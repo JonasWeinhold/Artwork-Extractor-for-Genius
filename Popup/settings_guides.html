@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings: Artwork Extractor for Genius</title>
+    <style>
+        body {
+            display: flex;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .columns-container {
+            display: flex;
+            height: 100%;
+        }
+
+        .left-column {
+            width: 600px;
+            padding: 10px;
+            padding-top: 0px;
+            display: block;
+        }
+
+        .right-column {
+            width: calc(100% - 600px);
+            padding: 10px;
+            padding-top: 0px;
+            display: block;
+        }
+
+        .one-column {
+            width: 100%;
+            padding: 10px;
+            padding-top: 0px;
+            display: block;
+        }
+
+        .menu {
+            width: 200px;
+            flex-shrink: 0;
+            padding-top: 20px;
+            padding-left: 25px;
+            background-color: #f0f0f0;
+            height: 100%;
+            overflow: auto;
+            font-size: 20px;
+        }
+
+        .menu a {
+            display: block;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #000;
+        }
+
+        .menu a:hover {
+            text-decoration: underline;
+        }
+
+        .menu a.home-link {
+            font-size: 1.208em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            margin-block-start: 0.66558em;
+        }
+
+        .menu ul {
+            list-style-type: square;
+            padding-left: 20px;
+            margin-top: 5px;
+        }
+
+        .menu li {
+            margin-bottom: 5px;
+        }
+
+        .content {
+            flex-grow: 1;
+            padding: 20px;
+            height: 95%;
+            overflow-y: auto;
+        }
+
+        .content p {
+            font-size: 18px;
+        }
+
+        body.dark-mode {
+            background-color: #3a3a3a;
+            color: #f5f5f5;
+        }
+
+        .menu.dark-mode {
+            background-color: #2e2e2e;
+        }
+
+        .menu.dark-mode a {
+            color: #f5f5f5;
+        }
+
+        .settings-span {
+            font-size: 18px;
+        }
+
+        .settings-label {
+            margin-top: 5px;
+            margin-bottom: 5px;
+            margin-left: 5px;
+            margin-right: 7.5px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #fa7878;
+            transition: .5s;
+            border-radius: 20px;
+            height: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .5s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #99f2a5;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        .frame {
+            border: 2px solid #ccc;
+            border-radius: 50px;
+            padding-left: 30px;
+            padding-bottom: 15px;
+            margin-top: -5px;
+            margin-bottom: 20px;
+            width: 440px;
+        }
+
+        body.dark-mode .frame {
+            border-color: #888;
+        }
+
+        iframe {
+            width: 467px;
+            height: 550px;
+            border: none;
+            transform-origin: 0 0;
+        }
+
+        input[type="text"] {
+            width: 292.19px;
+            margin-top: 5px;
+            margin-bottom: 2px;
+            margin-left: 10px;
+            margin-right: 2.5px;
+            border: 1px solid #2e2e2e;
+        }
+
+        body.dark-mode input[type="text"] {
+            background-color: #3a3a3a;
+            color: #f5f5f5;
+            border: 1px solid #f0f0f0;
+        }
+
+        body.dark-mode input[type="text"]::placeholder {
+            color: #ccc;
+        }
+
+        label {
+            font-size: 18px;
+        }
+
+        span:not(.slider):not(.disabled):not(.settings-span) {
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        span.disabled {
+            font-size: inherit;
+        }
+
+        h3 {
+            margin: 0;
+        }
+
+        #saveAllSectors {
+            width: 300px;
+            border: 2px solid #2e2e2e;
+            background-color: #ccc;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 7.5px;
+            margin-left: 10px;
+            margin-right: 2.5px;
+            cursor: pointer;
+            transition-duration: 0.4s;
+        }
+
+        #saveAllSectors:hover {
+            background-color: white;
+            color: black;
+            border: 2px solid #2e2e2e;
+        }
+
+        body.dark-mode #saveAllSectors {
+            border: 2px solid #f0f0f0;
+            background-color: #2e2e2e;
+            color: #f5f5f5;
+        }
+
+        body.dark-mode #saveAllSectors:hover {
+            border: 2px solid #f0f0f0;
+            background-color: #3a3a3a;
+            color: #f5f5f5;
+        }
+
+        .divider {
+            width: 2px;
+            background-color: #888;
+            margin: 0 10px;
+        }
+
+        body.dark-mode .divider {
+            background-color: #ccc;
+        }
+
+        .function-container {
+            display: block;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .function-container label {
+            padding-left: 4px;
+        }
+
+        .function-container input {
+            width: 40px;
+            padding: 3px;
+            text-align: center;
+        }
+
+        button {
+            width: 49.79px;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="menu">
+        <a href="#" class="home-link" data-id="homepage">Home</a>
+        <span class="disabled">Genius</span>
+        <ul>
+            <li><a href="#" data-id="genius-song">Song Page</a></li>
+            <li><a href="#" data-id="genius-album">Album Page</a></li>
+            <li><a href="#" data-id="genius-artist">Artist Page</a></li>
+        </ul>
+        <span class="disabled">Streaming Services</span>
+        <ul>
+            <li><a href="#" data-id="45">45 Music</a></li>
+            <li><a href="#" data-id="apple">Apple Music</a></li>
+            <li><a href="#" data-id="bandcamp">Bandcamp</a></li>
+            <li><a href="#" data-id="deezer">Deezer</a></li>
+            <li><a href="#" data-id="soundcloud">SoundCloud</a></li>
+            <li><a href="#" data-id="spotify">Spotify</a></li>
+            <li><a href="#" data-id="tidal">Tidal</a></li>
+            <li><a href="#" data-id="yandexmusic">Yandex Music</a></li>
+            <li><a href="#" data-id="youtubemusic">YouTube Music</a></li>
+        </ul>
+        <span class="disabled">Social Media</span>
+        <ul>
+            <li><a href="#" data-id="instagram">Instagram</a></li>
+        </ul>
+    </div>
+    <div class="content">
+        <div id="homepage">
+            <h1>Artwork Extractor for Genius</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <iframe src="popup.html" id="popupIframe"></iframe>
+
+                    <br><br>
+                    <label for="imgbbApiKey">ImgBB API Key:</label>
+                    <input type="text" id="imgbbApiKey" placeholder="Enter new API key">
+                    <button id="saveButton">Save</button>
+
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="genius-song">
+            <h1>Genius Song Page</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Indicators</em></h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongSongPage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Song Page: Cover</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongSongPageZwsp" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Song Page: ZWSP</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongSongPageInfo" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Song Page: Cover Info</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongCheckIndex" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Song Page: Index (Transcriber+)</span>
+                        <br />
+                    </div>
+                    <h2>Song Buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongFollowButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Follow Button</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongCleanupMetadataButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span"> Cleanup Metadata Button</span>
+                        <br />
+                    </div>
+                    <h2>Lyric Editor Buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongLanguageButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Language Button</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongCleanupButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cleanup Button</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongSectionsButtons" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Song Sections Buttons</span>
+                        <br />
+                    </div>
+                    <h2>Players</em></h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongRenameButtons" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Rename Buttons</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Copy Cover Button</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongAppleMusicPlayer" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Apple Music Player</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongYouTubePlayer" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">YouTube Player</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongSoundCloudPlayer" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">SoundCloud Player</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongSpotifyPlayer" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Spotify Player</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongLyricEditor" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Players next to Lyric Editor</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="genius-album">
+            <h1>Genius Album Page</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Indicators</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumAlbumPage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Album Page: Cover</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumAlbumPageZwsp" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Album Page: ZWSP</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumAlbumPageLyrics" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Album Page: Lyric State</span>
+                        <br />
+                    </div>
+                    <h2>Tracklist Buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumExpandTracklist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Expand Tracklist</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumEditTracklist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Edit Tracklist</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumUploadCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Upload Album Cover</span>
+                        <br />
+                    </div>
+                    <h2>Album Buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumRenameButtons" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Rename buttons</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumSongCreditsButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Song Credits Button</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumFollowButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Follow Button</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusAlbumCleanupButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cleanup Metadata Button</span>
+                        <br />
+                    </div>
+                    <h2>Metadata Editor</h2>
+                    <div class="frame">
+                        <div class="function-container">
+                            <input type="number" id="song_relationship" min="0" max="14">
+                            <label for="song_relationship">Song Relationship</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="related_album" min="0" max="14">
+                            <label for="related_album">Related Album</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="language" min="0" max="14">
+                            <label for="language">Language</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="primary_artists" min="0" max="14">
+                            <label for="primary_artists">Primary Artists</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="featured_artists" min="0" max="14">
+                            <label for="featured_artists">Featured Artists</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="primary_tag" min="0" max="14">
+                            <label for="primary_tag">Primary Tag</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="tags" min="0" max="14">
+                            <label for="tags">Tags</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="release_date" min="0" max="14">
+                            <label for="release_date">Release Date</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="recorded_at" min="0" max="14">
+                            <label for="recorded_at">Recorded At</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="youtube_url" min="0" max="14">
+                            <label for="youtube_url">YouTube URL</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="soundcloud_url" min="0" max="14">
+                            <label for="soundcloud_url">SoundCloud URL</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="producers" min="0" max="14">
+                            <label for="producers">Producers</label>
+                        </div>
+                        <div class="function-container">
+                            <input type="number" id="writers" min="0" max="14">
+                            <label for="writers">Writers</label>
+                        </div>
+                        <!--
+<div class="function-container">
+    <input type="number" id="gradient" min="0" max="14">
+    <label for="gradient">Gradient</label>
+</div>
+-->
+                        <div class="function-container">
+                            <input type="number" id="additional_credits" min="0" max="15" step="15">
+                            <label for="additional_credits">Additional Credits</label>
+                        </div>
+                        <button id="saveMetadataButton">Save</button>
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="genius-artist">
+            <h1>Genius Artist Page</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Indicators</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusArtistArtistPage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Artist Page: Cover</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusArtistArtistPageZwsp" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Artist Page: ZWSP</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusArtistAllSongsAlbumsPage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">All Songs / Albums Page: Cover</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusArtistAllSongsAlbumsPageMetadata" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">All Songs / Albums Page: Metadata</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusArtistAllSongsAlbumsPageZwsp" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">All Songs / Albums Page: ZWSP</span>
+                        <br />
+                    </div>
+                    <h2>Buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusArtistFollowButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Follow Button</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="45">
+            <h1>45 Music</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="is45CopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="is45ConvertPNG" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">JPG to PNG</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="is45HostImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Host Image</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="is45SaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="is45Popup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                    </div>
+                    <h2>Enable Right-Click</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="is45RightClick" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Context Menu</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="apple">
+            <h1>Apple Music</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Tracklist buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicCopyTracklist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">CT & CA</span>
+                        <br />
+                    </div>
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicCopyAnimatedCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Animated Artwork</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicCopyArtist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Artist Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Copy Credits buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicCopyCredits" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Credits</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicHighlighting" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Highlighting</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="bandcamp">
+            <h1>Bandcamp</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isBandcampCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isBandcampSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isBandcampPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="deezer">
+            <h1>Deezer</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDeezerCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDeezerCopyArtist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Artist Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDeezerSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Tracklist buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDeezerTrack" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Track</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDeezerShowCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Show Covers</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDeezerPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                    </div>
+                    <h2>Hide Deezer Premium Popup</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDeezerPremiumPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Ad blocking</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="soundcloud">
+            <h1>SoundCloud</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSoundCloudCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSoundCloudConvertPNG" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">JPG to PNG</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSoundCloudHostImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Host Image</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSoundCloudSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSoundCloudPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                    </div>
+                    <h2>Hide SoundCloud Artist Banner</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSoundCloudArtistBanner" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Ad blocking</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="spotify">
+            <h1>Spotify</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Tracklist buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifyCopyTracklist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">CT & CA</span>
+                        <br />
+                    </div>
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifyCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifyCopyArtist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Artist Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifyConvertPNG" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">JPG to PNG</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifyHostImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Host Image</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifySaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifyPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                    </div>
+                    <h2>Hide Now Playing View</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifySidebar" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Sidebar</span>
+                        <br />
+                    </div>
+                    <h2>Enable Right-Click</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isSpotifyRightClick" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Context Menu</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="tidal">
+            <h1>Tidal</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalCopyArtist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Artist Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalConvertPNG" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">JPG to PNG</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalHostImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Host Image</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Copy Credits buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalCopyCredits" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Credits</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalHighlighting" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Highlighting</span>
+                        <br />
+                    </div>
+                    <h2>Hide Tidal Premium Popup</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isTidalPremiumPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Ad blocking</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="yandexmusic">
+            <h1>Yandex Music</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYandexMusicCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYandexMusicConvertPNG" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">JPG to PNG</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYandexMusicHostImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Host Image</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYandexMusicSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYandexMusicPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="youtubemusic">
+            <h1>YouTube Music</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYouTubeMusicCopyCoverPlaylist" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYouTubeMusicCopyCoverChannel" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Artist Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYouTubeMusicSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Tracklist buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYouTubeMusicCopyLink" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Copy Link</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isYouTubeMusicPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="instagram">
+            <h1>Instagram</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isInstagramConvertPNG" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">JPG to PNG</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isInstagramHostImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Host Image</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isInstagramSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isInstagramPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <script src="settings_guides.js" defer> </script>
+</body>
+
+</html>

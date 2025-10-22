@@ -1,0 +1,143 @@
+{
+  "manifest_version": 3,
+  "name": "Artwork Extractor for Genius",
+  "version": "0.4.5",
+  "description": "Copy the artwork URL to the clipboard for genius.com by clicking the copy button on Apple Music, Deezer, Spotify, and more.",
+  "permissions": [
+    "activeTab",
+    "clipboardWrite",
+    "storage",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "Popup/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "Services/secrets.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.45cat.com/*",
+        "*://*.45worlds.com/*",
+        "*://*.45spaces.com/*"
+      ],
+      "js": [
+        "Services/45.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.apple.com/*"
+      ],
+      "js": [
+        "Services/apple.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.deezer.com/*"
+      ],
+      "js": [
+        "Services/deezer.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.bandcamp.com/*"
+      ],
+      "js": [
+        "Services/bandcamp.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.spotify.com/*"
+      ],
+      "js": [
+        "Services/spotify.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://music.youtube.com/*"
+      ],
+      "js": [
+        "Services/youtubemusic.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.soundcloud.com/*"
+      ],
+      "js": [
+        "Services/soundcloud.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.tidal.com/*"
+      ],
+      "js": [
+        "Services/tidal.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.yandex.ru/*"
+      ],
+      "js": [
+        "Services/yandexmusic.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.instagram.com/*"
+      ],
+      "js": [
+        "Services/instagram.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://genius.com/*",
+        "*://genius-staging.com/*"
+      ],
+      "js": [
+        "Services/genius_song.js",
+        "Services/genius_album.js",
+        "Services/genius_artist.js"
+      ]
+    }
+  ],
+  "icons": {
+    "128": "128.png"
+  },
+  "action": {
+    "default_popup": "Popup/popup.html",
+    "default_icon": {
+      "128": "128.png"
+    }
+  },
+  "host_permissions": [
+    "*://45cat.com/*",
+    "*://45worlds.com/*",
+    "*://45spaces.com/*",
+    "*://*.apple.com/*",
+    "*://*.deezer.com/*",
+    "*://*.bandcamp.com/*",
+    "*://*.spotify.com/*",
+    "*://music.youtube.com/*",
+    "*://*.soundcloud.com/*",
+    "*://*.tidal.com/*",
+    "*://*.yandex.ru/*",
+    "*://*.instagram.com/*",
+    "*://genius.com/*",
+    "*://genius-staging.com/*"
+  ]
+}

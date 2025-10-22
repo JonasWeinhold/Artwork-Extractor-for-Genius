@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Popup: Artwork Extractor for Genius</title>
+  <style>
+    body {
+      font-family: 'Programme', Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      width: 450px;
+      box-sizing: border-box;
+    }
+
+    body.dark-mode {
+      background-color: #2E2E2E;
+      color: #f5f5f5;
+      border-color: #555;
+    }
+
+    h1 {
+      font-size: 1.5em;
+      color: #222;
+      margin-top: 5px;
+      margin-bottom: 5px;
+      text-align: center;
+      border: 2px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+      box-sizing: border-box;
+      cursor: pointer;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    h1:hover {
+      background-color: #e0e0e0;
+    }
+
+    h1.dark-mode {
+      color: #f5f5f5;
+      border-color: #888;
+    }
+
+    h1.dark-mode:hover {
+      background-color: #555;
+    }
+
+    #file-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      border: 2px solid #ccc;
+      padding-left: 10px;
+      padding-right: 10px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+
+
+    body.dark-mode #file-container {
+      border-color: #888;
+    }
+
+    .file-toggle {
+      width: 30%;
+      margin: 7.5px 0;
+      padding-left: 5px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      justify-content: flex-start;
+    }
+
+    .file-toggle img {
+      width: 26px;
+      height: 26px;
+      margin-right: 10px;
+      transition: opacity 0.3s ease;
+    }
+
+    .file-toggle.inactive img,
+    .file-toggle.inactive label {
+      opacity: 0.4;
+    }
+
+    label {
+      font-size: 1.1em;
+      white-space: nowrap;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    input[type="checkbox"] {
+      display: none;
+    }
+
+    .file-toggle:hover {
+      background-color: #ebebeb;
+    }
+
+    body.dark-mode .file-toggle:hover {
+      background-color: #444;
+    }
+
+    .legend {
+      font-size: 1.0em;
+      line-height: 16px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      border: 2px solid #ccc;
+      padding-top: 9px;
+      padding-bottom: 5px;
+      padding-left: 19px;
+      border-radius: 5px;
+      box-sizing: border-box;
+      margin-top: 5px;
+    }
+
+    .legend {
+      display: grid;
+    }
+
+    body.dark-mode .legend {
+      border-color: #888;
+    }
+
+    .legend div {
+      display: flex;
+      align-items: center;
+    }
+
+    .cross {
+      font-variant: JIS04;
+      height: 16px;
+      width: 16px;
+      display: inline-block;
+      margin-right: 0.925rem;
+      margin-bottom: 0.25rem;
+      position: relative;
+      border: 1px solid;
+      border-radius: 50%;
+    }
+
+    .cross.black::before,
+    .cross.black::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 3px;
+      background-color: #2c2c2c;
+    }
+
+    .cross.black::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    .cross.black::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    .circle {
+      font-variant: JIS04;
+      height: 16px;
+      width: 16px;
+      display: inline-block;
+      margin-right: 0.925rem;
+      margin-bottom: 0.25rem;
+      border: 1px solid;
+      border-radius: 50%;
+    }
+
+    .circle.black {
+      position: relative;
+    }
+
+    .circle.black::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background-color: #2c2c2c;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .black {
+      background-color: #fcfcfc;
+      border-color: #888;
+    }
+
+    .gray {
+      background-color: #dddddd;
+      border-color: #aaaaaa;
+    }
+
+    .green {
+      background-color: #99f2a5;
+      border-color: #66bfa3;
+    }
+
+    .yellow {
+      background-color: #ffff64;
+      border-color: #cccc00;
+    }
+
+    .orange {
+      background-color: #ffa335;
+      border-color: #c76a2b;
+    }
+
+    .red {
+      background-color: #fa7878;
+      border-color: #a74d4d;
+    }
+
+    .blue {
+      background-color: #7689e8;
+      border-color: #4a5e9d;
+    }
+
+    .brown {
+      background-color: #986540;
+      border-color: #704B35;
+    }
+
+    body.dark-mode .black {
+      background-color: #fcfcfc;
+      border-color: #ccc;
+    }
+
+    body.dark-mode .gray {
+      background-color: #dddddd;
+      border-color: #aaaaaa;
+    }
+
+    body.dark-mode .green {
+      background-color: #99f2a5;
+      border-color: #66bfa3;
+    }
+
+    body.dark-mode .yellow {
+      background-color: #ffff64;
+      border-color: #cccc00;
+    }
+
+    body.dark-mode .orange {
+      background-color: #ffa335;
+      border-color: #c76a2b;
+    }
+
+    body.dark-mode .red {
+      background-color: #fa7878;
+      border-color: #a74d4d;
+    }
+
+    body.dark-mode .blue {
+      background-color: #7689e8;
+      border-color: #4a5e9d;
+    }
+
+    body.dark-mode .brown {
+      background-color: #986540;
+      border-color: #704B35;
+    }
+
+    .guide {
+      font-size: 1.0em;
+      font-weight: bold;
+      line-height: 16px;
+      display: flex;
+      text-align: center;
+      flex-direction: column;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+      margin-top: 5px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    body.dark-mode .guide {
+      border-color: #888;
+    }
+
+    .guide div {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .guide .item {
+      font-size: 1.2em;
+      color: #222;
+      text-align: center;
+      padding: 7.5px 0;
+      box-sizing: border-box;
+      cursor: pointer;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    body.dark-mode .guide .item {
+      color: #f5f5f5;
+      border-color: #888;
+    }
+
+    hr {
+      border: 1px solid #ccc;
+      width: 75%;
+      margin: 0;
+      box-sizing: border-box;
+    }
+
+    body.dark-mode hr {
+      border-color: #888;
+    }
+  </style>
+
+</head>
+
+<body>
+  <h1>Artwork Extractor<br>for Genius</h1>
+  <div id="file-container"></div>
+  <div class="legend">
+    <div><span class="circle black"></span> Zero-width space</div>
+    <div><span class="cross black"></span> Primary Artists</div>
+    <div><span class="circle green"></span> Good cover</div>
+    <div><span class="circle gray"></span> Missing cover</div>
+    <div><span class="circle orange"></span> Bad cover on album page</div>
+    <div><span class="circle yellow"></span> Cover is being converted</div>
+    <div><span class="circle red"></span> Bad cover on current page</div>
+    <div><span class="circle blue"></span> Cover URL must be fixed</div>
+    <div><span class="circle brown"></span> Error,&nbsp;<a href="https://genius.com/jonas" target="_blank">please report
+        to me</a></div>
+
+  </div>
+  <a href="settings_guides.html" target="_blank">
+    <div class="guide">
+      <div class="item">Settings & Guides</div>
+    </div>
+  </a>
+  <script src="popup.js"></script>
+</body>
+
+</html>
