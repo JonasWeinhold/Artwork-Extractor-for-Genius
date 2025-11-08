@@ -442,6 +442,7 @@ chrome.storage.local.get([
                 { code: 'SV', name: 'Swedish' },
                 { code: 'TR', name: 'Turkish' },
                 { code: 'UK', name: 'Ukrainian' },
+                { code: 'VI', name: 'Vietnamese' },
             ];
         } else if (dropdownType === "Cleanup") {
             options = [
@@ -935,6 +936,26 @@ chrome.storage.local.get([
                         { displayText: "Post-Refräng", fullText: "Post-Refräng" },
                         { displayText: "Stick", fullText: "Stick" },
                         { displayText: "Mellanspel", fullText: "Mellanspel" }
+                    ],
+                    "VI": [
+                        { displayText: null, fullText: null },
+                        { displayText: null, fullText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental" },
+                        { displayText: "Snippet", fullText: "Snippet" },
+                        { displayText: "Intro", fullText: "Intro" },
+                        { displayText: "Outro", fullText: "Outro" },
+                        { displayText: "Skit", fullText: "Skit" },
+                        { displayText: "Part", fullText: "Part" },
+                        { displayText: "Verse", fullText: "Verse" },
+                        { displayText: "Pre-Chorus", fullText: "Pre-Chorus" },
+                        { displayText: "Chorus", fullText: "Chorus" },
+                        { displayText: "Post-Chorus", fullText: "Post-Chorus" },
+                        { displayText: "Refrain", fullText: "Refrain" },
+                        { displayText: "Bridge", fullText: "Bridge" },
+                        { displayText: "Breakdown", fullText: "Breakdown" },
+                        { displayText: "Interlude", fullText: "Interlude" },
+                        { displayText: "Build", fullText: "Build" },
+                        { displayText: "Drop", fullText: "Drop" }
                     ]
                 };
 
@@ -1289,6 +1310,7 @@ chrome.storage.local.get([
             'SV': ``,
             'TR': `["${songTitle}"${featuringText} için şarkı sözleri]`,
             'UK': `[Текст пісні «${songTitle}»${featuringText}]`,
+            'VI': `[Lời bài hát "${songTitle}"${featuringText}]`,
             'ZH-S': `[${primaryArtists}《${songTitle}》${formattedFeaturingText}歌词]`,
             'ZH-T': `[${primaryArtists}《${songTitle}》${formattedFeaturingText}歌詞]`,
         };
@@ -1317,6 +1339,7 @@ chrome.storage.local.get([
             'SQ': `[Teksti i "${songTitle}"${featuringText} në shqip]`,
             'SV': ``,
             'TR': `["${songTitle}"${featuringText} için Türkçe şarkı sözleri]`,
+            'VI': `[Lời dịch tiếng Việt cho "${songTitle}"${featuringText}]`,
             //'UK': `[Текст пісні "${songTitle}"${featuringText}]`,
             //'ZH-S': `[${primaryArtists} "${songTitle}" ${formattedFeaturingText}歌词]`,
             //'ZH-T': `[${primaryArtists}「${songTitle}」${formattedFeaturingText}歌詞]`,
