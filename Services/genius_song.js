@@ -938,10 +938,10 @@ chrome.storage.local.get([
                         { displayText: "Mellanspel", fullText: "Mellanspel" }
                     ],
                     "VI": [
-                        { displayText: null, fullText: null },
-                        { displayText: null, fullText: null },
+                        { displayText: "Header", fullText: "Header" },
+                        { displayText: "Translation", fullText: "Translation" },
                         { displayText: "Instrumental", fullText: "Instrumental" },
-                        { displayText: "Snippet", fullText: "Snippet" },
+                        { displayText: null, fullText: null },
                         { displayText: "Intro", fullText: "Intro" },
                         { displayText: "Outro", fullText: "Outro" },
                         { displayText: "Skit", fullText: "Skit" },
