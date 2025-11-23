@@ -1500,21 +1500,24 @@ chrome.storage.local.get([
                 */
 
                 if (cleanupType === 'general' || cleanupType === 'language') {
-
+                    // Capitalize the first letter at line start and after punctuation (. ! ? ")
                     line = line.replace(/(^|\.\s+|!\s+|\?\s+|\s+"|^\s*")(\w)/g, (match, prefix, char) => {
                         return prefix + char.toUpperCase();
                     });
-
+                    
+                    // Capitalize the first letter at line start with HTML tags
                     line = line.replace(/(^|\n|\r)(\s*(?:<[^>]+>\s*)+)([a-zA-Z])/g, (match, prefix, tags, char) => {
                         return prefix + tags + char.toUpperCase();
                     });
 
-                    line = line.replace(/\(\s*(\w)/g, (match, char) => {
-                        return "(" + char.toUpperCase();
+                    // Capitalize after opening brackets "(" or "["
+                    line = line.replace(/([\(\[])\s*(\w)/g, (match, bracket, char) => {
+                        return bracket + char.toUpperCase();
                     });
 
-                    line = line.replace(/\(\s*((?:<[^>]+>\s*)+)(\w)/g, (match, tags, char) => {
-                        return "(" + tags + char.toUpperCase();
+                    // Capitalize after opening brackets "(" or "[" with HTML tags in between
+                    line = line.replace(/([\(\[])\s*((?:<[^>]+>\s*)+)(\w)/g, (match, bracket, tags, char) => {
+                        return bracket + tags + char.toUpperCase();
                     });
 
                     for (const [key, value] of Object.entries(replacementsGeneral)) {
