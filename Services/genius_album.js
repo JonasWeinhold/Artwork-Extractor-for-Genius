@@ -3256,9 +3256,12 @@ chrome.storage.local.get([
 
             if (chartRow.querySelector('.lyric-status-box')) return;
 
+            // Lyrics are marked complete, staff approved, or verified
+            const lyricsAreValidated =  songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
+
             let color = '#ff7878';
             if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
-                if ((songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true) && songData.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+                if (lyricsAreValidated && songData.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
                     color = '#99f2a5';
                 } else if (songData.lyrics_state === 'complete' && songData.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
                     color = '#ffff64';
@@ -3266,7 +3269,7 @@ chrome.storage.local.get([
                     color = '#ffa335';
                 }
             } else {
-                if ((songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true)) {
+                if (lyricsAreValidated) {
                     color = '#99f2a5';
                 } else if (songData.lyrics_state === 'complete') {
                     color = '#ffff64';
