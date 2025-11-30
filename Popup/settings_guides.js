@@ -72,7 +72,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    function setupEventListeners(prefix) {
+    document.getElementById('saveButtonTidal').addEventListener('click', () => {
+        const newCountryCode = document.getElementById('tidalCountryCode').value;
+        chrome.storage.local.set({ tidalCountryCode: newCountryCode }, () => {
+            console.log('Tidal country code successfully saved!');
+            console.log('Tidal Country Code:', newCountryCode);
+            alert('Tidal country code successfully saved!');
+        });
+    });
+
+    function setupEventListener1(prefix) {
         const convertCheckbox = document.getElementById(`${prefix}ConvertPNG`);
         const saveCheckbox = document.getElementById(`${prefix}SaveImage`);
         const hostCheckbox = document.getElementById(`${prefix}HostImage`);
@@ -90,6 +99,41 @@ document.addEventListener('DOMContentLoaded', function () {
             saveCheckbox.checked = !this.checked;
         });
     }
+
+    function setupEventListener2(prefix) {
+    const convertCheckbox = document.getElementById(`${prefix}ConvertPNG`);
+    const saveCheckbox = document.getElementById(`${prefix}SaveImage`);
+    const hostImgBB = document.getElementById(`${prefix}HostImgBB`);
+    const hostImageFilestack = document.getElementById(`${prefix}HostFilestack`);
+    const hostImageSpanImgBB = document.querySelector(`#${prefix}HostImgBB`).parentElement.nextElementSibling;
+    const hostImageSpanFilestack = document.querySelector(`#${prefix}HostFilestack`).parentElement.nextElementSibling;
+
+    convertCheckbox.addEventListener("change", function () {
+        hostImageSpanImgBB.textContent = this.checked ? "Host Image (ImgBB)" : "Copy Image";
+        hostImageSpanFilestack.textContent = this.checked ? "Host Image (Filestack)" : "Copy Image";
+    });
+
+    saveCheckbox.addEventListener("change", function () {
+        if (this.checked) {
+            hostImgBB.checked = false;
+            hostImageFilestack.checked = false;
+        }
+    });
+
+    hostImgBB.addEventListener("change", function () {
+        if (this.checked) {
+            hostImageFilestack.checked = false;
+            saveCheckbox.checked = false;
+        }
+    });
+
+    hostImageFilestack.addEventListener("change", function () {
+        if (this.checked) {
+            hostImgBB.checked = false;
+            saveCheckbox.checked = false;
+        }
+    });
+}
 
 
     function saveOrder() {
@@ -176,12 +220,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-    setupEventListeners("is45");
-    setupEventListeners("isSoundCloud");
-    setupEventListeners("isSpotify");
-    setupEventListeners("isTidal");
-    setupEventListeners("isYandexMusic");
-    setupEventListeners("isInstagram");
+    setupEventListener2("is45");
+    setupEventListener2("isSoundCloud");
+    setupEventListener2("isSpotify");
+    setupEventListener2("isTidal");
+    setupEventListener2("isYandexMusic");
+    setupEventListener1("isInstagram");
 
     // Funktion zum Speichern der Einstellungen
     function saveSettings() {
@@ -221,7 +265,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const is45Popup = document.getElementById('is45Popup').checked;
         const is45ConvertPNG = document.getElementById('is45ConvertPNG').checked;
         const is45SaveImage = document.getElementById('is45SaveImage').checked;
-        const is45HostImage = document.getElementById('is45HostImage').checked;
+        const is45HostImgBB = document.getElementById('is45HostImgBB').checked;
+        const is45HostFilestack = document.getElementById('is45HostFilestack').checked;
         const is45RightClick = document.getElementById('is45RightClick').checked;
         const isAppleMusicCopyTracklist = document.getElementById('isAppleMusicCopyTracklist').checked;
         const isAppleMusicCopyCover = document.getElementById('isAppleMusicCopyCover').checked;
@@ -246,7 +291,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const isSoundCloudArtistBanner = document.getElementById('isSoundCloudArtistBanner').checked;
         const isSoundCloudConvertPNG = document.getElementById('isSoundCloudConvertPNG').checked;
         const isSoundCloudSaveImage = document.getElementById('isSoundCloudSaveImage').checked;
-        const isSoundCloudHostImage = document.getElementById('isSoundCloudHostImage').checked;
+        const isSoundCloudHostImgBB = document.getElementById('isSoundCloudHostImgBB').checked;
+        const isSoundCloudHostFilestack = document.getElementById('isSoundCloudHostFilestack').checked;
         const isSpotifyCopyTracklist = document.getElementById('isSpotifyCopyTracklist').checked;
         const isSpotifyCopyCover = document.getElementById('isSpotifyCopyCover').checked;
         const isSpotifyCopyArtist = document.getElementById('isSpotifyCopyArtist').checked;
@@ -255,7 +301,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const isSpotifyRightClick = document.getElementById('isSpotifyRightClick').checked;
         const isSpotifyConvertPNG = document.getElementById('isSpotifyConvertPNG').checked;
         const isSpotifySaveImage = document.getElementById('isSpotifySaveImage').checked;
-        const isSpotifyHostImage = document.getElementById('isSpotifyHostImage').checked;
+        const isSpotifyHostImgBB = document.getElementById('isSpotifyHostImgBB').checked;
+        const isSpotifyHostFilestack = document.getElementById('isSpotifyHostFilestack').checked;
         const isTidalCopyCover = document.getElementById('isTidalCopyCover').checked;
         const isTidalCopyArtist = document.getElementById('isTidalCopyArtist').checked;
         const isTidalCopyCredits = document.getElementById('isTidalCopyCredits').checked;
@@ -264,12 +311,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const isTidalPremiumPopup = document.getElementById('isTidalPremiumPopup').checked;
         const isTidalConvertPNG = document.getElementById('isTidalConvertPNG').checked;
         const isTidalSaveImage = document.getElementById('isTidalSaveImage').checked;
-        const isTidalHostImage = document.getElementById('isTidalHostImage').checked;
+        const isTidalHostImgBB = document.getElementById('isTidalHostImgBB').checked;
+        const isTidalHostFilestack = document.getElementById('isTidalHostFilestack').checked;
         const isYandexMusicCopyCover = document.getElementById('isYandexMusicCopyCover').checked;
         const isYandexMusicPopup = document.getElementById('isYandexMusicPopup').checked;
         const isYandexMusicConvertPNG = document.getElementById('isYandexMusicConvertPNG').checked;
         const isYandexMusicSaveImage = document.getElementById('isYandexMusicSaveImage').checked;
-        const isYandexMusicHostImage = document.getElementById('isYandexMusicHostImage').checked;
+        const isYandexMusicHostImgBB = document.getElementById('isYandexMusicHostImgBB').checked;
+        const isYandexMusicHostFilestack = document.getElementById('isYandexMusicHostFilestack').checked;
         const isYouTubeMusicCopyCoverPlaylist = document.getElementById('isYouTubeMusicCopyCoverPlaylist').checked;
         const isYouTubeMusicCopyCoverChannel = document.getElementById('isYouTubeMusicCopyCoverChannel').checked;
         const isYouTubeMusicCopyLink = document.getElementById('isYouTubeMusicCopyLink').checked;
@@ -317,7 +366,8 @@ document.addEventListener('DOMContentLoaded', function () {
             is45Popup: is45Popup,
             is45ConvertPNG: is45ConvertPNG,
             is45SaveImage: is45SaveImage,
-            is45HostImage: is45HostImage,
+            is45HostImgBB: is45HostImgBB,
+            is45HostFilestack: is45HostFilestack,
             is45RightClick: is45RightClick,
             isAppleMusicCopyTracklist: isAppleMusicCopyTracklist,
             isAppleMusicCopyCover: isAppleMusicCopyCover,
@@ -342,7 +392,8 @@ document.addEventListener('DOMContentLoaded', function () {
             isSoundCloudArtistBanner: isSoundCloudArtistBanner,
             isSoundCloudConvertPNG: isSoundCloudConvertPNG,
             isSoundCloudSaveImage: isSoundCloudSaveImage,
-            isSoundCloudHostImage: isSoundCloudHostImage,
+            isSoundCloudHostImgBB: isSoundCloudHostImgBB,
+            isSoundCloudHostFilestack: isSoundCloudHostFilestack,
             isSpotifyCopyTracklist: isSpotifyCopyTracklist,
             isSpotifyCopyCover: isSpotifyCopyCover,
             isSpotifyCopyArtist: isSpotifyCopyArtist,
@@ -351,7 +402,8 @@ document.addEventListener('DOMContentLoaded', function () {
             isSpotifyRightClick: isSpotifyRightClick,
             isSpotifyConvertPNG: isSpotifyConvertPNG,
             isSpotifySaveImage: isSpotifySaveImage,
-            isSpotifyHostImage: isSpotifyHostImage,
+            isSpotifyHostImgBB: isSpotifyHostImgBB,
+            isSpotifyHostFilestack: isSpotifyHostFilestack,
             isTidalCopyCover: isTidalCopyCover,
             isTidalCopyArtist: isTidalCopyArtist,
             isTidalCopyCredits: isTidalCopyCredits,
@@ -360,12 +412,14 @@ document.addEventListener('DOMContentLoaded', function () {
             isTidalPremiumPopup: isTidalPremiumPopup,
             isTidalConvertPNG: isTidalConvertPNG,
             isTidalSaveImage: isTidalSaveImage,
-            isTidalHostImage: isTidalHostImage,
+            isTidalHostImgBB: isTidalHostImgBB,
+            isTidalHostFilestack: isTidalHostFilestack,
             isYandexMusicCopyCover: isYandexMusicCopyCover,
             isYandexMusicPopup: isYandexMusicPopup,
             isYandexMusicConvertPNG: isYandexMusicConvertPNG,
             isYandexMusicSaveImage: isYandexMusicSaveImage,
-            isYandexMusicHostImage: isYandexMusicHostImage,
+            isYandexMusicHostImgBB: isYandexMusicHostImgBB,
+            isYandexMusicHostFilestack: isYandexMusicHostFilestack,
             isYouTubeMusicCopyCoverPlaylist: isYouTubeMusicCopyCoverPlaylist,
             isYouTubeMusicCopyCoverChannel: isYouTubeMusicCopyCoverChannel,
             isYouTubeMusicCopyLink: isYouTubeMusicCopyLink,
@@ -383,14 +437,14 @@ document.addEventListener('DOMContentLoaded', function () {
         'isGeniusSongSongPage', 'isGeniusSongSongPageZwsp', 'isGeniusSongSongPageInfo', 'isGeniusSongCheckIndex', 'isGeniusSongFollowButton', 'isGeniusSongCleanupMetadataButton', 'isGeniusSongLanguageButton', 'isGeniusSongCleanupButton', 'isGeniusSongSectionsButtons', 'isGeniusSongCopyCover', 'isGeniusSongAppleMusicPlayer', 'isGeniusSongYouTubePlayer', 'isGeniusSongSoundCloudPlayer', 'isGeniusSongSpotifyPlayer', 'isGeniusSongLyricEditor', 'isGeniusSongRenameButtons',
         'isGeniusAlbumAlbumPage', 'isGeniusAlbumAlbumPageZwsp', 'isGeniusAlbumAlbumPageLyrics', 'isGeniusAlbumExpandTracklist', 'isGeniusAlbumEditTracklist', 'isGeniusAlbumUploadCover', 'isGeniusAlbumRenameButtons', 'isGeniusAlbumSongCreditsButton', 'isGeniusAlbumFollowButton', 'isGeniusAlbumCleanupButton',
         'isGeniusArtistArtistPage', 'isGeniusArtistArtistPageZwsp', 'isGeniusArtistAllSongsAlbumsPage', 'isGeniusArtistAllSongsAlbumsPageMetadata', 'isGeniusArtistAllSongsAlbumsPageZwsp', 'isGeniusArtistFollowButton',
-        'is45CopyCover', 'is45Popup', 'is45ConvertPNG', 'is45SaveImage', 'is45HostImage', 'is45RightClick',
+        'is45CopyCover', 'is45Popup', 'is45ConvertPNG', 'is45SaveImage', 'is45HostImgBB', 'is45HostFilestack','is45RightClick',
         'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage',
         'isBandcampCopyCover', 'isBandcampPopup', 'isBandcampSaveImage',
         'isDeezerCopyCover', 'isDeezerCopyArtist', 'isDeezerTrack', 'isDeezerPopup', 'isDeezerPremiumPopup', 'isDeezerSaveImage',
-        'isSoundCloudCopyCover', 'isSoundCloudPopup', 'isSoundCloudArtistBanner', 'isSoundCloudConvertPNG', 'isSoundCloudSaveImage', 'isSoundCloudHostImage',
-        'isSpotifyCopyTracklist', 'isSpotifyCopyCover', 'isSpotifyCopyArtist', 'isSpotifyPopup', 'isSpotifySidebar', 'isSpotifyRightClick', 'isSpotifyConvertPNG', 'isSpotifySaveImage', 'isSpotifyHostImage',
-        'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalPremiumPopup', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImage',
-        'isYandexMusicCopyCover', 'isYandexMusicPopup', 'isYandexMusicConvertPNG', 'isYandexMusicSaveImage', 'isYandexMusicHostImage',
+        'isSoundCloudCopyCover', 'isSoundCloudPopup', 'isSoundCloudArtistBanner', 'isSoundCloudConvertPNG', 'isSoundCloudSaveImage', 'isSoundCloudHostImgBB', 'isSoundCloudHostFilestack',
+        'isSpotifyCopyTracklist', 'isSpotifyCopyCover', 'isSpotifyCopyArtist', 'isSpotifyPopup', 'isSpotifySidebar', 'isSpotifyRightClick', 'isSpotifyConvertPNG', 'isSpotifySaveImage', 'isSpotifyHostImgBB', 'isSpotifyHostFilestack',
+        'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalPremiumPopup', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImgBB', 'isTidalHostFilestack',
+        'isYandexMusicCopyCover', 'isYandexMusicPopup', 'isYandexMusicConvertPNG', 'isYandexMusicSaveImage', 'isYandexMusicHostImgBB', 'isYandexMusicHostFilestack',
         'isYouTubeMusicCopyCoverPlaylist', 'isYouTubeMusicCopyCoverChannel', 'isYouTubeMusicCopyLink', 'isYouTubeMusicPopup', 'isYouTubeMusicSaveImage',
         'isInstagramPopup', 'isInstagramConvertPNG', 'isInstagramSaveImage', 'isInstagramHostImage'
     ], function (result) {
@@ -430,7 +484,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('is45Popup').checked = result.is45Popup !== undefined ? result.is45Popup : true;
         document.getElementById('is45ConvertPNG').checked = result.is45ConvertPNG !== undefined ? result.is45ConvertPNG : true;
         document.getElementById('is45SaveImage').checked = result.is45SaveImage !== undefined ? result.is45SaveImage : false;
-        document.getElementById('is45HostImage').checked = result.is45HostImage !== undefined ? result.is45HostImage : true;
+        document.getElementById('is45HostImgBB').checked = result.is45HostImgBB !== undefined ? result.is45HostImgBB : true;
+        document.getElementById('is45HostFilestack').checked = result.is45HostFilestack !== undefined ? result.is45HostFilestack : false;
         document.getElementById('is45RightClick').checked = result.is45RightClick !== undefined ? result.is45RightClick : true;
         document.getElementById('isAppleMusicCopyTracklist').checked = result.isAppleMusicCopyTracklist !== undefined ? result.isAppleMusicCopyTracklist : true;
         document.getElementById('isAppleMusicCopyCover').checked = result.isAppleMusicCopyCover !== undefined ? result.isAppleMusicCopyCover : true;
@@ -455,7 +510,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isSoundCloudArtistBanner').checked = result.isSoundCloudArtistBanner !== undefined ? result.isSoundCloudArtistBanner : false;
         document.getElementById('isSoundCloudConvertPNG').checked = result.isSoundCloudConvertPNG !== undefined ? result.isSoundCloudConvertPNG : true;
         document.getElementById('isSoundCloudSaveImage').checked = result.isSoundCloudSaveImage !== undefined ? result.isSoundCloudSaveImage : false;
-        document.getElementById('isSoundCloudHostImage').checked = result.isSoundCloudHostImage !== undefined ? result.isSoundCloudHostImage : true;
+        document.getElementById('isSoundCloudHostImgBB').checked = result.isSoundCloudHostImgBB !== undefined ? result.isSoundCloudHostImgBB : false;
+        document.getElementById('isSoundCloudHostFilestack').checked = result.isSoundCloudHostFilestack !== undefined ? result.isSoundCloudHostFilestack : true;
         document.getElementById('isSpotifyCopyTracklist').checked = result.isSpotifyCopyTracklist !== undefined ? result.isSpotifyCopyTracklist : true;
         document.getElementById('isSpotifyCopyCover').checked = result.isSpotifyCopyCover !== undefined ? result.isSpotifyCopyCover : true;
         document.getElementById('isSpotifyCopyArtist').checked = result.isSpotifyCopyArtist !== undefined ? result.isSpotifyCopyArtist : true;
@@ -464,7 +520,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isSpotifyRightClick').checked = result.isSpotifyRightClick !== undefined ? result.isSpotifyRightClick : false;
         document.getElementById('isSpotifyConvertPNG').checked = result.isSpotifyConvertPNG !== undefined ? result.isSpotifyConvertPNG : true;
         document.getElementById('isSpotifySaveImage').checked = result.isSpotifySaveImage !== undefined ? result.isSpotifySaveImage : false;
-        document.getElementById('isSpotifyHostImage').checked = result.isSpotifyHostImage !== undefined ? result.isSpotifyHostImage : true;
+        document.getElementById('isSpotifyHostImgBB').checked = result.isSpotifyHostImgBB !== undefined ? result.isSpotifyHostImgBB : false;
+        document.getElementById('isSpotifyHostFilestack').checked = result.isSpotifyHostFilestack !== undefined ? result.isSpotifyHostFilestack : true;
         document.getElementById('isTidalCopyCover').checked = result.isTidalCopyCover !== undefined ? result.isTidalCopyCover : true;
         document.getElementById('isTidalCopyArtist').checked = result.isTidalCopyArtist !== undefined ? result.isTidalCopyArtist : true;
         document.getElementById('isTidalCopyCredits').checked = result.isTidalCopyCredits !== undefined ? result.isTidalCopyCredits : true;
@@ -473,12 +530,14 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isTidalPremiumPopup').checked = result.isTidalPremiumPopup !== undefined ? result.isTidalPremiumPopup : false;
         document.getElementById('isTidalConvertPNG').checked = result.isTidalConvertPNG !== undefined ? result.isTidalConvertPNG : true;
         document.getElementById('isTidalSaveImage').checked = result.isTidalSaveImage !== undefined ? result.isTidalSaveImage : false;
-        document.getElementById('isTidalHostImage').checked = result.isTidalHostImage !== undefined ? result.isTidalHostImage : true;
+        document.getElementById('isTidalHostImgBB').checked = result.isTidalHostImgBB !== undefined ? result.isTidalHostImgBB : false;
+        document.getElementById('isTidalHostFilestack').checked = result.isTidalHostFilestack !== undefined ? result.isTidalHostFilestack : true;
         document.getElementById('isYandexMusicCopyCover').checked = result.isYandexMusicCopyCover !== undefined ? result.isYandexMusicCopyCover : true;
         document.getElementById('isYandexMusicPopup').checked = result.isYandexMusicPopup !== undefined ? result.isYandexMusicPopup : true;
         document.getElementById('isYandexMusicConvertPNG').checked = result.isYandexMusicConvertPNG !== undefined ? result.isYandexMusicConvertPNG : false;
         document.getElementById('isYandexMusicSaveImage').checked = result.isYandexMusicSaveImage !== undefined ? result.isYandexMusicSaveImage : false;
-        document.getElementById('isYandexMusicHostImage').checked = result.isYandexMusicHostImage !== undefined ? result.isYandexMusicHostImage : false;
+        document.getElementById('isYandexMusicHostImgBB').checked = result.isYandexMusicHostImgBB !== undefined ? result.isYandexMusicHostImgBB : true;
+        document.getElementById('isYandexMusicHostFilestack').checked = result.isYandexMusicHostFilestack !== undefined ? result.isYandexMusicHostFilestack : false;
         document.getElementById('isYouTubeMusicCopyCoverPlaylist').checked = result.isYouTubeMusicCopyCoverPlaylist !== undefined ? result.isYouTubeMusicCopyCoverPlaylist : true;
         document.getElementById('isYouTubeMusicCopyCoverChannel').checked = result.isYouTubeMusicCopyCoverChannel !== undefined ? result.isYouTubeMusicCopyCoverChannel : true;
         document.getElementById('isYouTubeMusicCopyLink').checked = result.isYouTubeMusicCopyLink !== undefined ? result.isYouTubeMusicCopyLink : true;
@@ -528,7 +587,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('is45Popup').addEventListener('change', saveSettings);
     document.getElementById('is45ConvertPNG').addEventListener('change', saveSettings);
     document.getElementById('is45SaveImage').addEventListener('change', saveSettings);
-    document.getElementById('is45HostImage').addEventListener('change', saveSettings);
+    document.getElementById('is45HostImgBB').addEventListener('change', saveSettings);
+    document.getElementById('is45HostFilestack').addEventListener('change', saveSettings);
     document.getElementById('is45RightClick').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicCopyTracklist').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicCopyCover').addEventListener('change', saveSettings);
@@ -553,7 +613,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isSoundCloudArtistBanner').addEventListener('change', saveSettings);
     document.getElementById('isSoundCloudConvertPNG').addEventListener('change', saveSettings);
     document.getElementById('isSoundCloudSaveImage').addEventListener('change', saveSettings);
-    document.getElementById('isSoundCloudHostImage').addEventListener('change', saveSettings);
+    document.getElementById('isSoundCloudHostImgBB').addEventListener('change', saveSettings);
+    document.getElementById('isSoundCloudHostFilestack').addEventListener('change', saveSettings);
     document.getElementById('isSpotifyCopyTracklist').addEventListener('change', saveSettings);
     document.getElementById('isSpotifyCopyCover').addEventListener('change', saveSettings);
     document.getElementById('isSpotifyCopyArtist').addEventListener('change', saveSettings);
@@ -562,7 +623,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isSpotifyRightClick').addEventListener('change', saveSettings);
     document.getElementById('isSpotifyConvertPNG').addEventListener('change', saveSettings);
     document.getElementById('isSpotifySaveImage').addEventListener('change', saveSettings);
-    document.getElementById('isSpotifyHostImage').addEventListener('change', saveSettings);
+    document.getElementById('isSpotifyHostImgBB').addEventListener('change', saveSettings);
+    document.getElementById('isSpotifyHostFilestack').addEventListener('change', saveSettings);
     document.getElementById('isTidalCopyCover').addEventListener('change', saveSettings);
     document.getElementById('isTidalCopyArtist').addEventListener('change', saveSettings);
     document.getElementById('isTidalCopyCredits').addEventListener('change', saveSettings);
@@ -571,12 +633,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isTidalPremiumPopup').addEventListener('change', saveSettings);
     document.getElementById('isTidalConvertPNG').addEventListener('change', saveSettings);
     document.getElementById('isTidalSaveImage').addEventListener('change', saveSettings);
-    document.getElementById('isTidalHostImage').addEventListener('change', saveSettings);
+    document.getElementById('isTidalHostImgBB').addEventListener('change', saveSettings);
+    document.getElementById('isTidalHostFilestack').addEventListener('change', saveSettings);
     document.getElementById('isYandexMusicCopyCover').addEventListener('change', saveSettings);
     document.getElementById('isYandexMusicPopup').addEventListener('change', saveSettings);
     document.getElementById('isYandexMusicConvertPNG').addEventListener('change', saveSettings);
     document.getElementById('isYandexMusicSaveImage').addEventListener('change', saveSettings);
-    document.getElementById('isYandexMusicHostImage').addEventListener('change', saveSettings);
+    document.getElementById('isYandexMusicHostImgBB').addEventListener('change', saveSettings);
+    document.getElementById('isYandexMusicHostFilestack').addEventListener('change', saveSettings);
     document.getElementById('isYouTubeMusicCopyCoverPlaylist').addEventListener('change', saveSettings);
     document.getElementById('isYouTubeMusicCopyCoverChannel').addEventListener('change', saveSettings);
     document.getElementById('isYouTubeMusicCopyLink').addEventListener('change', saveSettings);

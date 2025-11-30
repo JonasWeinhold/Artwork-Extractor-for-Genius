@@ -408,7 +408,7 @@ chrome.storage.local.get([
                 'Content-Type': 'application/json',
                 'Cookie': document.cookie,
                 'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)'
+                'User-Agent': 'ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)'
             },
             body: JSON.stringify({})
         });
@@ -747,7 +747,7 @@ chrome.storage.local.get([
                             "Content-Type": "application/json",
                             "Cookie": document.cookie,
                             "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)"
+                            "User-Agent": "ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)"
                         },
                         body: JSON.stringify(payload)
                     });
@@ -772,7 +772,7 @@ chrome.storage.local.get([
                             "Content-Type": "application/json",
                             "Cookie": document.cookie,
                             "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)"
+                            "User-Agent": "ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)"
                         },
                     });
 
@@ -811,7 +811,7 @@ chrome.storage.local.get([
                             "Content-Type": "application/json",
                             "Cookie": document.cookie,
                             "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)"
+                            "User-Agent": "ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)"
                         },
                         body: JSON.stringify(payload)
                     });
@@ -1197,6 +1197,7 @@ chrome.storage.local.get([
                     'Русский (Russian)': 'ru',
                     'Svenska': 'sv',
                     'Türkçe': 'tr',
+                    'o‘zbekcha': 'uz',
                     'Tiếng Việt': 'vi',
                     '简体中文 (Simplified Chinese)': 'zh',
                     '繁體中文 (Traditional Chinese)': 'zh-Hant',
@@ -1728,7 +1729,7 @@ chrome.storage.local.get([
                             'Content-Type': 'application/json',
                             'Cookie': document.cookie,
                             'X-CSRF-Token': getCsrfToken(),
-                            'User-Agent': 'ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)'
+                            'User-Agent': 'ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)'
                         },
                         body: JSON.stringify(payload)
                     });
@@ -2116,6 +2117,8 @@ chrome.storage.local.get([
                     'Русский (Russian)',
                     'Svenska',
                     'Türkçe',
+                    'o‘zbekcha',
+                    'Tiếng Việt',
                     '简体中文 (Simplified Chinese)',
                     '繁體中文 (Traditional Chinese)'
                 ];
@@ -2946,7 +2949,7 @@ chrome.storage.local.get([
                         'Content-Type': 'application/json',
                         'Cookie': document.cookie,
                         'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)'
+                        'User-Agent': 'ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)'
                     }
                 });
 
@@ -3256,9 +3259,12 @@ chrome.storage.local.get([
 
             if (chartRow.querySelector('.lyric-status-box')) return;
 
+            // Lyrics are marked complete, staff approved, or verified
+            const lyricsAreValidated =  songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
+
             let color = '#ff7878';
             if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
-                if (songData.lyrics_marked_complete_by && songData.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+                if (lyricsAreValidated && songData.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
                     color = '#99f2a5';
                 } else if (songData.lyrics_state === 'complete' && songData.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
                     color = '#ffff64';
@@ -3266,7 +3272,7 @@ chrome.storage.local.get([
                     color = '#ffa335';
                 }
             } else {
-                if (songData.lyrics_marked_complete_by) {
+                if (lyricsAreValidated) {
                     color = '#99f2a5';
                 } else if (songData.lyrics_state === 'complete') {
                     color = '#ffff64';
@@ -3738,7 +3744,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });
@@ -3765,7 +3771,7 @@ chrome.storage.local.get([
                         'Content-Type': 'application/json',
                         'Cookie': document.cookie,
                         'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)'
+                        'User-Agent': 'ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)'
                     }
                 });
 
@@ -3781,7 +3787,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });
@@ -3798,7 +3804,7 @@ chrome.storage.local.get([
                         'Content-Type': 'application/json',
                         'Cookie': document.cookie,
                         'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)'
+                        'User-Agent': 'ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)'
                     }
                 });
 
