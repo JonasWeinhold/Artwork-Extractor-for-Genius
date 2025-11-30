@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Artwork Extractor for Genius",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Copy the artwork URL to the clipboard for genius.com by clicking the copy button on Apple Music, Deezer, Spotify, and more.",
   "permissions": [
     "activeTab",
@@ -28,6 +28,7 @@
         "*://*.45spaces.com/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/45.js"
       ]
     },
@@ -36,6 +37,7 @@
         "*://*.apple.com/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/apple.js"
       ]
     },
@@ -44,6 +46,7 @@
         "*://*.deezer.com/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/deezer.js"
       ]
     },
@@ -52,6 +55,7 @@
         "*://*.bandcamp.com/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/bandcamp.js"
       ]
     },
@@ -60,6 +64,7 @@
         "*://*.spotify.com/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/spotify.js"
       ]
     },
@@ -68,6 +73,7 @@
         "*://music.youtube.com/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/youtubemusic.js"
       ]
     },
@@ -76,6 +82,7 @@
         "*://*.soundcloud.com/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/soundcloud.js"
       ]
     },
@@ -84,6 +91,7 @@
         "*://*.tidal.com/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/tidal.js"
       ]
     },
@@ -92,6 +100,7 @@
         "*://*.yandex.ru/*"
       ],
       "js": [
+        "Services/streaming_utils.js",
         "Services/yandexmusic.js"
       ]
     },
