@@ -1,17 +1,220 @@
-chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalPremiumPopup', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImage'], function (result) {
+chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalPremiumPopup', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImgBB', 'isTidalHostFilestack'], function (result) {
   const isTidalCopyCover = result.isTidalCopyCover !== undefined ? result.isTidalCopyCover : true;
-  const isTidalCopyArtist = result.isTidalCopyArtist !== undefined ? result.isTidalCopyArtist : true; 
-  const isTidalCopyCredits = result.isTidalCopyCredits !== undefined ? result.isTidalCopyCredits : true; 
+  const isTidalCopyArtist = result.isTidalCopyArtist !== undefined ? result.isTidalCopyArtist : true;
+  const isTidalCopyCredits = result.isTidalCopyCredits !== undefined ? result.isTidalCopyCredits : true;
   const isTidalPopup = result.isTidalPopup !== undefined ? result.isTidalPopup : true;
-  const isTidalHighlighting = result.isTidalHighlighting !== undefined ? result.isTidalHighlighting : true; 
-  const isTidalPremiumPopup = result.isTidalPremiumPopup !== undefined ? result.isTidalPremiumPopup : false; 
-  const isTidalConvertPNG = result.isTidalConvertPNG !== undefined ? result.isTidalConvertPNG : true; 
-  const isTidalSaveImage = result.isTidalSaveImage !== undefined ? result.isTidalSaveImage : false; 
-  const isTidalHostImage = result.isTidalHostImage !== undefined ? result.isTidalHostImage : true; 
+  const isTidalHighlighting = result.isTidalHighlighting !== undefined ? result.isTidalHighlighting : true;
+  const isTidalPremiumPopup = result.isTidalPremiumPopup !== undefined ? result.isTidalPremiumPopup : false;
+  const isTidalConvertPNG = result.isTidalConvertPNG !== undefined ? result.isTidalConvertPNG : true;
+  const isTidalSaveImage = result.isTidalSaveImage !== undefined ? result.isTidalSaveImage : false;
+  const isTidalHostImgBB = result.isTidalHostImgBB !== undefined ? result.isTidalHostImgBB : false;
+  const isTidalHostFilestack = result.isTidalHostFilestack !== undefined ? result.isTidalHostFilestack : true;
 
   if (result['Services/tidal.js'] === false) {
     return;
   }
+
+  // Copy Cover Button
+  function addCopyCoverButton() {
+    const buttonContainer = document.querySelector('button[data-test="shuffle-all"]');
+
+    if (buttonContainer && !document.getElementById('copy-cover-button')) {
+      const copyButton = document.createElement('button');
+      copyButton.id = 'copy-cover-button';
+      copyButton.innerText = isTidalSaveImage ? "Save Cover" : "Copy Cover";
+
+      Object.assign(copyButton.style, {
+        backgroundColor: '#fff',
+        color: 'var(--wave-color-solid-base-fill)',
+        borderRadius: '1000px',
+        cursor: 'pointer',
+        fontSize: '16px',
+        fontWeight: '600',
+        lineHeight: '24px',
+        width: '160px'
+      });
+
+      copyButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        sessionStorage.setItem('copyCover', 'true');
+        sessionStorage.setItem('mouseX', event.clientX);
+        sessionStorage.setItem('mouseY', event.clientY);
+
+        const currentUrl = window.location.href;
+        const accessToken = await getTidalAccessToken();
+
+        const { coverUrl, type, id } = await getTidalArtwork(currentUrl, accessToken);
+        const imageUrl = coverUrl.replace(/\d{2,4}x\d{2,4}\.(jpg|jpeg)$/, 'origin.jpg');
+
+        if (imageUrl) {
+          const urlName = `tidal-${type}-${id}`;
+          const fileName = getFileNameFromUrl(imageUrl);
+          const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+          const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+          const design = {
+            position: "fixed",
+            backgroundColor: "#fff",
+            color: "var(--wave-color-solid-base-fill)",
+            borderRadius: "16px",
+            padding: "10px 20px",
+            fontSize: "12px",
+            fontWeight: "bold",
+            zIndex: "9999",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+            top: `${mouseY + 50}px`,
+            left: `${mouseX + 75}px`
+          };
+          await processJpgImage(imageUrl, urlName, fileName, isTidalHostFilestack, isTidalHostImgBB, isTidalSaveImage, isTidalConvertPNG, isTidalPopup, design);
+        }
+      });
+
+      buttonContainer.insertAdjacentElement('afterend', copyButton);
+    }
+  }
+
+  // Copy Cover Button for Browse Albums (Does this page still exist?)
+  function addBrowseCopyButton() {
+    console.log('createBrowseCopyButton called');
+    const mainButton = document.querySelector('.main-button');
+
+    if (mainButton && !document.getElementById('copy-cover-button')) {
+      const copyButton = document.createElement('button');
+      copyButton.id = 'copy-cover-button';
+      copyButton.innerText = isTidalSaveImage ? "Save Cover" : "Copy Cover";
+
+      Object.assign(copyButton.style, {
+        backgroundColor: '#fff',
+        color: 'var(--ts-color-text-inverted)',
+        borderRadius: '16px',
+        cursor: 'pointer',
+        fontSize: '16px',
+        fontWeight: '600',
+        lineHeight: '24px',
+        width: '160px'
+      });
+
+      copyButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        sessionStorage.setItem('copyCover', 'true');
+        sessionStorage.setItem('mouseX', event.clientX);
+        sessionStorage.setItem('mouseY', event.clientY);
+
+        const currentUrl = window.location.href;
+        const accessToken = await getTidalAccessToken();
+
+        const { coverUrl, type, id } = await getTidalArtwork(currentUrl, accessToken);
+        const imageUrl = coverUrl.replace(/\d{2,4}x\d{2,4}\.(jpg|jpeg)$/, 'origin.jpg');
+
+        if (imageUrl) {
+          const urlName = `tidal-${type}-${id}`;
+          const fileName = getFileNameFromUrl(imageUrl);
+          const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+          const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+          const design = {
+            position: "fixed",
+            backgroundColor: "#fff",
+            color: "var(--wave-color-solid-base-fill)",
+            borderRadius: "16px",
+            padding: "10px 20px",
+            fontSize: "12px",
+            fontWeight: "bold",
+            zIndex: "9999",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+            top: `${mouseY + 50}px`,
+            left: `${mouseX + 75}px`
+          };
+          await processJpgImage(imageUrl, urlName, fileName, isTidalHostFilestack, isTidalHostImgBB, isTidalSaveImage, isTidalConvertPNG, isTidalPopup, design);
+        }
+      });
+
+      mainButton.insertAdjacentElement('afterend', copyButton);
+    }
+  }
+
+  // Tidal Access Token for API Calls
+  async function getTidalAccessToken() {
+    const clientId = window.secrets.TIDAL_CLIENT_ID;
+    const clientSecret = window.secrets.TIDAL_CLIENT_SECRET;
+
+    const credentials = btoa(`${clientId}:${clientSecret}`);
+
+    try {
+      const response = await fetch('https://auth.tidal.com/v1/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Token error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.access_token;
+    } catch (error) {
+      console.error('Error fetching access token:', error.message);
+      return null;
+    }
+  }
+
+  // Tidal Artwork Fetcher via API
+  async function getTidalArtwork(url, accessToken) {
+    const parsedUrl = new URL(url);
+    const [type, id] = parsedUrl.pathname.split('/').filter(Boolean);
+
+    const supportedTypes = {
+      album: `albums/${id}/relationships/coverArt?include=coverArt`,
+      playlist: `playlists/${id}/relationships/coverArt?include=coverArt`,
+      artist: `artists/${id}/relationships/profileArt?include=profileArt`
+    };
+
+    if (!supportedTypes[type]) {
+      return null;
+    }
+
+    const countryCode = await new Promise((resolve) => {
+      chrome.storage.local.get(['tidalCountryCode'], (result) => {
+        resolve(result.tidalCountryCode || 'US');
+      });
+    });
+    console.log('Using Country Code:', countryCode);
+    try {
+      const response = await fetch(`https://openapi.tidal.com/v2/${supportedTypes[type]}&countryCode=${countryCode}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const artwork = data.included?.find(item => item.type === 'artworks' && item.id === data.data[0]?.id);
+      const coverUrl = artwork?.attributes?.files?.[0]?.href;
+      return { coverUrl, type, id };
+
+    } catch (error) {
+      console.error('Error fetching cover:', error.message);
+      return null;
+    }
+  }
+
+  function getFileNameFromUrl(url) {
+    const parts = url.split('/images/');
+    const fileNameWithExtension = parts.length > 1 ? parts[1] : '';
+    const fileNameWithoutSuffix = fileNameWithExtension.split('.')[0];
+    return fileNameWithoutSuffix;
+  }
+
+
+
+
 
   const replacements = {
     "BACKGROUND VOCALIST": "Background Vocals",
@@ -39,266 +242,6 @@ chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyA
     "PROGRAMMING": "Programmer",
     "MUSIC PUBLISHER": "Publisher",
   };
-
-  function clickTidalPremiumPopup() {
-    const closeButton = document.querySelector('._modalHeader_e62bee9 [data-test="modal-close-button"]');
-
-    if (closeButton) {
-      closeButton.click();
-    }
-  }
-
-  function createBrowseCopyButton() {
-    console.log('createBrowseCopyButton called');
-    const mainButton = document.querySelector('.main-button');
-
-    if (mainButton && !document.getElementById('copy-cover-button')) {
-      const copyButton = document.createElement('button');
-      copyButton.id = 'copy-cover-button';
-      copyButton.innerText = isTidalSaveImage ? "Save Cover" : "Copy Cover";
-      Object.assign(copyButton.style, {
-        backgroundColor: '#fff',
-        color: 'var(--ts-color-text-inverted)',
-        borderRadius: '16px',
-        cursor: 'pointer',
-        fontSize: '16px',
-        fontWeight: '600',
-        lineHeight: '24px',
-        width: '160px'
-      });
-
-      copyButton.addEventListener('click', async (event) => {
-        event.preventDefault();
-        sessionStorage.setItem('copyCover', 'true');
-        sessionStorage.setItem('mouseX', event.clientX);
-        sessionStorage.setItem('mouseY', event.clientY);
-        const imageUrl = await getLatestImageUrl();
-        if (imageUrl) {
-          if (imageUrl) {
-            await processTidalImage(imageUrl);
-          }
-        }
-      });
-
-      mainButton.insertAdjacentElement('afterend', copyButton);
-    }
-  }
-
-  function createCopyButton() {
-    const buttonContainer = document.querySelector('button[data-test="shuffle-all"]');
-
-    if (buttonContainer && !document.getElementById('copy-cover-button')) {
-      const copyButton = document.createElement('button');
-      copyButton.id = 'copy-cover-button';
-      copyButton.innerText = isTidalSaveImage ? "Save Cover" : "Copy Cover";
-      Object.assign(copyButton.style, {
-        backgroundColor: '#fff',
-        color: 'var(--wave-color-solid-base-fill)',
-        borderRadius: '16px',
-        cursor: 'pointer',
-        fontSize: '16px',
-        fontWeight: '600',
-        lineHeight: '24px',
-        width: '160px'
-      });
-
-      copyButton.addEventListener('click', async (event) => {
-        event.preventDefault();
-        sessionStorage.setItem('copyCover', 'true');
-        sessionStorage.setItem('mouseX', event.clientX);
-        sessionStorage.setItem('mouseY', event.clientY);
-        const imageUrl = await getLatestImageUrl();
-        if (imageUrl) {
-          if (imageUrl) {
-            await processTidalImage(imageUrl);
-          }
-        }
-      });
-
-      buttonContainer.insertAdjacentElement('afterend', copyButton);
-    }
-  }
-
-  async function convertJpgToPng(jpgUrl) {
-    try {
-      const image = new Image();
-      image.crossOrigin = "anonymous";
-      image.src = jpgUrl;
-
-      await new Promise((resolve, reject) => {
-        image.onload = resolve;
-        image.onerror = reject;
-      });
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-
-      const originalWidth = image.width;
-      const originalHeight = image.height;
-
-      canvas.width = originalWidth;
-      canvas.height = originalHeight;
-
-      ctx.drawImage(image, 0, 0, originalWidth, originalHeight);
-
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error('Fehler beim Laden oder Konvertieren:', error);
-      return null;
-    }
-  }
-
-  async function uploadToImgBB(pngDataUrl, fileName) {
-    try {
-      const base64Response = await fetch(pngDataUrl);
-      const blob = await base64Response.blob();
-
-      const formData = new FormData();
-      formData.append('image', blob);
-      formData.append('name', fileName);
-
-      const apiKey = await window.secrets.IMGBB_API_KEY;
-      const apiUrl = `https://api.imgbb.com/1/upload?key=${apiKey}`;
-            console.log('ImgBB API Key:', apiKey);
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error uploading: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      return data.data.url;
-    } catch (error) {
-      console.error('Error uploading to ImgBB:', error);
-      return null;
-    }
-  }
-
-  async function processTidalImage(extractedUrl) {
-    const fileName = getFileNameFromUrl(extractedUrl);
-
-    if (isTidalConvertPNG) {
-      const pngDataUrl = await convertJpgToPng(extractedUrl);
-
-      if (pngDataUrl) {
-        if (isTidalHostImage) {
-          const uploadedUrl = await uploadToImgBB(pngDataUrl, fileName);
-          if (uploadedUrl) {
-            await navigator.clipboard.writeText(uploadedUrl);
-            if (isTidalPopup) {
-              showPopupNotification();
-            }
-          } else {
-            console.error('Error uploading the image.');
-          }
-        } else if (isTidalSaveImage) {
-          const link = document.createElement('a');
-          link.href = pngDataUrl;
-          link.download = `${fileName}.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      } else {
-        console.error('Error converting to PNG.');
-      }
-    } else {
-      if (isTidalHostImage) {
-        await navigator.clipboard.writeText(extractedUrl);
-        if (isTidalPopup) {
-          showPopupNotification();
-        }
-      } else if (isTidalSaveImage) {
-        const response = await fetch(extractedUrl);
-        const blob = await response.blob(); 
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob); 
-        link.download = `${fileName}.jpg`; 
-        document.body.appendChild(link);
-        link.click(); 
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href); 
-      }
-    }
-  }
-
-  function getFileNameFromUrl(url) {
-    const parts = url.split('/images/'); 
-    const fileNameWithExtension = parts.length > 1 ? parts[1] : ''; 
-    const fileNameWithoutSuffix = fileNameWithExtension.split('.')[0]; 
-    return fileNameWithoutSuffix; 
-  }
-
-  function showPopupNotification() {
-    const popup = document.createElement("div");
-    popup.className = "popup-notification";
-    popup.innerText = "Copied to clipboard";
-    Object.assign(popup.style, {
-      position: "fixed",
-      backgroundColor: "#fff",
-      color: "var(--wave-color-solid-base-fill)",
-      borderRadius: "16px",
-      padding: "10px 20px",
-      fontSize: "12px",
-      fontWeight: "bold",
-      zIndex: "9999",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.2)"
-    });
-    const mouseX = parseInt(sessionStorage.getItem('mouseX'), 10);
-    const mouseY = parseInt(sessionStorage.getItem('mouseY'), 10);
-    popup.style.top = `${mouseY + 50}px`;
-    popup.style.left = `${mouseX + 75}px`;
-    document.body.appendChild(popup);
-    setTimeout(() => {
-      document.body.removeChild(popup);
-    }, 1500);
-  }
-
-  async function getLatestImageUrl() {
-    const images = Array.from(document.querySelectorAll('img'));
-    const currentUrl = window.location.href;
-
-    if (images.length > 0) {
-      return images[0].src.replace(/\d{2,4}x\d{2,4}\.(jpg|png|jpeg)$/, 'origin.jpg');
-    }
-
-    return null;
-  }
-
-  async function getLatestImageUrlold() {
-    const images = Array.from(document.querySelectorAll('img'));
-    const currentUrl = window.location.href;
-    console.log('getLatestImageUrl called', currentUrl, images);
-    const dimensions = {
-      'https://tidal.com/album/': { width: 1280, height: 1280 },
-      'https://tidal.com/artist/': { width: 750, height: 750 },
-      'https://tidal.com/playlist/': { width: 1080, height: 1080 },
-      'https://tidal.com/browse/album/': { width: 320, height: 320 },
-      'https://listen.tidal.com/album/': { width: 1280, height: 1280 },
-      'https://listen.tidal.com/artist/': { width: 750, height: 750 },
-      'https://listen.tidal.com/playlist/': { width: 1080, height: 1080 },
-      'https://listen.tidal.com/browse/album/': { width: 320, height: 320 }
-    };
-
-    for (const [url, { width, height }] of Object.entries(dimensions)) {
-      if (currentUrl.startsWith(url)) {
-        const filteredImages = images.filter(img => img.naturalWidth === width && img.naturalHeight === height);
-        console.log('Filtered Images:', filteredImages);
-        if (filteredImages.length > 0) {
-          return filteredImages[filteredImages.length - 1].src.replace(/(1280x1280|750x750|1080x1080|320x320)\.jpg$/, 'origin.jpg');
-        }
-        break;
-      }
-    }
-    return null;
-  }
 
   function replaceWords(text) {
     for (const [key, value] of Object.entries(replacements)) {
@@ -352,10 +295,9 @@ chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyA
       });
     });
 
-
     const itemElements = document.querySelectorAll('.wave-text-description-medium'); itemElements.forEach(item => {
       const names = item.innerText.split(',').map(name => name.trim());
-      item.innerHTML = ''; 
+      item.innerHTML = '';
       names.forEach((name, index) => {
         const nameSpan = document.createElement('span');
         nameSpan.innerText = name;
@@ -368,33 +310,43 @@ chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyA
     });
   }
 
+
+
+
+
+  function clickTidalPremiumPopup() {
+    const closeButton = document.querySelector('._modalHeader_e62bee9 [data-test="modal-close-button"]');
+
+    if (closeButton) {
+      closeButton.click();
+    }
+  }
+
+
+
+
+
   window.addEventListener('click', () => {
     const tidalArtistUrlPattern = /^https:\/\/(?:listen\.)?tidal\.com\/artist\//;
     const tidalAlbumUrlPattern = /^https:\/\/(?:listen\.)?tidal\.com\/album\//;
     const tidalBrowseAlbumUrlPattern = /^https:\/\/(?:listen\.)?tidal\.com\/browse\/album\//;
     const tidalPlaylistUrlPattern = /^https:\/\/(?:listen\.)?tidal\.com\/playlist\//;
 
-    //const tidalArtistUrlPattern = /^https:\/\/listen\.tidal\.com\/artist\//;
-    //const tidalAlbumUrlPattern = /^https:\/\/listen\.tidal\.com\/album\//;
-    //const tidalPlaylistUrlPattern = /^https:\/\/listen\.tidal\.com\/playlist\//;
-
     if (tidalArtistUrlPattern.test(window.location.href)) {
-      if (isTidalCopyArtist) createCopyButton();
+      if (isTidalCopyArtist) addCopyCoverButton();
     }
     if (tidalAlbumUrlPattern.test(window.location.href) || tidalPlaylistUrlPattern.test(window.location.href)) {
-      if (isTidalCopyCover) createCopyButton();
+      if (isTidalCopyCover) addCopyCoverButton();
     }
     if (tidalBrowseAlbumUrlPattern.test(window.location.href)) {
-      if (isTidalCopyCover) createBrowseCopyButton();
+      if (isTidalCopyCover) addBrowseCopyButton();
     }
     if (isTidalCopyCredits) enableTextHoverAndCopy();
   });
 
-  document.addEventListener('DOMContentLoaded', enableTextHoverAndCopy);
-
   const observer = new MutationObserver(() => {
-    if (isTidalPremiumPopup) clickTidalPremiumPopup(); 
+    if (isTidalPremiumPopup) clickTidalPremiumPopup();
   });
-  observer.observe(document.body, { childList: true, subtree: true }); 
+  observer.observe(document.body, { childList: true, subtree: true });
 
 });

@@ -442,6 +442,7 @@ chrome.storage.local.get([
                 { code: 'SV', name: 'Swedish' },
                 { code: 'TR', name: 'Turkish' },
                 { code: 'UK', name: 'Ukrainian' },
+                { code: 'UZ', name: 'Uzbek' },
                 { code: 'VI', name: 'Vietnamese' },
             ];
         } else if (dropdownType === "Cleanup") {
@@ -937,6 +938,28 @@ chrome.storage.local.get([
                         { displayText: "Stick", fullText: "Stick" },
                         { displayText: "Mellanspel", fullText: "Mellanspel" }
                     ],
+                    "UZ": [
+                        { displayText: "Header", fullText: "Header" },
+                        { displayText: null, fullText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental" },
+                        { displayText: null, fullText: null },
+                        { displayText: "Kirish", fullText: "Kirish" },
+                        { displayText: "Chiqish", fullText: "Chiqish" },
+                        { displayText: "Skit", fullText: "Skit" },
+                        { displayText: "Qism", fullText: "Qism" },
+                        { displayText: "Ko'plet", fullText: "Ko'plet" },
+                        { displayText: "Oldinaqarot", fullText: "Oldinaqarot" },
+                        { displayText: "Naqarot", fullText: "Naqarot" },
+                        { displayText: "Keyingi-naqarot", fullText: "Keyingi-naqarot" },
+                        { displayText: "Refren", fullText: "Refren" },
+                        { displayText: "Ko'prik", fullText: "Ko'prik" },
+                        { displayText: "Breykdaun", fullText: "Breykdaun" },
+                        { displayText: "Oraliq", fullText: "Oraliq" },
+                        { displayText: "Cholg'u qismi", fullText: "Cholg'u qismi" },
+                        { displayText: "O'tish", fullText: "O'tish" },
+                        { displayText: "Build", fullText: "Build" },
+                        { displayText: "Drop", fullText: "Drop" }
+                    ],
                     "VI": [
                         { displayText: "Header", fullText: "Header" },
                         { displayText: "Translation", fullText: "Translation" },
@@ -1310,6 +1333,7 @@ chrome.storage.local.get([
             'SV': ``,
             'TR': `["${songTitle}"${featuringText} için şarkı sözleri]`,
             'UK': `[Текст пісні «${songTitle}»${featuringText}]`,
+            'UZ': `[«${songTitle}» qo'shig'i matni${featuringText}]`,
             'VI': `[Lời bài hát "${songTitle}"${featuringText}]`,
             'ZH-S': `[${primaryArtists}《${songTitle}》${formattedFeaturingText}歌词]`,
             'ZH-T': `[${primaryArtists}《${songTitle}》${formattedFeaturingText}歌詞]`,
@@ -1872,7 +1896,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.5 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.4.6 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });

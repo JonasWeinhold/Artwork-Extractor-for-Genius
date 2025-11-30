@@ -1,206 +1,232 @@
 chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage'], function (result) {
     const isAppleMusicCopyTracklist = result.isAppleMusicCopyTracklist !== undefined ? result.isAppleMusicCopyTracklist : true;
     const isAppleMusicCopyCover = result.isAppleMusicCopyCover !== undefined ? result.isAppleMusicCopyCover : true;
-    const isAppleMusicCopyAnimatedCover = result.isAppleMusicCopyAnimatedCover !== undefined ? result.isAppleMusicCopyAnimatedCover : true; 
-    const isAppleMusicCopyArtist = result.isAppleMusicCopyArtist !== undefined ? result.isAppleMusicCopyArtist : true; 
-    const isAppleMusicCopyCredits = result.isAppleMusicCopyCredits !== undefined ? result.isAppleMusicCopyCredits : true; 
-    const isAppleMusicPopup = result.isAppleMusicPopup !== undefined ? result.isAppleMusicPopup : true; 
+    const isAppleMusicCopyAnimatedCover = result.isAppleMusicCopyAnimatedCover !== undefined ? result.isAppleMusicCopyAnimatedCover : true;
+    const isAppleMusicCopyArtist = result.isAppleMusicCopyArtist !== undefined ? result.isAppleMusicCopyArtist : true;
+    const isAppleMusicCopyCredits = result.isAppleMusicCopyCredits !== undefined ? result.isAppleMusicCopyCredits : true;
+    const isAppleMusicPopup = result.isAppleMusicPopup !== undefined ? result.isAppleMusicPopup : true;
     const isAppleMusicHighlighting = result.isAppleMusicHighlighting !== undefined ? result.isAppleMusicHighlighting : true;
-    const isAppleMusicSaveImage = result.isAppleMusicSaveImage !== undefined ? result.isAppleMusicSaveImage : false; 
+    const isAppleMusicSaveImage = result.isAppleMusicSaveImage !== undefined ? result.isAppleMusicSaveImage : false;
 
     if (result['Services/apple.js'] === false) {
         return;
     }
 
-    const replacements = {
-        "Synth Bass": "Bass Synthesizer",
-        "String Arranger": "Strings Arranger",
-        "Editing Engineer": "Audio Editor",
-    };
+    // Copy Cover Button
+    function addCopyCoverButton() {
+        const primaryActions = document.querySelector(".primary-actions");
+        const playButton = document.querySelector(".primary-actions__button--play");
 
-    function styleInlineButton(button, display, title) {
-        button.classList.add("tracklist-helper-btn");
-        button.title = title;
-        button.innerText = display;
-        button.style.flex = "0 0 auto";
-        button.style.borderRadius = "5px";
-        button.style.border = "none";
-        if (title === "Copy Primary Artists") {
-            button.style.backgroundColor = "#d60017";
-            button.style.fontWeight = "600";
-        } else {
-            button.style.backgroundColor = "#1db954";
-            button.style.fontWeight = "500";
-        }
-        button.style.color = "white";
-        button.style.padding = "5px";
-        button.style.cursor = "pointer";
-        if (display === "CT") {
-            button.style.width = "1.75rem";
-        } else {
-            button.style.width = "2.25rem";
-        }
-    }
+        if (primaryActions && playButton && !document.getElementById('copy-cover-button')) {
+            const copyWrapper = playButton.cloneNode(true);
 
-    function createButtonHolder() {
-        const buttonHolder = document.createElement("div");
-        buttonHolder.style.display = "flex";
-        buttonHolder.style.flexDirection = "row";
-        buttonHolder.style.justifyContent = "flex-end";
-        buttonHolder.style.gap = "10px";
-        return buttonHolder;
-    }
+            const copyButton = copyWrapper.querySelector("button");
+            copyButton.id = "copy-cover-button";
+            copyButton.innerText = isAppleMusicSaveImage ? "Save Cover" : "Copy Cover";
 
-    function createButton(innerText, buttonClass, outerClasses = []) {
-        const outerDiv = document.createElement("div");
-        const innerButton = document.createElement("button");
-        outerDiv.classList.add(...outerClasses);
-        innerButton.classList.add(buttonClass, ...outerClasses);
-        innerButton.innerText = innerText;
-        outerDiv.appendChild(innerButton);
-        return outerDiv;
-    }
+            copyButton.replaceWith(copyButton.cloneNode(true));
+            const freshButton = copyWrapper.querySelector("button");
+            freshButton.addEventListener("click", async (event) => {
+                event.preventDefault();
+                sessionStorage.setItem("mouseX", event.clientX);
+                sessionStorage.setItem("mouseY", event.clientY);
 
-    function createPrimaryActionButtons() {
-        const selectorPlay = ".primary-actions__button--play";
-        const existingPlayButton = document.querySelector(selectorPlay);
-        const playOuterChildClasses = existingPlayButton?.children?.[0]?.classList || [];
+                const imageUrl = await getAppleMusicArtwork("cover");
+                const fileName = getFileNameFromUrl(imageUrl);
+                const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+                const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+                const design = {
+                    position: "fixed",
+                    backgroundColor: "#d60017",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "5px",
+                    padding: "10px 20px",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    zIndex: "9999",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                    top: `${mouseY + 30}px`,
+                    left: `${mouseX + 40}px`
+                };
+                await processPngImage(imageUrl, fileName, isAppleMusicSaveImage, isAppleMusicPopup, design);
+            });
 
-        const copyCoverButton = createButton(isAppleMusicSaveImage ? "Save Cover" : "Copy Cover", "tracklist-helper-btn", [...existingPlayButton?.classList || [], ...playOuterChildClasses]);
-        copyCoverButton.classList.remove(selectorPlay.substring(1));
-
-        const animatedButton = createButton("Copy Animated Cover", "tracklist-helper-btn", [...existingPlayButton?.classList || [], ...playOuterChildClasses]);
-        animatedButton.classList.remove(selectorPlay.substring(1));
-
-        return [copyCoverButton, animatedButton];
-    }
-
-
-
-
-    // Function to copy cover URL to clipboard
-    function copyCoverUrlToClipboard(event) {
-        const pictureElement = document.querySelector('picture');
-        if (pictureElement) {
-            const sourceElement = pictureElement.querySelector('source');
-            if (sourceElement) {
-                const srcset = sourceElement.getAttribute('srcset');
-                if (srcset) {
-                    const coverImageUrl = srcset.split(',')[0].trim().split(' ')[0];
-                    let modifiedUrl = coverImageUrl;
-
-                    // Modify the URL based on specific conditions
-                    if (coverImageUrl.endsWith('200x200cc.webp')) {
-                        modifiedUrl = coverImageUrl.replace(/200x200cc\.webp$/, '1000x1000cc.png');
-                    } else if (coverImageUrl.endsWith('200x200bb.webp')) {
-                        modifiedUrl = coverImageUrl.replace(/200x200bb\.webp$/, '1000x1000bb.png');
-                    } else if (coverImageUrl.endsWith('296x296bb.webp')) {
-                        modifiedUrl = coverImageUrl.replace(/296x296bb\.webp$/, '1000x1000bb.png');
-                    } else if (coverImageUrl.endsWith('296x296bb.webp')) {
-                        modifiedUrl = coverImageUrl.replace(/296x296bb\.webp$/, '1000x1000bb.png');
-                    } else if (coverImageUrl.match(/200x200SC\.(.+?)\.webp(\?l=[a-zA-Z-]*)?$/)) {
-                        const identifier = coverImageUrl.match(/200x200SC\.(.+?)\.webp(\?l=[a-zA-Z-]*)?$/)[1];
-                        modifiedUrl = coverImageUrl.replace(/200x200SC\..+?\.webp(\?l=[a-zA-Z-]*)?$/, `1000x1000SC.${identifier}.png`);
-                    }
-
-                    if (isAppleMusicSaveImage) {
-                        fetch(modifiedUrl)
-                            .then(response => response.blob())
-                            .then(blob => {
-                                const urlParts = modifiedUrl.split('/'); 
-                                const fileName = urlParts[urlParts.length - 2].split('.')[0];
-
-                                const link = document.createElement("a");
-                                const url = URL.createObjectURL(blob);
-                                link.href = url;
-                                link.download = `${fileName}.png`; 
-                                link.style.display = "none"; 
-                                document.body.appendChild(link);
-                                link.click(); 
-                                document.body.removeChild(link); 
-                                URL.revokeObjectURL(url); 
-                            })
-                            .catch(error => {
-                                console.error("Fehler beim Herunterladen des Bildes:", error);
-                            });
-                    } else {
-                        navigator.clipboard.writeText(modifiedUrl).then(() => {
-                            if (isAppleMusicPopup) showPopupNotification(event);
-                        });
-                    }
-                }
-            }
+            primaryActions.appendChild(copyWrapper);
         }
     }
 
+    // Copy Animated Cover Button
+    function addAnimatedCoverButton() {
+        const primaryActions = document.querySelector(".primary-actions");
+        const playButton = document.querySelector(".primary-actions__button--play");
+        const videoArtworkContainer = document.querySelector('.video-artwork__container');
 
-    // Function to copy the URL of an XHR element to the clipboard
-    function copyAnimationUrlToClipboard(event) {
-        function checkXhrEntries() {
-            fetch(location.href)
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const metaTags = doc.getElementsByTagName('meta');
-                    let coverUrl = '';
+        if (primaryActions && playButton && videoArtworkContainer && !document.getElementById('copy-animated-cover-button')) {
+            const copyWrapper = playButton.cloneNode(true);
 
-                    for (let i = 0; i < metaTags.length; i++) {
-                        if (metaTags[i].getAttribute('property') === 'og:image') {
-                            coverUrl = metaTags[i].getAttribute('content');
-                            break;
-                        }
-                    }
+            const copyButton = copyWrapper.querySelector("button");
+            copyButton.id = "copy-animated-cover-button";
+            copyButton.innerText = isAppleMusicSaveImage ? "Save Animated Cover" : "Copy Animated Cover";
 
-                    if (coverUrl) {
-                        copyCoverUrlToClipboard(coverUrl);
-                    }
+            copyButton.replaceWith(copyButton.cloneNode(true));
+            const freshButton = copyWrapper.querySelector("button");
+            freshButton.addEventListener("click", async (event) => {
+                event.preventDefault();
+                sessionStorage.setItem("mouseX", event.clientX);
+                sessionStorage.setItem("mouseY", event.clientY);
 
-                    const xhrEntries = performance.getEntriesByType("resource").filter(entry =>
-                        entry.initiatorType === "xmlhttprequest"
-                    );
+                copyAnimationUrlToClipboard(event);
+            });
 
-                    let foundUrl = "";
+            primaryActions.appendChild(copyWrapper);
+        }
+    }
 
-                    // Iterate through XHR entries in reverse order
-                    for (let i = xhrEntries.length - 1; i >= 0; i--) {
-                        const entry = xhrEntries[i];
-                        if (entry.name.includes("sdr_") && (entry.name.endsWith("2160x2160-.mp4") || entry.name.endsWith("2160x2160_-.mp4"))) {
-                            foundUrl = entry.name; 
-                            break; 
-                        }
-                    }
+    // Copy Primary Artist Button
+    function addCopyArtistButton() {
+        const secondaryActions = document.querySelector(".secondary-actions");
+        const playButton = document.querySelector(".primary-actions__button--play");
+        const primaryArtists = document.querySelector(".headings__subtitles")?.querySelectorAll("a") || [];
 
-                    // If a URL is found, copy it to the clipboard
-                    if (foundUrl) {
-                        navigator.clipboard.writeText(foundUrl).then(() => {
-                            if (isAppleMusicPopup) showPopupNotification(event);
-                            setTimeout(() => {
-                                window.open("https://ezgif.com/video-to-gif", "_blank");
-                            }, 500);
-                        }).catch(err => console.error("Error copying to clipboard:", err));
-                    } else {
-                        // Get the current URL of the page
-                        const currentUrl = window.location.href;
+        if (secondaryActions && playButton && primaryArtists.length > 0 && !document.querySelector('[id^="copy-artist-button-"]')) {
+            Array.from(primaryArtists).reverse().forEach((linkElement, index) => {
+                const artistName = linkElement.innerText;
 
-                        // Copy the current URL to the clipboard
-                        navigator.clipboard.writeText(currentUrl).then(() => {
-                            setTimeout(() => {
-                                window.open("https://ezgif.com/video-to-gif", "_blank");
-                                window.open("https://bendodson.com/projects/apple-music-artwork-finder/", "_blank");
-                            }, 500);
-                        }).catch(err => console.error("Error copying to clipboard:", err));
-                    }
-                })
-                .catch(error => {
+                const copyWrapper = playButton.cloneNode(true);
+                const freshButton = copyWrapper.querySelector("button");
+
+                freshButton.id = `copy-artist-button-${index}`;
+                freshButton.innerText = primaryArtists.length === 1 ? "CA" : `CA${primaryArtists.length - index}`;
+                Object.assign(freshButton.style, {
+                    minWidth: "2.25rem",
+                    width: "2.5rem",
                 });
+
+                freshButton.addEventListener("click", async (event) => {
+                    event.preventDefault();
+                    await navigator.clipboard.writeText(artistName);
+                });
+
+                secondaryActions.prepend(copyWrapper);
+            });
         }
-        setTimeout(checkXhrEntries, 1500);
     }
 
+    // Copy Tracklist Button
 
-    // Function to copy the URL from the meta tag on click
-    function copyArtistUrlToClipboard() {
+    function addCopyTracklistButton() {
+        const songs = document.querySelectorAll("[data-testid='track-title']");
+        const playButton = document.querySelector(".primary-actions__button--play");
+
+        if (playButton && songs.length > 0 && !document.querySelector('[id^="copy-title-button-"]')) {
+            songs.forEach((song, index) => {
+                const songTitle = song.innerText;
+                const featuredArtists = (song.innerText.match(/[\(\[]\s*feat\.\s+(.*?)\s*[\)\]]/i) || [])[1]?.trim() || null;
+
+                const attachTo = song.closest(".songs-list-row__song-wrapper");
+                const primaryArtists = attachTo.querySelectorAll(".songs-list-row__by-line a");
+
+                const buttonContainer = document.createElement("div");
+                Object.assign(buttonContainer.style, {
+                    display: "flex",
+                    flexDirection: "row",
+                    gap: "0.5rem",
+                });
+
+                // CA Button
+                primaryArtists.forEach((artistElement, artistIndex, arr) => {
+                    const artistName = artistElement.innerText;
+
+                    const copyWrapperCA = playButton.cloneNode(true);
+                    const freshButtonCA = copyWrapperCA.querySelector("button");
+
+                    freshButtonCA.id = `copy-artist-button-${index}-${artistIndex}`;
+                    freshButtonCA.innerText = arr.length === 1 ? "CA" : `CA${artistIndex + 1}`;
+
+                    Object.assign(freshButtonCA.style, {
+                        minWidth: "2.25rem",
+                        width: "2.25rem",
+                        backgroundColor: "#1db954"
+                    });
+
+                    freshButtonCA.addEventListener("click", async (event) => {
+                        event.preventDefault();
+                        await navigator.clipboard.writeText(artistName);
+                    });
+
+                    buttonContainer.appendChild(copyWrapperCA);
+                });
+
+
+                // FA Button
+                if (featuredArtists) {
+                    const copyWrapperFA = playButton.cloneNode(true);
+                    const freshButtonFA = copyWrapperFA.querySelector("button");
+
+                    freshButtonFA.id = `copy-featured-button-${index}`;
+                    freshButtonFA.innerText = "FA";
+
+                    Object.assign(freshButtonFA.style, {
+                        minWidth: "2.25rem",
+                        width: "2.25rem",
+                        backgroundColor: "#1db954"
+                    });
+
+                    freshButtonFA.addEventListener("click", async (event) => {
+                        event.preventDefault();
+                        await navigator.clipboard.writeText(featuredArtists);
+                    });
+
+                    buttonContainer.appendChild(copyWrapperFA);
+                }
+
+                // CT Button
+                const copyWrapperCT = playButton.cloneNode(true);
+                const freshButtonCT = copyWrapperCT.querySelector("button");
+
+                freshButtonCT.id = `copy-title-button-${index}`;
+                freshButtonCT.innerText = "CT";
+                Object.assign(freshButtonCT.style, {
+                    minWidth: "2rem",
+                    width: "2rem",
+                    backgroundColor: "#1db954"
+                });
+
+                freshButtonCT.addEventListener("click", async (event) => {
+                    event.preventDefault();
+
+                    // Replace angle brackets with safe characters for Genius
+                    const modifiedTitle = song.innerText
+                        .replace(/</g, '˂')
+                        .replace(/>/g, '˃');
+
+                    // Remove any "(feat. ...)" or "[with ...]" sections from title
+                    let cleanedTitle = modifiedTitle.replace(/\s*[\(\[]\s*(feat\.|with)\s+.*?[\)\]]/i, '');
+
+                    const parenthesisMatch = modifiedTitle.match(/\(\s*(feat\.|with)\s+.*?\)/i);
+                    if (parenthesisMatch) {
+                        const parenthesisIndex = modifiedTitle.indexOf(parenthesisMatch[0]);
+                        const remainder = modifiedTitle.slice(parenthesisIndex + parenthesisMatch[0].length);
+                        const bracketMatch = remainder.match(/\[([^\]]+)\]/);
+
+                        if (bracketMatch) {
+                            cleanedTitle = cleanedTitle.replace(bracketMatch[0], `(${bracketMatch[1]})`);
+                        }
+                    }
+
+                    await navigator.clipboard.writeText(cleanedTitle.trim());
+                });
+
+                buttonContainer.appendChild(copyWrapperCT);
+
+
+                attachTo.appendChild(buttonContainer);
+            });
+        }
+    }
+
+    function addCopyArtistArtwork() {
         const artistHeader = document.querySelector('h1.artist-header__name');
         if (artistHeader) {
             artistHeader.style.cursor = 'pointer';
@@ -210,168 +236,186 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
             artistHeader.addEventListener('mouseleave', () => { artistHeader.style.textDecoration = 'none'; });
 
             artistHeader.addEventListener('click', async (event) => {
-                try {
-                    await new Promise(resolve => {
-                        if (document.readyState === 'complete') {
-                            resolve();
-                        } else {
-                            window.addEventListener('load', resolve);
-                        }
+                event.preventDefault();
+                sessionStorage.setItem('mouseX', event.clientX);
+                sessionStorage.setItem('mouseY', event.clientY);
+
+                const imageUrl = await getAppleMusicArtwork("artist")
+                console.log(imageUrl);
+                const fileName = getFileNameFromUrl(imageUrl);
+                const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+                const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+                const design = {
+                    position: "fixed",
+                    backgroundColor: "#d60017",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "5px",
+                    padding: "10px 20px",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    zIndex: "9999",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                    top: `${mouseY + 30}px`,
+                    left: `${mouseX + 40}px`
+                };
+                await processPngImage(imageUrl, fileName, isAppleMusicSaveImage, isAppleMusicPopup, design);
+            });
+        }
+    }
+
+
+    async function getAppleMusicArtwork(type) {
+        let coverUrl, imageUrl;
+
+        if (type === "cover") {
+            coverUrl = document.querySelector("picture")?.querySelector("source")?.getAttribute("srcset")
+                ?.split(",")[0].trim().split(" ")[0];
+
+            const resolutionRegex = /(\d{2,3}x\d{2,3})(cc|bb|SC\.[^\.]+)\.webp(\?l=[a-zA-Z-]*)?$/;
+            const match = coverUrl?.match(resolutionRegex);
+
+            if (match) {
+                imageUrl = coverUrl.replace(resolutionRegex, `1000x1000${match[2]}.png`);
+            }
+        } else if (type === "artist") {
+            coverUrl = document.querySelectorAll('meta[property="og:image"]')[1]?.getAttribute("content");
+            console.log(coverUrl);
+            imageUrl = coverUrl.replace(/\/[^\/]*$/, "/1000x1000bb.png");
+        }
+
+        return imageUrl;
+    }
+
+    async function getAppleMusicArtworkOld() {
+        const coverUrl = document.querySelector('picture')?.querySelector('source')?.getAttribute('srcset')?.split(',')[0].trim().split(' ')[0];
+        if (coverUrl) {
+            let imageUrl = coverUrl;
+
+            if (coverUrl.endsWith('200x200cc.webp')) {
+                imageUrl = coverUrl.replace(/200x200cc\.webp$/, '1000x1000cc.png');
+            } else if (coverUrl.endsWith('200x200bb.webp')) {
+                imageUrl = coverUrl.replace(/200x200bb\.webp$/, '1000x1000bb.png');
+            } else if (coverUrl.endsWith('296x296bb.webp')) {
+                imageUrl = coverUrl.replace(/296x296bb\.webp$/, '1000x1000bb.png');
+            } else if (coverUrl.endsWith('296x296bb.webp')) {
+                imageUrl = coverUrl.replace(/296x296bb\.webp$/, '1000x1000bb.png');
+            } else if (coverUrl.match(/200x200SC\.(.+?)\.webp(\?l=[a-zA-Z-]*)?$/)) {
+                const identifier = coverUrl.match(/200x200SC\.(.+?)\.webp(\?l=[a-zA-Z-]*)?$/)[1];
+                imageUrl = coverUrl.replace(/200x200SC\..+?\.webp(\?l=[a-zA-Z-]*)?$/, `1000x1000SC.${identifier}.png`);
+            }
+            return imageUrl;
+        }
+    }
+
+
+    function getFileNameFromUrl(url) {
+        const parts = url.split('/');
+        const fileNameWithExtension = parts[parts.length - 2].split('.')[0];
+        return fileNameWithExtension;
+    }
+
+
+    async function copyAnimationUrlToClipboard(event) {
+        function findAnimationUrl() {
+            const xhrEntries = performance.getEntriesByType("resource")
+                .filter(entry => entry.initiatorType === "xmlhttprequest");
+
+            for (let i = xhrEntries.length - 1; i >= 0; i--) {
+                const entry = xhrEntries[i];
+                if (entry.name.includes("sdr_") && /2160x2160[-_]\.mp4$/.test(entry.name)) {
+                    return entry.name;
+                }
+            }
+            return null;
+        }
+
+        async function checkXhrEntries() {
+            try {
+                const foundUrl = findAnimationUrl();
+
+                if (foundUrl) {
+                    const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+                    const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+                    const design = {
+                        position: "fixed",
+                        backgroundColor: "#d60017",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "5px",
+                        padding: "10px 20px",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        zIndex: "9999",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                        top: `${mouseY + 30}px`,
+                        left: `${mouseX + 40}px`
+                    };
+                    if (isAppleMusicPopup) showPopupNotification(design);
+                    await navigator.clipboard.writeText(foundUrl);
+                    setTimeout(() => window.open("https://ezgif.com/video-to-gif", "_blank"), 500);
+                } else {
+                    const currentUrl = window.location.href;
+                    await navigator.clipboard.writeText(currentUrl);
+                    setTimeout(() => {
+                        window.open("https://ezgif.com/video-to-gif", "_blank");
+                        window.open("https://bendodson.com/projects/apple-music-artwork-finder/", "_blank");
+                    }, 500);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        setTimeout(checkXhrEntries, 1500);
+    }
+
+
+
+    function addCopyCredits() {
+        const artistNames = document.querySelectorAll('.artist-name');
+        const artistRoles = document.querySelectorAll('.artist-roles');
+
+        artistNames.forEach(name => {
+            name.style.cursor = 'pointer';
+            name.addEventListener('mouseover', () => { name.style.textDecoration = 'underline'; });
+            name.addEventListener('mouseout', () => { name.style.textDecoration = 'none'; });
+            name.addEventListener('click', () => {
+                const textToCopy = name.innerText;
+                copyCreditToClipboard(textToCopy, name);
+            });
+        });
+
+        artistRoles.forEach(role => {
+            if (!role.classList.contains('roles-processed')) {
+                const roles = role.innerText.split(',');
+                role.innerHTML = '';
+
+                roles.forEach((roleText, index) => {
+                    const roleSpan = document.createElement('span');
+                    roleSpan.innerText = roleText.trim();
+
+                    roleSpan.style.cursor = 'pointer';
+                    roleSpan.addEventListener('mouseover', () => { roleSpan.style.textDecoration = 'underline'; });
+                    roleSpan.addEventListener('mouseout', () => { roleSpan.style.textDecoration = 'none'; });
+                    roleSpan.addEventListener('click', () => {
+                        copyCreditToClipboard(roleText.trim(), roleSpan);
                     });
 
-                    const currentUrl = window.location.href;
+                    role.appendChild(roleSpan);
 
-                    const response = await fetch(currentUrl);
-                    const text = await response.text();
-
-                    const ogImageUrlMatch = text.match(/<meta property="og:image" content="([^"]+)"/);
-                    if (ogImageUrlMatch) {
-                        let ogImageUrl = ogImageUrlMatch[1];
-
-                        if (ogImageUrl) {
-                            ogImageUrl = ogImageUrl.replace(/\/[^\/]*$/, '/1000x1000bb.png');
-
-                            if (isAppleMusicSaveImage) {
-                                fetch(ogImageUrl)
-                                    .then(response => response.blob())
-                                    .then(blob => {
-                                        const urlParts = ogImageUrl.split('/'); 
-                                        const fileName = urlParts[urlParts.length - 2].split('.')[0];
-
-
-                                        const link = document.createElement("a");
-                                        const url = URL.createObjectURL(blob);
-                                        link.href = url;
-                                        link.download = `${fileName}.png`;
-                                        link.style.display = "none";
-                                        document.body.appendChild(link);
-                                        link.click(); 
-                                        document.body.removeChild(link); 
-                                        URL.revokeObjectURL(url);
-                                    })
-                                    .catch(error => {
-                                        console.error("Fehler beim Herunterladen des Bildes:", error);
-                                    });
-                            } else {
-                                navigator.clipboard.writeText(ogImageUrl).then(() => {
-                                    if (isAppleMusicPopup) showPopupNotification(event);
-                                });
-                            }
-                        }
+                    if (index < roles.length - 1) {
+                        role.appendChild(document.createTextNode(', '));
                     }
-                } catch (error) {
-                }
-            });
-        }
-    }
-
-    // Function to show the "copied to clipboard" popup notification
-    function showPopupNotification(mouseEvent) {
-        const popup = document.createElement("div");
-        popup.className = "popup-notification";
-
-        const content = document.createElement("div");
-        content.innerText = "Copied to clipboard";
-        content.className = "popup-content";
-
-        popup.style.position = "fixed";
-        popup.style.backgroundColor = "#d60017";
-        popup.style.color = "white";
-        popup.style.border = "none";
-        popup.style.borderRadius = "5px";
-        popup.style.padding = "10px 20px";
-        popup.style.fontSize = "12px";
-        popup.style.fontWeight = "bold";
-        popup.style.zIndex = "9999";
-        popup.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
-
-        // Position the popup 30px to the right and 40px below the mouse position
-        popup.style.top = `${mouseEvent.clientY + 30}px`;
-        popup.style.left = `${mouseEvent.clientX + 40}px`;
-
-        popup.appendChild(content);
-        document.body.appendChild(popup);
-
-        setTimeout(() => {
-            document.body.removeChild(popup);
-        }, 1500);
-    }
-
-    // Function to add the copy buttons
-    function addButtons() {
-        const primaryActions = document.querySelector(".primary-actions");
-        if (!primaryActions) return;
-
-        const [copyCoverButton, animatedButton] = createPrimaryActionButtons();
-
-        if (isAppleMusicCopyCover) {
-            primaryActions.appendChild(copyCoverButton);
-        }
-        if (isAppleMusicCopyAnimatedCover) {
-            const videoArtworkContainer = document.querySelector('.video-artwork__container');
-            if (videoArtworkContainer) primaryActions.appendChild(animatedButton);
-        }
-
-
-        const secondaryActions = document.querySelector(".secondary-actions");
-        const primaryArtistsContainer = document.querySelector(".headings__subtitles");
-        const artistLinks = primaryArtistsContainer?.querySelectorAll("a") || [];
-        const buttonHolder = createButtonHolder();
-
-        if (isAppleMusicCopyTracklist) {
-            artistLinks.forEach((linkElement, index, arr) => {
-                const artistName = linkElement.innerText;
-                const button = document.createElement("button");
-                const buttonLabel = arr.length === 1 ? "CA" : `CA${index + 1}`;
-
-                styleInlineButton(button, buttonLabel, 'Copy Primary Artists');
-
-                button.addEventListener("click", (event) => {
-                    navigator.clipboard.writeText(artistName).then(() => { });
-                    // if (isAppleMusicPopup) showPopupNotification(event);
                 });
-                buttonHolder.appendChild(button);
-            });
 
-            buttonHolder.style.marginRight = "33px";
-            secondaryActions.prepend(buttonHolder);
-        }
-
-        copyCoverButton.onclick = (event) => {
-            sessionStorage.setItem('copyCover', 'true');
-            sessionStorage.setItem('mouseX', event.clientX);
-            sessionStorage.setItem('mouseY', event.clientY);
-        };
-
-        animatedButton.onclick = (event) => {
-            sessionStorage.setItem('Animation', 'true');
-            sessionStorage.setItem('mouseX', event.clientX);
-            sessionStorage.setItem('mouseY', event.clientY);
-        };
+                role.classList.add('roles-processed');
+            }
+        });
     }
 
-    // Check if the page was reloaded to copy the link
-    window.addEventListener('click', () => {
-        if (sessionStorage.getItem('copyCover') === 'true') {
-            sessionStorage.removeItem('copyCover');
-            const mouseX = parseInt(sessionStorage.getItem('mouseX'), 10);
-            const mouseY = parseInt(sessionStorage.getItem('mouseY'), 10);
-            const event = { clientX: mouseX, clientY: mouseY };
-            copyCoverUrlToClipboard(event);
-        } else if (sessionStorage.getItem('Animation') === 'true') {
-            sessionStorage.removeItem('Animation');
-            const mouseX = parseInt(sessionStorage.getItem('mouseX'), 10);
-            const mouseY = parseInt(sessionStorage.getItem('mouseY'), 10);
-            const event = { clientX: mouseX, clientY: mouseY };
-            copyAnimationUrlToClipboard(event);
-        } else {
-            run();
-        }
-        if (isAppleMusicCopyArtist) copyArtistUrlToClipboard(event);
-    });
 
-
-    function copyToClipboard(text, element) {
+    function copyCreditToClipboard(text, element) {
         const originalColor = window.getComputedStyle(element).color;
         const textToCopy = replaceWords(text);
         navigator.clipboard.writeText(textToCopy).then(() => {
@@ -392,140 +436,23 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
         return text;
     }
 
+    const replacements = {
+        "Synth Bass": "Bass Synthesizer",
+        "String Arranger": "Strings Arranger",
+        "Editing Engineer": "Audio Editor",
+    };
 
-    document.addEventListener('click', () => {
-        if (isAppleMusicCopyCredits) {
-            if (/^https:\/\/music\.apple\.com\/[a-z]{2}\/song\//.test(window.location.href)) {
-                const artistNames = document.querySelectorAll('.artist-name');
-                const artistRoles = document.querySelectorAll('.artist-roles');
 
-                artistNames.forEach(name => {
-                    name.style.cursor = 'pointer';
-                    name.addEventListener('mouseover', () => { name.style.textDecoration = 'underline'; });
-                    name.addEventListener('mouseout', () => { name.style.textDecoration = 'none'; });
-                    name.addEventListener('click', () => {
-                        const textToCopy = name.innerText;
-                        copyToClipboard(textToCopy, name);
-                    });
-                });
 
-                artistRoles.forEach(role => {
-                    if (!role.classList.contains('roles-processed')) {
-                        const roles = role.innerText.split(',');
-                        role.innerHTML = '';
 
-                        roles.forEach((roleText, index) => {
-                            const roleSpan = document.createElement('span'); 
-                            roleSpan.innerText = roleText.trim(); 
-                            roleSpan.style.cursor = 'pointer'; 
 
-                            roleSpan.addEventListener('mouseover', () => { roleSpan.style.textDecoration = 'underline'; });
-                            roleSpan.addEventListener('mouseout', () => { roleSpan.style.textDecoration = 'none'; });
-
-                            roleSpan.addEventListener('click', () => {
-                                copyToClipboard(roleText.trim(), roleSpan); 
-                            });
-
-                            role.appendChild(roleSpan); 
-
-                            if (index < roles.length - 1) {
-                                role.appendChild(document.createTextNode(', '));
-                            }
-                        });
-
-                        role.classList.add('roles-processed');
-                    }
-                });
-            }
-        }
+    document.addEventListener('click', (event) => {
+        if (isAppleMusicCopyCover) addCopyCoverButton();
+        if (isAppleMusicCopyAnimatedCover) addAnimatedCoverButton();
+        if (isAppleMusicCopyTracklist) addCopyArtistButton();
+        if (isAppleMusicCopyTracklist) addCopyTracklistButton();
+        if (isAppleMusicCopyArtist) addCopyArtistArtwork();
+        if (isAppleMusicCopyCredits) addCopyCredits();
     });
 
-    // Main function to run the script
-    function run() {
-        if (document.querySelector(".tracklist-helper-btn")) {
-            return;
-        }
-        if (isAppleMusicCopyTracklist) {
-            const songs = document.querySelectorAll("[data-testid='track-title']");
-
-            // Iterate through each song element
-            for (const song of songs) {
-                const titleButton = document.createElement("button");
-                styleInlineButton(titleButton, "CT", "Copy Track Name");
-
-                const featureMatch = song.innerText.match(/[\(\[]\s*(feat\.)\s+(.*?)\s*[\)\]]/i);
-                let featureText = featureMatch ? featureMatch[2].trim() : null;
-
-
-                // Event listener for copying track name
-                titleButton.addEventListener("click", () => {
-                    let rawTitle = song.innerText
-                        .replace(/</g, '˂')
-                        .replace(/>/g, '˃');
-
-                    let sanitizedTitle = rawTitle.replace(/\s*[\(\[]\s*(feat\.|with)\s+.*?[\)\]]/i, '');
-
-                    const matchFeat = rawTitle.match(/\(\s*(feat\.|with)\s+.*?\)/i);
-                    if (matchFeat) {
-                        const featIndex = rawTitle.indexOf(matchFeat[0]);
-
-                        const remainder = rawTitle.slice(featIndex + matchFeat[0].length);
-                        const bracketMatch = remainder.match(/\[([^\]]+)\]/);
-
-                        if (bracketMatch) {
-                            sanitizedTitle = sanitizedTitle.replace(bracketMatch[0], `(${bracketMatch[1]})`);
-                        }
-                    }
-
-                    navigator.clipboard.writeText(sanitizedTitle.trim());
-                });
-
-
-                const buttonHolder = createButtonHolder();
-                let attachTo = song.parentElement.parentElement;
-
-                if (song.parentElement.parentElement.className.includes("songs-list-row__explicit-wrapper")) {
-                    attachTo = attachTo.parentElement;
-                }
-
-                attachTo.appendChild(buttonHolder);
-
-                const artists = attachTo.querySelectorAll(".songs-list-row__by-line a");
-
-                if (artists.length > 0) {
-                    artists.forEach((artist, index) => {
-                        const artistName = artist.innerText;
-                        const artistButton = document.createElement("button");
-                        const label = `CA${index + 1}`;
-                        styleInlineButton(artistButton, label, "Copy Artist Name");
-
-                        artistButton.addEventListener("click", () => {
-                            navigator.clipboard.writeText(artistName);
-                        });
-                        buttonHolder.appendChild(artistButton);
-                    });
-                }
-
-                if (featureText) {
-                    const featureButton = document.createElement("button");
-                    styleInlineButton(featureButton, "FA", featureText);
-
-                    featureButton.addEventListener("click", () => {
-                        navigator.clipboard.writeText(featureText);
-                    });
-
-                    buttonHolder.appendChild(featureButton);
-                }
-
-                buttonHolder.appendChild(titleButton);
-
-            }
-        }
-
-        performance.clearResourceTimings();
-        addButtons();
-    }
-
-    // Run the script when the DOM is fully loaded
-    document.addEventListener("DOMContentLoaded", run);
 });

@@ -9,180 +9,170 @@ chrome.storage.local.get(['Services/youtubemusic.js', 'isYouTubeMusicCopyCoverPl
         return;
     }
 
-    function showPopup(message, event, offsetX, offsetY) {
-        const popup = document.createElement('div');
-        popup.innerText = message;
-        popup.className = 'copy-popup';
+    // Copy Cover Button for Playlists
+    function addCopyCoverButtonPlaylists() {
+        const actionButtons = document.querySelector('.thumbnail.style-scope.ytmusic-responsive-header-renderer');
 
-        popup.style.position = 'fixed';
-        popup.style.backgroundColor = '#f1f1f1';
-        popup.style.color = '#030303';
-        popup.style.borderRadius = '500px';
-        popup.style.padding = '10px 20px';
-        popup.style.fontSize = '12px';
-        popup.style.fontWeight = "bold";
-        popup.style.zIndex = "9999";
-        popup.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
-
-        popup.style.top = `${event.clientY + offsetY}px`;
-        popup.style.left = `${event.clientX + offsetX}px`;
-
-        document.body.appendChild(popup);
-        setTimeout(() => {
-            document.body.removeChild(popup);
-        }, 1500);
-    }
-
-    function CopyCoverButtonPlaylists() {
-        if (!window.location.href.startsWith('https://music.youtube.com/playlist')) return;
-        if (document.querySelector('.copy-cover-button-playlist')) return;
-
-        let actionButtons = document.querySelector('.thumbnail.style-scope.ytmusic-responsive-header-renderer');
-        let buttonStyles = {
-            height: '42px',
-            width: '200px',
-            margin: '10px auto',
-            borderRadius: '500px',
-            padding: '2px 11px',
-            border: '1px solid #f1f1f1',
-            backgroundColor: '#f1f1f1',
-            color: '#030303',
-            fontSize: '20px',
-            lineHeight: '20px',
-            fontWeight: 'bold'
-        };
-
-        if (actionButtons) {
+        if (actionButtons && !document.getElementById('copy-cover-button-playlist')) {
             const copyButton = document.createElement('button');
+            copyButton.id = 'copy-cover-button-playlist';
             copyButton.innerText = isYouTubeMusicSaveImage ? "Save Cover" : "Copy Cover";
-            copyButton.className = 'copy-cover-button-playlist';
 
-            Object.assign(copyButton.style, buttonStyles);
-            copyButton.style.display = 'block';
-            copyButton.style.position = 'relative';
-            copyButton.style.whiteSpace = 'nowrap';
-            copyButton.style.fontFamily = 'Roboto, sans-serif';
-            copyButton.style.textAlign = 'center';
-            copyButton.style.verticalAlign = 'initial';
-            copyButton.style.userSelect = 'none';
-            copyButton.style.boxSizing = 'border-box';
+            Object.assign(copyButton.style, {
+                height: '42px',
+                width: '200px',
+                margin: '10px auto',
+                borderRadius: '500px',
+                padding: '2px 11px',
+                border: '1px solid #f1f1f1',
+                backgroundColor: '#f1f1f1',
+                color: '#030303',
+                fontSize: '20px',
+                lineHeight: '20px',
+                fontWeight: 'bold',
+                display: 'block',
+                position: 'relative',
+                whiteSpace: 'nowrap',
+                fontFamily: 'Roboto, sans-serif',
+                textAlign: 'center',
+                verticalAlign: 'initial',
+                userSelect: 'none',
+                boxSizing: 'border-box'
+            });
 
-            actionButtons.parentNode.insertBefore(copyButton, actionButtons.nextSibling);
+            copyButton.addEventListener('click', async (event) => {
+                event.preventDefault();
+                sessionStorage.setItem('mouseX', event.clientX);
+                sessionStorage.setItem('mouseY', event.clientY);
 
-            copyButton.addEventListener('click', async function (event) {
-                let coverImage = document.querySelector('ytmusic-thumbnail-renderer.thumbnail.style-scope.ytmusic-responsive-header-renderer img#img');
-                if (coverImage) {
-                    let coverImageUrl = coverImage.src;
-                    coverImageUrl = coverImageUrl.replace(/=w\d+-h\d+-[a-z-]*\d*-rj(?:-[a-zA-Z0-9]+)?$/, '=s0-rp');
+                const coverUrl = await getYouTubeMusicPlaylistArtwork();
+                const imageUrl = coverUrl.replace(/=w\d+-h\d+-[a-z-]*\d*-rj(?:-[a-zA-Z0-9]+)?$/, '=s0-rp');
 
-                    if (coverImageUrl) {
-                        await processYouTubeMusicImage(coverImageUrl, event);
-                        if (isYouTubeMusicPopup && !isYouTubeMusicSaveImage) showPopup('Copied to clipboard', event, 25, 50);
-                    }
+                if (imageUrl) {
+                    const fileName = getFileNameFromUrl(imageUrl);
+                    const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+                    const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+                    const design = {
+                        position: "fixed",
+                        backgroundColor: "#f1f1f1",
+                        color: "#030303",
+                        borderRadius: "500px",
+                        padding: "10px 20px",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        zIndex: "9999",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                        top: `${mouseY + 40}px`,
+                        left: `${mouseX + 50}px`
+                    };
+                    await processPngImage(imageUrl, fileName, isYouTubeMusicSaveImage, isYouTubeMusicPopup, design);
                 }
             });
+            actionButtons.parentNode.insertBefore(copyButton, actionButtons.nextSibling);
         }
     }
 
-    function CopyCoverButtonChannels() {
-        if (!window.location.href.startsWith('https://music.youtube.com/channel')) return;
-        if (document.querySelector('.copy-cover-button-channel')) return;
+    // Copy Cover Button for Channels
+    function addCopyCoverButtonChannels() {
+        const actionButtons = document.querySelector('.buttons.style-scope.ytmusic-immersive-header-renderer');
 
-        let actionButtons = document.querySelector('.buttons.style-scope.ytmusic-immersive-header-renderer');
-        let buttonStyles = {
-            height: '36px',
-            width: '136px',
-            margin: '0',
-            borderRadius: '500px',
-            padding: '2px 11px',
-            border: '1px solid #f1f1f1',
-            backgroundColor: '#f1f1f1',
-            color: '#030303',
-            fontSize: '14px',
-            fontWeight: '500',
-            textAlign: 'left'
-        };
-
-        if (actionButtons) {
+        if (actionButtons && !document.getElementById('copy-cover-button-channel')) {
             const copyButton = document.createElement('button');
+            copyButton.id = 'copy-cover-button-channel';
             copyButton.innerText = isYouTubeMusicSaveImage ? "Save Cover" : "Copy Cover";
-            copyButton.className = 'copy-cover-button-channel';
 
-            Object.assign(copyButton.style, buttonStyles);
-            copyButton.style.display = 'block';
-            copyButton.style.position = 'relative';
-            copyButton.style.whiteSpace = 'nowrap';
-            copyButton.style.fontFamily = 'Roboto, sans-serif';
-            copyButton.style.textAlign = 'center';
-            copyButton.style.verticalAlign = 'initial';
-            copyButton.style.userSelect = 'none';
-            copyButton.style.boxSizing = 'border-box';
+            Object.assign(copyButton.style, {
+                height: '36px',
+                width: '136px',
+                margin: '0',
+                borderRadius: '500px',
+                padding: '2px 11px',
+                border: '1px solid #f1f1f1',
+                backgroundColor: '#f1f1f1',
+                color: '#030303',
+                fontSize: '14px',
+                fontWeight: '500',
+                textAlign: 'left',
+                display: 'block',
+                position: 'relative',
+                whiteSpace: 'nowrap',
+                fontFamily: 'Roboto, sans-serif',
+                textAlign: 'center',
+                verticalAlign: 'initial',
+                userSelect: 'none',
+                boxSizing: 'border-box'
+            });
+            copyButton.addEventListener('click', async (event) => {
+                event.preventDefault();
+                sessionStorage.setItem('mouseX', event.clientX);
+                sessionStorage.setItem('mouseY', event.clientY);
 
-            actionButtons.parentNode.insertBefore(copyButton, actionButtons.nextSibling);
+                const coverUrl = await getYouTubeMusicChannelArtwork();
+                const imageUrl = coverUrl.replace(/=w\d+-h\d+-[a-z-]*\d*-rj(?:-[a-zA-Z0-9]+)?$/, '=s0-rp');
 
-            copyButton.addEventListener('click', async function (event) {
-                let coverImage = document.querySelector('ytmusic-fullbleed-thumbnail-renderer.image.style-scope.ytmusic-immersive-header-renderer picture img');
-                if (coverImage) {
-                    let coverImageUrl = coverImage.src;
-                    coverImageUrl = coverImageUrl.replace(/=w\d+-h\d+-[a-z-]*\d*-rj(?:-[a-zA-Z0-9]+)?$/, '=s0-rp');
-
-                    if (coverImageUrl) {
-                        await processYouTubeMusicImage(coverImageUrl, event);
-                        if (isYouTubeMusicPopup && !isYouTubeMusicSaveImage) showPopup('Copied to clipboard', event, 25, 50);
-                    }
+                if (imageUrl) {
+                    const fileName = getFileNameFromUrl(imageUrl);
+                    const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+                    const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+                    const design = {
+                        position: "fixed",
+                        backgroundColor: "#f1f1f1",
+                        color: "#030303",
+                        borderRadius: "500px",
+                        padding: "10px 20px",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        zIndex: "9999",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                        top: `${mouseY + 25}px`,
+                        left: `${mouseX + 50}px`
+                    };
+                    await processPngImage(imageUrl, fileName, isYouTubeMusicSaveImage, isYouTubeMusicPopup, design);
                 }
             });
+            actionButtons.parentNode.insertBefore(copyButton, actionButtons.nextSibling);
         }
     }
 
+    //YouTube Music Artwork Fetcher for Playlists via img src
+    async function getYouTubeMusicPlaylistArtwork() {
+        const coverUrl = document.querySelector('ytmusic-thumbnail-renderer.thumbnail.style-scope.ytmusic-responsive-header-renderer img#img');
+        return coverUrl.src;
+    }
 
-
-    async function processYouTubeMusicImage(extractedUrl, event) {
-        const fileName = getFileNameFromUrl(extractedUrl);
-
-        if (isYouTubeMusicSaveImage) {
-            const response = await fetch(extractedUrl); 
-            const blob = await response.blob(); 
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob); 
-            link.download = `${fileName}.png`; 
-            document.body.appendChild(link);
-            link.click(); 
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href); 
-        } else {
-            await navigator.clipboard.writeText(extractedUrl);
-        }
+    //YouTube Music Artwork Fetcher for Channels via img src
+    async function getYouTubeMusicChannelArtwork() {
+        const coverUrl = document.querySelector('ytmusic-fullbleed-thumbnail-renderer.image.style-scope.ytmusic-immersive-header-renderer picture img');
+        return coverUrl.src;
     }
 
     function getFileNameFromUrl(url) {
-        const parts = url.split('/'); 
-        const fileNameWithExtension = parts.pop().split('.')[0]; 
-        return fileNameWithExtension; 
+        const parts = url.split('/');
+        const fileNameWithExtension = parts.pop().split('.')[0];
+        return fileNameWithExtension;
     }
 
 
-    function CopyLinkButtons() {
 
-        if (!window.location.href.startsWith('https://music.youtube.com/playlist')) {
-            return; 
-        }
 
+
+    // Copy Link Button
+    function addCopyLinkButtons() {
         const items = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
         items.forEach(item => {
             if (!item.querySelector('.copy-link-button')) {
                 const titleColumn = item.querySelector('.title-column.style-scope.ytmusic-responsive-list-item-renderer');
                 if (titleColumn) {
                     titleColumn.style.display = 'flex';
-                    titleColumn.style.alignItems = 'center'; 
-                    titleColumn.style.justifyContent = 'flex-start'; 
+                    titleColumn.style.alignItems = 'center';
+                    titleColumn.style.justifyContent = 'flex-start';
 
-                    const copyButton = document.createElement('button');
-                    copyButton.innerText = 'Copy Link';
-                    copyButton.className = 'copy-link-button';
-                    copyButton.style.cursor = 'pointer'; 
+                    const trackButton = document.createElement('button');
+                    trackButton.className = 'copy-link-button';
+                    trackButton.innerText = 'Copy Link';
 
-                    const buttonStyles = {
+                    Object.assign(trackButton.style, {
+                        cursor: 'pointer',
                         height: 'auto',
                         width: 'auto',
                         marginRight: '10px',
@@ -194,56 +184,72 @@ chrome.storage.local.get(['Services/youtubemusic.js', 'isYouTubeMusicCopyCoverPl
                         fontSize: 'var(--ytmusic-responsive-font-size)',
                         fontWeight: 'bold',
                         textAlign: 'center',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center' 
-                    };
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    });
 
-                    Object.assign(copyButton.style, buttonStyles);
-
-                    copyButton.addEventListener('click', function (event) {
+                    trackButton.addEventListener('click', async (event) => {
                         event.stopPropagation();
-                        const linkElement = titleColumn.querySelector('a'); 
-                        if (linkElement) {
-                            let link = linkElement.href;
+                        sessionStorage.setItem('mouseX', event.clientX);
+                        sessionStorage.setItem('mouseY', event.clientY);
 
-                            if (link.startsWith('https://music.youtube.com/watch')) {
-                                const url = new URL(link);
-                                link = `https://youtube.com/watch?v=${url.searchParams.get('v')}`;
-                            }
-
+                        const link = await getYouTubeMusicTrackLink(titleColumn);
+                        if (link) {
                             navigator.clipboard.writeText(link).then(() => {
-                                if (isYouTubeMusicPopup) showPopup('Copied to clipboard', event, 20, 40);
+                                const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+                                const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+                                const design = {
+                                    position: "fixed",
+                                    backgroundColor: "#f1f1f1",
+                                    color: "#030303",
+                                    borderRadius: "500px",
+                                    padding: "10px 20px",
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    zIndex: "9999",
+                                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                                    top: `${mouseY + 20}px`,
+                                    left: `${mouseX + 40}px`
+                                };
+                                if (isYouTubeMusicPopup) showPopupNotification(design);
                             });
                         }
                     });
 
-                    titleColumn.insertBefore(copyButton, titleColumn.firstChild);
+                    titleColumn.insertBefore(trackButton, titleColumn.firstChild);
                 }
             }
         });
     }
 
-    function observeUrlChanges() {
-        let previousUrl = window.location.href;
-        const observer = new MutationObserver(() => {
-            if (previousUrl !== window.location.href) {
-                previousUrl = window.location.href;
-                if (isYouTubeMusicCopyCoverPlaylist) CopyCoverButtonPlaylists();
-                if (isYouTubeMusicCopyCoverChannels) CopyCoverButtonChannels();
-                if (isYouTubeMusicCopyLink) CopyLinkButtons();
+    //YouTube Music Track Link Fetcher via title column
+    async function getYouTubeMusicTrackLink(titleColumn) {
+        const linkElement = titleColumn.querySelector('a');
+        if (linkElement) {
+            if (linkElement.href.startsWith('https://music.youtube.com/watch')) {
+                const url = new URL(linkElement.href);
+                const link = `https://youtube.com/watch?v=${url.searchParams.get('v')}`;
+                return link;
             }
-        });
-
-        const config = { subtree: true, childList: true };
-        observer.observe(document, config);
+        }
     }
 
-    window.addEventListener('click', function () {
-        if (isYouTubeMusicCopyCoverPlaylist) CopyCoverButtonPlaylists();
-        if (isYouTubeMusicCopyCoverChannels) CopyCoverButtonChannels();
-        if (isYouTubeMusicCopyLink) CopyLinkButtons();
-        observeUrlChanges();
+
+
+
+
+    document.addEventListener('click', (event) => {
+        const playlistUrlPattern = /^https:\/\/music\.youtube\.com\/playlist/;
+        const channelUrlPattern = /^https:\/\/music\.youtube\.com\/channel/;
+
+        if (playlistUrlPattern.test(window.location.href)) {
+            if (isYouTubeMusicCopyCoverPlaylist) addCopyCoverButtonPlaylists();
+            if (isYouTubeMusicCopyLink) addCopyLinkButtons();
+        }
+        if (channelUrlPattern.test(window.location.href)) {
+            if (isYouTubeMusicCopyCoverChannels) addCopyCoverButtonChannels();
+        }
     });
 
 });
