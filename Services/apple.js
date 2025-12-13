@@ -269,8 +269,7 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
         let coverUrl, imageUrl;
 
         if (type === "cover") {
-            coverUrl = document.querySelector("picture")?.querySelector("source")?.getAttribute("srcset")
-                ?.split(",")[0].trim().split(" ")[0];
+            coverUrl = document.querySelector('[data-testid="main"] picture')?.querySelector('source')?.getAttribute('srcset')?.split(',')[0].trim().split(' ')[0];
 
             const resolutionRegex = /(\d{2,3}x\d{2,3})(cc|bb|SC\.[^\.]+)\.webp(\?l=[a-zA-Z-]*)?$/;
             const match = coverUrl?.match(resolutionRegex);
