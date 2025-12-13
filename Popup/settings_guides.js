@@ -19,14 +19,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Setze die Links in der Menüleiste
     document.querySelectorAll('a[data-id]').forEach(link => {
-        const id = link.getAttribute('data-id'); // Extrahiere den Wert von data-id
-        link.href = `${id}`; // Weisen eine dynamische URL basierend auf der ID zu
+        const id = link.getAttribute('data-id'); 
+        link.href = `${id}`;
     });
 
 
-    // Füge Event-Listener für die Menülinks hinzu
     var menuLinks = document.querySelectorAll('.menu a');
     menuLinks.forEach(link => {
         link.addEventListener('click', function (event) {
@@ -35,14 +33,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Überprüfen, ob ein Anker in der URL vorhanden ist
     const hash = window.location.hash;
     if (hash) {
         showContent(hash.substring(1));
     } else {
         showContent('homepage');
     }
-    // Überprüfen und setzen Sie das Theme basierend auf dem gespeicherten Zustand
+
     chrome.storage.local.get('darkMode', function (result) {
         if (result.darkMode) {
             document.body.classList.add('dark-mode');
@@ -50,7 +47,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Füge einen Listener hinzu, um Nachrichten zu empfangen
     chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         if (request.darkMode !== undefined) {
             if (request.darkMode) {
@@ -203,7 +199,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Überprüfung bei Änderung eines Feldes
     const inputs = document.querySelectorAll('.function-container input');
     inputs.forEach(input => {
         input.addEventListener("change", function () {
@@ -219,7 +214,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-
     setupEventListener2("is45");
     setupEventListener2("isSoundCloud");
     setupEventListener2("isSpotify");
@@ -227,7 +221,6 @@ document.addEventListener('DOMContentLoaded', function () {
     setupEventListener2("isYandexMusic");
     setupEventListener1("isInstagram");
 
-    // Funktion zum Speichern der Einstellungen
     function saveSettings() {
         const isGeniusSongSongPage = document.getElementById('isGeniusSongSongPage').checked;
         const isGeniusSongSongPageZwsp = document.getElementById('isGeniusSongSongPageZwsp').checked;
@@ -238,6 +231,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isGeniusSongLanguageButton = document.getElementById('isGeniusSongLanguageButton').checked;
         const isGeniusSongCleanupButton = document.getElementById('isGeniusSongCleanupButton').checked;
         const isGeniusSongSectionsButtons = document.getElementById('isGeniusSongSectionsButtons').checked;
+        const isGeniusSongExpandSectionsButtons = document.getElementById('isGeniusSongExpandSectionsButtons').checked;
         const isGeniusSongCopyCover = document.getElementById('isGeniusSongCopyCover').checked;
         const isGeniusSongAppleMusicPlayer = document.getElementById('isGeniusSongAppleMusicPlayer').checked;
         const isGeniusSongYouTubePlayer = document.getElementById('isGeniusSongYouTubePlayer').checked;
@@ -339,6 +333,7 @@ document.addEventListener('DOMContentLoaded', function () {
             isGeniusSongLanguageButton: isGeniusSongLanguageButton,
             isGeniusSongCleanupButton: isGeniusSongCleanupButton,
             isGeniusSongSectionsButtons: isGeniusSongSectionsButtons,
+            isGeniusSongExpandSectionsButtons: isGeniusSongExpandSectionsButtons,
             isGeniusSongCopyCover: isGeniusSongCopyCover,
             isGeniusSongAppleMusicPlayer: isGeniusSongAppleMusicPlayer,
             isGeniusSongYouTubePlayer: isGeniusSongYouTubePlayer,
@@ -434,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Lade die gespeicherten Einstellungen
     chrome.storage.local.get([
-        'isGeniusSongSongPage', 'isGeniusSongSongPageZwsp', 'isGeniusSongSongPageInfo', 'isGeniusSongCheckIndex', 'isGeniusSongFollowButton', 'isGeniusSongCleanupMetadataButton', 'isGeniusSongLanguageButton', 'isGeniusSongCleanupButton', 'isGeniusSongSectionsButtons', 'isGeniusSongCopyCover', 'isGeniusSongAppleMusicPlayer', 'isGeniusSongYouTubePlayer', 'isGeniusSongSoundCloudPlayer', 'isGeniusSongSpotifyPlayer', 'isGeniusSongLyricEditor', 'isGeniusSongRenameButtons',
+        'isGeniusSongSongPage', 'isGeniusSongSongPageZwsp', 'isGeniusSongSongPageInfo', 'isGeniusSongCheckIndex', 'isGeniusSongFollowButton', 'isGeniusSongCleanupMetadataButton', 'isGeniusSongLanguageButton', 'isGeniusSongCleanupButton', 'isGeniusSongSectionsButtons', 'isGeniusSongExpandSectionsButtons','isGeniusSongCopyCover', 'isGeniusSongAppleMusicPlayer', 'isGeniusSongYouTubePlayer', 'isGeniusSongSoundCloudPlayer', 'isGeniusSongSpotifyPlayer', 'isGeniusSongLyricEditor', 'isGeniusSongRenameButtons',
         'isGeniusAlbumAlbumPage', 'isGeniusAlbumAlbumPageZwsp', 'isGeniusAlbumAlbumPageLyrics', 'isGeniusAlbumExpandTracklist', 'isGeniusAlbumEditTracklist', 'isGeniusAlbumUploadCover', 'isGeniusAlbumRenameButtons', 'isGeniusAlbumSongCreditsButton', 'isGeniusAlbumFollowButton', 'isGeniusAlbumCleanupButton',
         'isGeniusArtistArtistPage', 'isGeniusArtistArtistPageZwsp', 'isGeniusArtistAllSongsAlbumsPage', 'isGeniusArtistAllSongsAlbumsPageMetadata', 'isGeniusArtistAllSongsAlbumsPageZwsp', 'isGeniusArtistFollowButton',
         'is45CopyCover', 'is45Popup', 'is45ConvertPNG', 'is45SaveImage', 'is45HostImgBB', 'is45HostFilestack','is45RightClick',
@@ -457,6 +452,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isGeniusSongLanguageButton').checked = result.isGeniusSongLanguageButton !== undefined ? result.isGeniusSongLanguageButton : true;
         document.getElementById('isGeniusSongCleanupButton').checked = result.isGeniusSongCleanupButton !== undefined ? result.isGeniusSongCleanupButton : true;
         document.getElementById('isGeniusSongSectionsButtons').checked = result.isGeniusSongSectionsButtons !== undefined ? result.isGeniusSongSectionsButtons : true;
+        document.getElementById('isGeniusSongExpandSectionsButtons').checked = result.isGeniusSongExpandSectionsButtons !== undefined ? result.isGeniusSongExpandSectionsButtons : false;
         document.getElementById('isGeniusSongCopyCover').checked = result.isGeniusSongCopyCover !== undefined ? result.isGeniusSongCopyCover : true;
         document.getElementById('isGeniusSongAppleMusicPlayer').checked = result.isGeniusSongAppleMusicPlayer !== undefined ? result.isGeniusSongAppleMusicPlayer : true;
         document.getElementById('isGeniusSongYouTubePlayer').checked = result.isGeniusSongYouTubePlayer !== undefined ? result.isGeniusSongYouTubePlayer : true;
@@ -560,6 +556,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isGeniusSongLanguageButton').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongCleanupButton').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongSectionsButtons').addEventListener('change', saveSettings);
+    document.getElementById('isGeniusSongExpandSectionsButtons').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongCopyCover').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongAppleMusicPlayer').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongYouTubePlayer').addEventListener('change', saveSettings);
