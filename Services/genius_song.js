@@ -1226,6 +1226,16 @@ chrome.storage.local.get([
                         { displayText: null, fullText: null, hoverText: null },
                         { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
                         { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Въведение", fullText: "Въведение", hoverText: "Intro" },
+                        { displayText: "Финал", fullText: "Финал", hoverText: "Outro" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Част", fullText: "Част", hoverText: "Part" },
+                        { displayText: "Куплет", fullText: "Куплет", hoverText: "Verse" },
+                        { displayText: "Предприпев", fullText: "Предприпев", hoverText: "Pre-Chorus" },
+                        { displayText: "Припев", fullText: "Припев", hoverText: "Chorus" },
+                        { displayText: "Следприпев", fullText: "Следприпев", hoverText: "Post-Chorus" },
+                        { displayText: "Рефрен", fullText: "Рефрен", hoverText: "Refrain" },
+                        { displayText: "Мост", fullText: "Мост", hoverText: "Bridge" },
                     ]
                 },
                 "ca": { // Catalan
