@@ -1798,7 +1798,7 @@ chrome.storage.local.get([
                     { label: "Horizontal Rule", openTag: "<hr>", closeTag: "", hoverText: "Horizontal Rule" },
 
                     { label: "Link", openTag: "[", closeTag: "]()", hoverText: "Link" },
-                    { label: "Image", openTag: "img src=\"", closeTag: "\">", hoverText: "Image" },
+                    { label: "Image", openTag: "<img src=\"", closeTag: "\">", hoverText: "Image" },
                     { label: "Abbreviation", openTag: "<abbr title=\"", closeTag: "\"></abbr>", hoverText: "Abbreviation" },
                     { label: "Preformatted", openTag: "<pre>", closeTag: "</pre>", hoverText: "Preformatted" },
 
@@ -1830,7 +1830,7 @@ chrome.storage.local.get([
                     { label: "Line-through", openTag: "<del>", closeTag: "</del>", hoverText: "Line-through" },
                     { label: "Underline", openTag: "<ins>", closeTag: "</ins>", hoverText: "Underline" },
                     { label: "Link", openTag: "[", closeTag: "]()", hoverText: "Link" },
-                    { label: "Image", openTag: "img src=\"", closeTag: "\">", hoverText: "Image" },
+                    { label: "Image", openTag: "<img src=\"", closeTag: "\">", hoverText: "Image" },
 
                     { label: "Center", openTag: "<center>", closeTag: "</center>", hoverText: "Center" },
                     { label: "Small", openTag: "<small>", closeTag: "</small>", hoverText: "Small" },
