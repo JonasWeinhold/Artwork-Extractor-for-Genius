@@ -260,13 +260,24 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
         }
 
         if (index > 0 && !cell.querySelector(".copy-song-button")) {
-          const songTitle = cell.parentElement.querySelector('[data-testid="internal-track-link"]')?.innerText || null;
+          const songTitle = cell.parentElement.querySelector('[aria-colindex="2"]')?.querySelector('[data-encore-id="text"]')?.innerText || null;
           if (!songTitle) return;
           addButton(cell, songTitle, "CT", "copy-song-button");
         }
 
         if (uniqueSongArtists.length > 0) {
           songArtists.reverse().forEach((name, i, arr) => addButton(cell, name, `CA${arr.length - i}`));
+        }
+
+        if (!cell.querySelector('[data-encore-id="buttonTertiary"]')) {
+          const ctButton = cell.querySelector(".copy-song-button");
+          if (ctButton && !cell.querySelector(".custom-spacer")) {
+            const spacer = document.createElement("div");
+            spacer.style.width = "31px";
+            spacer.style.display = "inline-block";
+            spacer.classList.add("custom-spacer");
+            ctButton.insertAdjacentElement("afterend", spacer);
+          }
         }
 
         cell.querySelectorAll('[data-encore-id="buttonTertiary"]').forEach(button => {
@@ -393,5 +404,6 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
     if (isSpotifySidebar) hideNowPlayingView();
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
 
 });
