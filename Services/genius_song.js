@@ -3,6 +3,7 @@ chrome.storage.local.get([
     'isGeniusSongSongPage',
     'isGeniusSongSongPageZwsp',
     'isGeniusSongSongPageInfo',
+    'isGeniusSongSongId',
     'isGeniusSongCheckIndex',
     'isGeniusSongFollowButton',
     'isGeniusSongCleanupMetadataButton',
@@ -10,6 +11,7 @@ chrome.storage.local.get([
     'isGeniusSongCleanupButton',
     'isGeniusSongSectionsButtons',
     'isGeniusSongExpandSectionsButtons',
+    'isGeniusSongAnnotationsButtons',
     'isGeniusSongCopyCover',
     'isGeniusSongAppleMusicPlayer',
     'isGeniusSongYouTubePlayer',
@@ -21,6 +23,7 @@ chrome.storage.local.get([
     const isGeniusSongSongPage = result.isGeniusSongSongPage ?? true;
     const isGeniusSongSongPageZwsp = result.isGeniusSongSongPageZwsp ?? true;
     const isGeniusSongSongPageInfo = result.isGeniusSongSongPageInfo ?? true;
+    const isGeniusSongSongId = result.isGeniusSongSongId ?? false;
     const isGeniusSongCheckIndex = result.isGeniusSongCheckIndex ?? false;
     const isGeniusSongFollowButton = result.isGeniusSongFollowButton ?? true;
     const isGeniusSongCleanupMetadataButton = result.isGeniusSongCleanupMetadataButton ?? true;
@@ -28,6 +31,7 @@ chrome.storage.local.get([
     const isGeniusSongCleanupButton = result.isGeniusSongCleanupButton ?? true;
     const isGeniusSongSectionsButtons = result.isGeniusSongSectionsButtons ?? true;
     const isGeniusSongExpandSectionsButtons = result.isGeniusSongExpandSectionsButtons ?? false;
+    const isGeniusSongAnnotationsButtons = result.isGeniusSongAnnotationsButtons ?? true;
     const isGeniusSongCopyCover = result.isGeniusSongCopyCover ?? true;
     const isGeniusSongAppleMusicPlayer = result.isGeniusSongAppleMusicPlayer ?? true;
     const isGeniusSongYouTubePlayer = result.isGeniusSongYouTubePlayer ?? true;
@@ -58,8 +62,7 @@ chrome.storage.local.get([
 
         const { songId, userId, songData } = await getSongInfo();
 
-        // jonas
-        if (userId == 4670957) showSongIdButton(songId);
+        if (isGeniusSongSongId) showSongIdButton(songId);
         if (isGeniusSongCheckIndex) showIndexButton();
 
         if (isGeniusSongSongPageInfo) showCoverInfo(songData);
@@ -72,6 +75,7 @@ chrome.storage.local.get([
         if (isGeniusSongLanguageButton) selectDropdown(songData, "Language");
         if (isGeniusSongCleanupButton) selectDropdown(songData, "Cleanup");
         if (isGeniusSongSectionsButtons) lyricsSectionsButtons(songData);
+        if (isGeniusSongAnnotationsButtons) lyricsAnnotationsButtons();
 
         if (songData.primary_tag.name !== "Non-Music") {
             if (isGeniusSongSpotifyPlayer) addSpotifyPlayer(songData);
@@ -413,11 +417,7 @@ chrome.storage.local.get([
         console.log("Run function cleanupMetadata()");
         checkZeroWidthSpaces(songData);
         checkWriterArtists(songData)
-        removePrimaryArtistsAndRenameAdditionalRole(songData);
-        //checkPrimaryArtists(songData);
-        if (userId == 5934018 || userId == 4670957) {
-            primaryArtistsToGroupMembers(songData);
-        }
+        renameAdditionalRoleLabels(songData);
     }
 
     function checkZeroWidthSpaces(songData) {
@@ -471,38 +471,15 @@ chrome.storage.local.get([
         }
     }
 
-    function removePrimaryArtistsAndRenameAdditionalRole(songData) {
-        const primaryArtists = songData.primary_artists || [];
+    function renameAdditionalRoleLabels(songData) {
         const customPerformances = songData.custom_performances || [];
-        const customPrimaryArtists = customPerformances.find(perf => perf.label === "Primary Artists");
-
-        let updatedCustomPerformances = [...customPerformances];
-        let needsPrimaryArtistsRemoval = false;
         let labelsToFix = [];
 
         const labelCorrections = {
             //"Primary Artists": "Group Members",
         };
 
-        if (customPrimaryArtists) {
-            const primaryArtistIds = primaryArtists.map(artist => artist.id);
-            const customPrimaryArtistIds = customPrimaryArtists.artists.map(artist => artist.id);
-
-            const sameArtists = JSON.stringify(customPrimaryArtistIds) === JSON.stringify(primaryArtistIds);
-            //const sameArtists = primaryArtistIds.length === customPrimaryArtistIds.length && primaryArtistIds.every(id => customPrimaryArtistIds.includes(id));
-            if (sameArtists) {
-                updatedCustomPerformances = updatedCustomPerformances.filter(perf => perf.label !== "Primary Artists");
-                needsPrimaryArtistsRemoval = true;
-            } else {
-                console.info(`Remaining Primary Artists: ${customPrimaryArtists.artists.map(artist => artist.name)}`);
-                const editButton = document.querySelector('button[class*="EditMetadataButton__SmallButton"]');
-                const circle = editButton.querySelector('.circle-indicator');
-                addBlackCross(circle);
-            }
-        }
-
-        // Alle Label-Korrekturen anwenden
-        updatedCustomPerformances = updatedCustomPerformances.map(perf => {
+        const updatedCustomPerformances = customPerformances.map(perf => {
             if (labelCorrections[perf.label]) {
                 labelsToFix.push(perf.label);
                 return { ...perf, label: labelCorrections[perf.label] };
@@ -510,85 +487,12 @@ chrome.storage.local.get([
             return perf;
         });
 
-        // Cleanup-Button setzen
-        const cleanupLabel = [
-            needsPrimaryArtistsRemoval ? "Primary Artists" : null,
-            ...labelsToFix
-        ].filter(Boolean).join(", ");
+        if (!labelsToFix.length) return;
 
-        const cleanupKey = [
-            needsPrimaryArtistsRemoval ? "PrimaryArtists" : null,
-            ...labelsToFix.map(label => label.replace(/\s+/g, ""))
-        ].filter(Boolean).join("And");
+        const cleanupKey = labelsToFix.map(label => label.replace(/\s+/g, "")).join("And");
+        const cleanupTitle = `Fix ${labelsToFix.join(", ")}`;
 
-        const cleanupTitle = [
-            needsPrimaryArtistsRemoval ? "Remove Primary Artists" : null,
-            labelsToFix.length ? `Fix ${labelsToFix.join(", ")}` : null
-        ].filter(Boolean).join(" & ");
-
-        if (needsPrimaryArtistsRemoval || labelsToFix.length) {
-            addCleanupButton(songData, cleanupKey, cleanupTitle, { custom_performances: updatedCustomPerformances });
-        }
-    }
-
-    function primaryArtistsToGroupMembers(song) {
-        const primaryArtists = song.primary_artists || [];
-        const customPerformances = song.custom_performances || [];
-        const customPrimaryArtists = customPerformances.find(perf => perf.label === "Primary Artists");
-
-        let updatedCustomPerformances = [...customPerformances];
-        let needsPrimaryArtistsRemoval = false;
-        let labelsToFix = [];
-
-        const labelCorrections = {
-            "Primary Artists": "Group Members",
-        };
-
-        // Alle Label-Korrekturen anwenden
-        updatedCustomPerformances = updatedCustomPerformances.map(perf => {
-            if (labelCorrections[perf.label]) {
-                labelsToFix.push(perf.label);
-                return { ...perf, label: labelCorrections[perf.label] };
-            }
-            return perf;
-        });
-
-        // Cleanup-Button setzen
-        const cleanupLabel = [
-            ...labelsToFix
-        ].filter(Boolean).join(", ");
-
-        const cleanupKey = [
-            ...labelsToFix.map(label => label.replace(/\s+/g, ""))
-        ].filter(Boolean).join("And");
-
-        const cleanupTitle = [
-            labelsToFix.length ? "Primary Artists → Group Members" : null
-        ].filter(Boolean).join(" & ");
-
-        if (needsPrimaryArtistsRemoval || labelsToFix.length) {
-            addCleanupButton(song, cleanupKey, cleanupTitle, { custom_performances: updatedCustomPerformances });
-        }
-    }
-
-    function checkPrimaryArtists(song) {
-        const primaryArtists = song.primary_artists || [];
-        const customPrimaryArtists = (song.custom_performances || []).find(perf => perf.label === "Primary Artists");
-
-        if (customPrimaryArtists) {
-            const primaryArtistIds = primaryArtists.map(artist => artist.id);
-            const customPrimaryArtistIds = customPrimaryArtists.artists.map(artist => artist.id);
-
-            if (JSON.stringify(customPrimaryArtistIds) === JSON.stringify(primaryArtistIds)) {
-                const updatedCustomPerformances = (song.custom_performances || []).filter(perf => perf.label !== "Primary Artists");
-                addCleanupButton(song, "PrimaryArtists", "Remove Primary Artists", { custom_performances: updatedCustomPerformances });
-            } else {
-                console.info(`Remaining Primary Artists: ${customPrimaryArtists.artists.map(artist => artist.name)}`);
-                const editButton = document.querySelector('button[class*="EditMetadataButton__SmallButton"]');
-                const circle = editButton.querySelector('.circle-indicator');
-                addBlackCross(circle);
-            }
-        }
+        addCleanupButton(songData, cleanupKey, cleanupTitle, { custom_performances: updatedCustomPerformances });
     }
 
     function addCleanupButton(song, actionType, label, metadataUpdate) {
@@ -619,7 +523,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.7 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });
@@ -875,6 +779,137 @@ chrome.storage.local.get([
         return svg;
     }
 
+    function lyricsAnnotationsButtons() {
+        const createGridContainer = (id, marginTop = "1.5rem") => {
+            const div = document.createElement("div");
+            div.id = id;
+            div.style.marginTop = marginTop;
+            div.style.display = "grid";
+            div.style.gridTemplateColumns = "repeat(3, 1fr)";
+            div.style.gap = "5px";
+            return div;
+        };
+
+        const createButton = (label, hoverText, className) => {
+            const btn = document.createElement("button");
+            btn.style.minWidth = "0";
+            btn.style.width = "100%";
+            btn.style.display = "flex";
+            btn.style.alignItems = "center";
+            btn.style.justifyContent = "center";
+
+            if (!label) {
+                btn.style.visibility = "hidden";
+                return btn;
+            }
+
+            btn.innerHTML = label;
+            btn.title = hoverText;
+            btn.type = "button";
+            btn.className = className;
+            return btn;
+        };
+
+        const applyTextFormatting = (openTag, closeTag) => {
+            const textarea = document.querySelector('textarea[class*="TextEditor__TextArea"]');
+            if (!textarea) return;
+
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+
+            if (start === end) {
+                textarea.setRangeText(openTag + closeTag, start, end, "end");
+                const cursor = start + openTag.length;
+                textarea.selectionStart = cursor;
+                textarea.selectionEnd = cursor;
+            } else {
+                let selected = textarea.value.substring(start, end);
+                let trailing = "";
+
+                while (/[ \n\r]$/.test(selected)) {
+                    trailing = selected.slice(-1) + trailing;
+                    selected = selected.slice(0, -1);
+                }
+
+                textarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
+            }
+
+            textarea.focus();
+        };
+
+        const renderButtons = (container, buttons, classNameMapper, storedLanguage) => {
+            buttons.forEach(({ label, openTag, closeTag, hoverText, fullText }) => {
+                const className = classNameMapper(hoverText || fullText);
+                const btn = createButton(label, hoverText, className);
+
+                btn.addEventListener("click", () => {
+                    if (openTag !== undefined) {
+                        applyTextFormatting(openTag, closeTag);
+                    } else {
+                        insertTextAtCursor(`[${fullText}]`);
+                    }
+                });
+
+                container.appendChild(btn);
+            });
+        };
+
+        let observer = new MutationObserver(() => {
+            const annotationContainer = [...document.querySelectorAll("div")]
+                .find(div => [...div.classList].some(c => c.startsWith("BaseAnnotation-desktop__Container")));
+
+            if (!annotationContainer) return;
+
+            const form = annotationContainer.querySelector("form.AnnotationEditForm-desktop__Form-sc-a3bdbf7b-0");
+            if (!form) return;
+
+            if (!form.querySelector("#lyricsStyleButtonsContainer")) {
+                injectButtons(form);
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        function injectButtons(form) {
+            const styleDiv = createGridContainer("lyricsStyleButtonsContainer");
+
+            const styleButtons = [
+                { label: "Heading 1", openTag: "#", closeTag: "", hoverText: "Heading 1" },
+                { label: "Heading 2", openTag: "##", closeTag: "", hoverText: "Heading 2" },
+                { label: "Heading 3", openTag: "###", closeTag: "", hoverText: "Heading 3" },
+
+                { label: "Italic", openTag: "*", closeTag: "*", hoverText: "Italic" },
+                { label: "Bold", openTag: "**", closeTag: "**", hoverText: "Bold" },
+                { label: "Italic + Bold", openTag: "***", closeTag: "***", hoverText: "Italic+Bold" },
+
+                { label: "Plain Text", openTag: "`", closeTag: "`", hoverText: "Plain Text" },
+                { label: "Strike-through", openTag: "<del>", closeTag: "</del>", hoverText: "Strike-through" },
+                { label: "Underline", openTag: "<ins>", closeTag: "</ins>", hoverText: "Underline" },
+
+                { label: "Link", openTag: "[", closeTag: "]()", hoverText: "Link" },
+                { label: "Center", openTag: "<center>", closeTag: "</center>", hoverText: "Center" },
+                { label: "Small", openTag: "<small>", closeTag: "</small>", hoverText: "Small" },
+
+                { label: "Horizontal Rule", openTag: "---", closeTag: "", hoverText: "Horizontal Rule" },
+                { label: "Em dash", openTag: "—", closeTag: "", hoverText: "Em dash" },
+                { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
+            ];
+
+            const referenceButton = document.querySelector("button[class*='EditMetadataButton']");
+
+            renderButtons(
+                styleDiv,
+                styleButtons,
+                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`)
+            );
+
+            form.prepend(styleDiv);
+        }
+    }
+
     function lyricsSectionsButtons(songData) {
         console.log("Run function lyricsSectionsButtons()");
 
@@ -897,7 +932,8 @@ chrome.storage.local.get([
 
         const createButton = (label, hoverText, className) => {
             const btn = document.createElement("button");
-            btn.style.width = "6rem";
+            btn.style.minWidth = "0";
+            btn.style.width = "100%";
             btn.style.display = "flex";
             btn.style.alignItems = "center";
             btn.style.justifyContent = "center";
@@ -911,6 +947,7 @@ chrome.storage.local.get([
             btn.title = hoverText;
             btn.type = "button";
             btn.className = className;
+
             return btn;
         };
 
@@ -1228,7 +1265,7 @@ chrome.storage.local.get([
                         { displayText: null, fullText: null, hoverText: null },
                         { displayText: "Въведение", fullText: "Въведение", hoverText: "Intro" },
                         { displayText: "Финал", fullText: "Финал", hoverText: "Outro" },
-                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: null, fullText: null, hoverText: null }, //Skit
                         { displayText: "Част", fullText: "Част", hoverText: "Part" },
                         { displayText: "Куплет", fullText: "Куплет", hoverText: "Verse" },
                         { displayText: "Предприпев", fullText: "Предприпев", hoverText: "Pre-Chorus" },
@@ -1601,7 +1638,7 @@ chrome.storage.local.get([
                         { displayText: "Breakdown", fullText: "Breakdown", hoverText: "Breakdown" },
                         { displayText: "Ndërhyrja ", fullText: "Ndërhyrja", hoverText: "Interlude" },
                         { displayText: "Ndë. Instr.", fullText: "Ndërhyrja Instrumentale", hoverText: "Instrumental Break" },
-                        { displayText: "Vokale pa Tekst", fullText: "Vokale pa Tekst", hoverText: "Non-Lyrical Vocals" },
+                        { displayText: "Vok. pa Tekst", fullText: "Vokale pa Tekst", hoverText: "Non-Lyrical Vocals" },
                         { displayText: "Yodeling", fullText: "Yodeling", hoverText: "Yodeling" },
                         { displayText: "Scatting", fullText: "Scatting", hoverText: "Scatting" },
                         { displayText: "Build", fullText: "Build", hoverText: "Build" },
@@ -1685,7 +1722,7 @@ chrome.storage.local.get([
                         { displayText: "Koʻplet", fullText: "Koʻplet", hoverText: "Verse" },
                         { displayText: "Oldinaqarot", fullText: "Oldinaqarot", hoverText: "Pre-Chorus" },
                         { displayText: "Naqarot", fullText: "Naqarot", hoverText: "Chorus" },
-                        { displayText: "Keyingi-naqarot", fullText: "Keyingi-naqarot", hoverText: "Post-Chorus" },
+                        { displayText: "Keyingi-naq.", fullText: "Keyingi-naqarot", hoverText: "Post-Chorus" },
                         { displayText: "Refren", fullText: "Refren", hoverText: "Refrain" },
                         { displayText: "Koʻprik", fullText: "Koʻprik", hoverText: "Bridge" },
                         { displayText: "Breykdaun", fullText: "Breykdaun", hoverText: "Breakdown" },
@@ -1759,7 +1796,11 @@ chrome.storage.local.get([
             const styleButtons = [
                 { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
                 { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
-                { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" }
+                { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
+                { label: null, openTag: null, closeTag: null, hoverText: null },
+                { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
+                { label: "THSP", openTag: "&thinsp;", closeTag: "", hoverText: "Thin Space" },
+                { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "", hoverText: "Zero-width space" },
             ];
 
             renderButtons(
@@ -1787,7 +1828,7 @@ chrome.storage.local.get([
                     { label: "Italic + Bold", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
                     { label: "Monospace", openTag: "<code>", closeTag: "</code>", hoverText: "Monospace" },
 
-                    { label: "Line-through", openTag: "<del>", closeTag: "</del>", hoverText: "Line-through" },
+                    { label: "Strike-through", openTag: "<del>", closeTag: "</del>", hoverText: "Strike-through" },
                     { label: "Underline", openTag: "<ins>", closeTag: "</ins>", hoverText: "Underline" },
                     { label: "Superscript", openTag: "<sup>", closeTag: "</sup>", hoverText: "Superscript" },
                     { label: "Subscript", openTag: "<sub>", closeTag: "</sub>", hoverText: "Subscript" },
@@ -1827,15 +1868,15 @@ chrome.storage.local.get([
                     { label: "Italic + Bold", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
                     { label: "Monospace", openTag: "<code>", closeTag: "</code>", hoverText: "Monospace" },
 
-                    { label: "Line-through", openTag: "<del>", closeTag: "</del>", hoverText: "Line-through" },
+                    { label: "Strike-through", openTag: "<del>", closeTag: "</del>", hoverText: "Strike-through" },
                     { label: "Underline", openTag: "<ins>", closeTag: "</ins>", hoverText: "Underline" },
                     { label: "Link", openTag: "[", closeTag: "]()", hoverText: "Link" },
                     { label: "Image", openTag: "<img src=\"", closeTag: "\">", hoverText: "Image" },
 
                     { label: "Center", openTag: "<center>", closeTag: "</center>", hoverText: "Center" },
                     { label: "Small", openTag: "<small>", closeTag: "</small>", hoverText: "Small" },
-                    { label: "Large", openTag: "<big>", closeTag: "</big>", hoverText: "Large" },
                     { label: "Horizontal Rule", openTag: "<hr>", closeTag: "", hoverText: "Horizontal Rule" },
+                    { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "", hoverText: "Zero-width space" },
 
                     { label: "Unordered List", openTag: "<ul>", closeTag: "</ul>", hoverText: "Unordered List" },
                     { label: "Ordered List", openTag: "<ol>", closeTag: "</ol>", hoverText: "Ordered List" },
@@ -1940,9 +1981,14 @@ chrome.storage.local.get([
 
                 if (cleanupType === 'general' || cleanupType === 'language') {
                     // Capitalize the first letter at line start and after punctuation (. ! ? ")
-                    line = line.replace(/(^|\.\s+|!\s+|\?\s+|\s+"|^\s*")(\w)/g, (match, prefix, char) => {
+                    line = line.replace(
+                        /(^|[.!?]\s+|\s+"|^\s*")(\p{L})/gu,
+                        (match, prefix, char) => prefix + char.toUpperCase()
+                    );
+                    //ASCII
+                    /*line = line.replace(/(^|\.\s+|!\s+|\?\s+|\s+"|^\s*")(\w)/g, (match, prefix, char) => {
                         return prefix + char.toUpperCase();
-                    });
+                    });*/
 
                     // Capitalize the first letter at line start with HTML tags
                     line = line.replace(/(^|\n|\r)(\s*(?:<[^>]+>\s*)+)([a-zA-Z])/g, (match, prefix, tags, char) => {

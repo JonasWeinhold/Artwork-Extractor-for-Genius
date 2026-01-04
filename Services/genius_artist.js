@@ -2,17 +2,21 @@ chrome.storage.local.get([
     'Services/genius_artist.js',
     'isGeniusArtistArtistPage',
     'isGeniusArtistArtistPageZwsp',
+    'isGeniusArtistArtistPageInfo',
+    'isGeniusArtistArtistId',
     'isGeniusArtistAllSongsAlbumsPage',
     'isGeniusArtistAllSongsAlbumsPageMetadata',
     'isGeniusArtistAllSongsAlbumsPageZwsp',
     'isGeniusArtistFollowButton'
 ], async function (result) {
-    const isGeniusArtistArtistPage = result.isGeniusArtistArtistPage !== undefined ? result.isGeniusArtistArtistPage : true;
-    const isGeniusArtistArtistPageZwsp = result.isGeniusArtistArtistPageZwsp !== undefined ? result.isGeniusArtistArtistPageZwsp : true;
-    const isGeniusArtistAllSongsAlbumsPage = result.isGeniusArtistAllSongsAlbumsPage !== undefined ? result.isGeniusArtistAllSongsAlbumsPage : true;
-    const isGeniusArtistAllSongsAlbumsPageMetadata = result.isGeniusArtistAllSongsAlbumsPageMetadata !== undefined ? result.isGeniusArtistAllSongsAlbumsPageMetadata : true;
-    const isGeniusArtistAllSongsAlbumsPageZwsp = result.isGeniusArtistAllSongsAlbumsPageZwsp !== undefined ? result.isGeniusArtistAllSongsAlbumsPageZwsp : true;
-    const isGeniusArtistFollowButton = result.isGeniusArtistFollowButton !== undefined ? result.isGeniusArtistFollowButton : false;
+    const isGeniusArtistArtistPage = result.isGeniusArtistArtistPage ?? true;
+    const isGeniusArtistArtistPageZwsp = result.isGeniusArtistArtistPageZwsp ?? true;
+    const isGeniusArtistArtistPageInfo = result.isGeniusArtistArtistPageInfo ?? true;
+    const isGeniusArtistArtistId = result.isGeniusArtistArtistId ?? false;
+    const isGeniusArtistAllSongsAlbumsPage = result.isGeniusArtistAllSongsAlbumsPage ?? true;
+    const isGeniusArtistAllSongsAlbumsPageMetadata = result.isGeniusArtistAllSongsAlbumsPageMetadata ?? true;
+    const isGeniusArtistAllSongsAlbumsPageZwsp = result.isGeniusArtistAllSongsAlbumsPageZwsp ?? true;
+    const isGeniusArtistFollowButton = result.isGeniusArtistFollowButton ?? false;
 
 
     if (result['Services/genius_artist.js'] === false) {
@@ -23,59 +27,178 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    checkPage();
+    main();
 
-    function checkPage() {
-        const isAllSongs = window.location.href.match(/https:\/\/(genius\.com|genius-staging.com)\/artists\/[^\/]+\/songs/);
-        const isAllAlbums = window.location.href.match(/https:\/\/(genius\.com|genius-staging.com)\/artists\/[^\/]+\/albums/);
-        const isArtist = window.location.href.startsWith('https://genius.com/artists') || window.location.href.startsWith('https://genius-staging.com/artists');
+    async function main() {
+        const isAllAlbums = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/albums$/.test(window.location.href);
+        const isAllSongs = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/songs$/.test(window.location.href);
+        const isArtist = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+$/.test(window.location.href);
 
         if (isAllSongs || isAllAlbums) {
-            if (isGeniusArtistAllSongsAlbumsPage || isGeniusArtistAllSongsAlbumsPageMetadata) checkAllSongsAlbumsPage();
+            const { artistId, userId, artistData } = await getArtistInfo2();
+
+            if (isGeniusArtistAllSongsAlbumsPage || isGeniusArtistAllSongsAlbumsPageMetadata) checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums);
         } else if (isArtist) {
-            const artistId = getArtistInfo();
-            if (isGeniusArtistArtistPage) checkArtistPage();
+            const { artistId, userId, artistData } = await getArtistInfo();
+
+            if (isGeniusArtistArtistId) showArtistIdButton(artistId);
+            if (isGeniusArtistArtistPageInfo) showCoverInfo(artistData);
+
+            if (isGeniusArtistArtistPage) checkArtistCover(artistData);
             if (isGeniusArtistFollowButton) FollowButtonArtistPage(artistId);
-        }
-
-        function getArtistInfo() {
-            const artistId = document.querySelector("link[rel='alternate']").href.split("/").pop();
-            const userId = document.documentElement.innerHTML.match(/var CURRENT_USER = JSON.parse\('{\\"id\\":(\d+)/)?.[1];
-
-            //const response = await fetch(`https://genius.com/api/artists/${artistId}`);
-            //const json = await response.json();
-
-            if (userId == 4670957) {
-                const identityTextContainer = document.querySelector(".profile_identity-text");
-                const artistIdContainer = document.createElement("div");
-                artistIdContainer.className = "profile_identity-alternate_names";
-                artistIdContainer.setAttribute("ng-if", "$ctrl.artist.alternate_names.length");
-                artistIdContainer.style.marginBottom = "0.25rem";
-                const artistIdElement = document.createElement("span");
-                artistIdElement.className = "profile_identity-alternate_names";
-                artistIdElement.textContent = "Artist ID: ";
-                artistIdElement.style.fontSize = "0.75rem";
-                const artistIdLink = document.createElement("a");
-                artistIdLink.href = `https://genius.com/api/artists/${artistId}`;
-                artistIdLink.target = "_blank";
-                artistIdLink.textContent = artistId;
-                artistIdLink.style.textDecoration = "none";
-                artistIdLink.style.color = "inherit";
-                artistIdLink.onmouseover = () => artistIdLink.style.textDecoration = "underline";
-                artistIdLink.onmouseout = () => artistIdLink.style.textDecoration = "none";
-                artistIdElement.appendChild(artistIdLink);
-                artistIdContainer.appendChild(artistIdElement);
-                identityTextContainer.appendChild(artistIdContainer);
-            }
-            return artistId;
         }
     }
 
+    async function getArtistInfo() {
+        console.log("Run function getArtistInfo()");
+        // Artist ID
+        const artistId = document.querySelector("link[rel='alternate']").href.split("/").pop();
+
+        // User ID
+        const userMatch = document.documentElement.innerHTML.match(/var CURRENT_USER = JSON.parse\('{\\"id\\":(\d+)/);
+        const userId = userMatch?.[1];
+
+        // Artist Data
+        const response = await fetch(`https://genius.com/api/artists/${artistId}`);
+        const json = await response.json();
+
+        return { artistId, userId, artistData: json.response.artist };
+    }
+
+    async function getArtistInfo2() {
+        console.log("Run function getArtistInfo2()");
+        // Artist ID
+        const artistIdMatch = document.documentElement.innerHTML.match(/\\?"artist\\?":(\d+)/);
+        const artistId = artistIdMatch ? artistIdMatch[1] : null;
+
+        // User ID
+        const userMatch = document.documentElement.innerHTML.match(/\\?"currentUser\\?":(\d+)/);
+        const userId = userMatch ? userMatch[1] : null;
+
+        // Artist Data
+        const response = await fetch(`https://genius.com/api/artists/${artistId}`);
+        const json = await response.json();
+
+        return { artistId, userId, artistData: json.response.artist };
+    }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////                                   INDICATORS                                   //////////
+    //////////                                   Artist ID                                    //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
+    function showArtistIdButton(artistId) {
+        const identityTextContainer = document.querySelector(".profile_identity-text");
+        const artistIdContainer = document.createElement("div");
+        artistIdContainer.className = "profile_identity-alternate_names";
+        artistIdContainer.setAttribute("ng-if", "$ctrl.artist.alternate_names.length");
+        artistIdContainer.style.marginBottom = "0.25rem";
+
+        const artistIdElement = document.createElement("span");
+        artistIdElement.className = "profile_identity-alternate_names";
+        artistIdElement.style.fontSize = "0.75rem";
+
+        const artistIdLink = document.createElement("a");
+        artistIdLink.href = `https://genius.com/api/artists/${artistId}`;
+        artistIdLink.target = "_blank";
+        artistIdLink.textContent = artistId;
+        artistIdLink.style.textDecoration = "none";
+        artistIdLink.style.color = "inherit";
+        artistIdLink.onmouseover = () => artistIdLink.style.textDecoration = "underline";
+        artistIdLink.onmouseout = () => artistIdLink.style.textDecoration = "none";
+
+        artistIdElement.textContent = "Artist ID: ";
+        artistIdElement.appendChild(artistIdLink);
+        artistIdContainer.appendChild(artistIdElement);
+        identityTextContainer.appendChild(artistIdContainer);
+
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                   COVER INFO                                   //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function showCoverInfo(artistData) {
+        console.log("Run function showCoverInfo()");
+
+        const avatar = document.querySelector('.user_avatar.profile_header-avatar');
+
+        if (avatar) {
+            avatar.style.position = "relative";
+
+            const existing = avatar.querySelector('p[data-type="resolution-info"]');
+            if (existing) existing.remove();
+
+            const infoElement = createResolutionInfo(artistData);
+            console.log("Created resolution info element:", infoElement);
+
+            avatar.append(infoElement);
+        }
+    }
+
+    function createResolutionInfo(artistData) {
+        const resolutionMatch = artistData.image_url.match(/(\d+)x(\d+)/);
+        const formatMatch = artistData.image_url.match(/\.(\w+)$/);
+
+        const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
+        const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
+
+        const resolutionInfo = document.createElement('p');
+
+        resolutionInfo.style.position = "absolute";
+        resolutionInfo.style.top = "-1.5rem";
+        resolutionInfo.style.left = "50%";
+        resolutionInfo.style.transform = "translateX(-50%)";
+
+        resolutionInfo.style.fontSize = "0.75rem";
+        resolutionInfo.style.color = "#ffffff";
+        resolutionInfo.style.fontWeight = "400";
+        resolutionInfo.style.margin = "0";
+        resolutionInfo.style.pointerEvents = "none";
+        resolutionInfo.style.textShadow = "0 0 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)";
+
+        resolutionInfo.dataset.type = "resolution-info";
+        resolutionInfo.textContent = `${resolutionText} ${formatText}`;
+
+        return resolutionInfo;
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                COVER INDICATOR                                 //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function checkArtistCover(artistData) {
+        console.log("Run function checkArtistCover()");
+
+        const container = document.querySelector('.profile_identity_and_description-action_row');
+        const editArtistButton = Array.from(container.querySelectorAll('.square_button')).find(button => button.textContent.trim() === 'Edit');
+        if (editArtistButton) {
+            const iconsToRemove = editArtistButton.querySelectorAll('.inline_icon, .inline_icon--reading_size, .inline_icon--up_1');
+            iconsToRemove.forEach(icon => icon.remove());
+
+            let color, borderColor;
+            const artistArt = artistData.image_url;
+
+            if (artistArt.endsWith("1000x1000x1.png")) {
+                color = '#99f2a5'; // Green
+                borderColor = '#66bfa3';
+            } else if (artistArt.startsWith("http://assets.genius.com/images/sharing_fallback.png")) {
+                if (document.body.innerHTML.includes("https://assets.genius.com/images/default_avatar_300.png")) {
+                    color = '#dddddd'; // Grey
+                    borderColor = '#aaaaaa';
+                } else {
+                    color = '#ffff64'; // Yellow
+                    borderColor = '#cccc00';
+                }
+            } else {
+                color = '#fa7878'; // Red
+                borderColor = '#a74d4d';
+            }
+            addColoredSquare(editArtistButton, color, borderColor);
+            if (isGeniusArtistArtistPageZwsp) checkArtistTitleForZeroWidthSpace();
+        }
+    }
 
     function addBlackSquare(square) {
         const existingSquare = square.querySelector('.black-square');
@@ -138,67 +261,32 @@ chrome.storage.local.get([
     }
 
     function checkListItemsForZeroWidthSpace() {
-        const listItems = document.querySelectorAll('li[class^="ListItem__Container"]');
+
+        const discographyList = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+        if (!discographyList) return;
+
+        const listItems = discographyList.querySelectorAll('a[class^="DiscographyItem__Container"]');
+
         listItems.forEach(item => {
-            const h3Element = item.querySelector('h3');
-            if (h3Element) {
-                const h3Text = h3Element.textContent;
-                if (h3Text.startsWith('\u200B')) {
-                    const targetDiv = item.querySelector('div[class^="ListItem__InfoContainer"]');
-                    if (targetDiv) {
-                        targetDiv.style.borderLeft = '20px solid black';
-                        targetDiv.style.paddingLeft = '5px';
-                    }
-                } else if (h3Text.endsWith('\u200B')) {
-                    const targetDiv = item.querySelector('div[class^="ListItem__InfoContainer"]');
-                    if (targetDiv) {
-                        targetDiv.style.borderRight = '20px solid black';
-                        targetDiv.style.paddingRight = '5px';
-                    }
-                } else if (h3Text.includes('\u200B')) {
-                    const targetDiv = item.querySelector('div[class^="ListItem__InfoContainer"]');
-                    if (targetDiv) {
-                        targetDiv.style.borderTop = '20px solid black';
-                    }
-                }
+            const h3Element = item.querySelector('h3[class^="DiscographyItem__Title"]');
+            if (!h3Element) return;
+
+            const h3Text = h3Element.textContent;
+            const targetDiv = item.querySelector('div[class^="DiscographyItem__Content"]');
+            if (!targetDiv) return;
+
+            if (h3Text.startsWith('\u200B')) {
+                targetDiv.style.borderLeft = '20px solid black';
+                targetDiv.style.paddingLeft = '5px';
+            }
+            else if (h3Text.endsWith('\u200B')) {
+                targetDiv.style.borderRight = '20px solid black';
+                targetDiv.style.paddingRight = '5px';
+            }
+            else if (h3Text.includes('\u200B')) {
+                targetDiv.style.borderTop = '20px solid black';
             }
         });
-    }
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////                               COVER ARTIST PAGES                               //////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    function checkArtistPage() {
-        const metaTag = document.querySelector('meta[property="og:image"]');
-        if (metaTag) {
-            const coverImageUrl = metaTag.getAttribute('content');
-            const container = document.querySelector('.profile_identity_and_description-action_row');
-            const editArtistButton = Array.from(container.querySelectorAll('.square_button')).find(button => button.textContent.trim() === 'Edit');
-            if (editArtistButton) {
-                const iconsToRemove = editArtistButton.querySelectorAll('.inline_icon, .inline_icon--reading_size, .inline_icon--up_1');
-                iconsToRemove.forEach(icon => icon.remove());
-                let color, borderColor;
-                if (coverImageUrl.endsWith("1000x1000x1.png")) {
-                    color = '#99f2a5'; // Green
-                    borderColor = '#66bfa3';
-                } else if (coverImageUrl.startsWith("http://assets.genius.com/images/sharing_fallback.png")) {
-                    if (document.body.innerHTML.includes("https://assets.genius.com/images/default_avatar_300.png")) {
-                        color = '#dddddd'; // Grey
-                        borderColor = '#aaaaaa';
-                    } else {
-                        color = '#ffff64'; // Yellow
-                        borderColor = '#cccc00';
-                    }
-                } else {
-                    color = '#fa7878'; // Red
-                    borderColor = '#a74d4d';
-                }
-                addColoredSquare(editArtistButton, color, borderColor);
-                if (isGeniusArtistArtistPageZwsp) checkArtistTitleForZeroWidthSpace();
-            }
-        }
     }
 
 
@@ -264,7 +352,7 @@ chrome.storage.local.get([
                 'Content-Type': 'application/json',
                 'Cookie': document.cookie,
                 'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.4.7 (Artwork Extractor for Genius)'
+                'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
             },
             body: JSON.stringify({})
         });
@@ -281,90 +369,87 @@ chrome.storage.local.get([
     //////////                            ALL SONGS / ALBUMS PAGES                            //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function checkAllSongsAlbumsPage() {
+    function checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums) {
+
         let cachedSongs = null;
         let cachedAlbums = null;
         let items = [];
-        let updates = [];
 
-        let fetchArtistId, fetchSongs, fetchAlbums;
+        console.log(artistId, isAllSongs, isAllAlbums);
 
-        const isAllSongs = window.location.href.match(/https:\/\/genius\.com\/artists\/[^\/]+\/songs/);
-        const isAllAlbums = window.location.href.match(/https:\/\/genius\.com\/artists\/[^\/]+\/albums/);
+        async function fetchAll(artistId, type) {
+            const results = [];
+            const workers = 5;
+            const perPage = 50;
 
-        async function checkAllEntriesAndFetchFunctions() {
-            fetchArtistId = async function () {
-                const artistIdMatch = document.body.innerHTML.match(/\\"artist\\":(\d+),/);
-                const totalEntriesMatch = document.body.innerHTML.match(/\\"totalEntries\\":(\d+),/);
-                if (!artistIdMatch || !totalEntriesMatch) {
-                    return { artistId: null, totalEntries: 0 };
+            async function worker(startPage) {
+                for (let page = startPage; ; page += workers) {
+                    const res = await fetch(
+                        `https://genius.com/api/artists/${artistId}/${type}?page=${page}&per_page=${perPage}&sort=popularity&text_format=html%2Cmarkdown`
+                    );
+
+                    if (!res.ok) break;
+
+                    const json = await res.json();
+                    const items = json.response[type];
+
+                    if (!items?.length) break;
+
+                    results.push(...items);
                 }
-                return {
-                    artistId: artistIdMatch[1],
-                    totalEntries: parseInt(totalEntriesMatch[1], 10)
-                };
-            };
+            }
 
-            fetchSongs = async function (artistId, totalEntries) {
-                if (cachedSongs) return cachedSongs;
+            const promises = [];
+            for (let i = 1; i <= workers; i++) {
+                await new Promise(r => setTimeout(r, 250 * (i - 1)));
+                promises.push(worker(i));
+            }
 
-                const songs = [];
-                const perPage = 50;
-                const totalPages = Math.ceil(totalEntries / perPage);
+            await Promise.all(promises);
+            return results;
+        }
 
-                const fetchPromises = Array.from({ length: totalPages }, (_, page) =>
-                    fetch(`https://genius.com/api/artists/${artistId}/songs?page=${page + 1}&per_page=${perPage}&sort=popularity&text_format=html%2Cmarkdown`)
-                        .then(response => response.json())
-                        .then(data => songs.push(...data.response.songs))
-                );
+        async function checkAllEntriesAndFetchFunctions(artistId) {
+            if (isAllSongs) {
+                if (!cachedSongs) cachedSongs = await fetchAll(artistId, "songs");
+                items = cachedSongs;
+            } else if (isAllAlbums) {
+                if (!cachedAlbums) cachedAlbums = await fetchAll(artistId, "albums");
+                items = cachedAlbums;
+            }
 
-                await Promise.all(fetchPromises);
-                cachedSongs = songs;
-                return songs;
-            };
-
-            fetchAlbums = async function (artistId, totalEntries) {
-                if (cachedAlbums) return cachedAlbums;
-
-                const albums = [];
-                const perPage = 50;
-                const totalPages = Math.ceil(totalEntries / perPage);
-
-                const fetchPromises = Array.from({ length: totalPages }, (_, page) =>
-                    fetch(`https://genius.com/api/artists/${artistId}/albums?page=${page + 1}&per_page=${perPage}&sort=popularity&text_format=html%2Cmarkdown`)
-                        .then(response => response.json())
-                        .then(data => albums.push(...data.response.albums))
-                );
-
-                await Promise.all(fetchPromises);
-                cachedAlbums = albums;
-                return albums;
-            };
-
-            const artistData = await fetchArtistId();
-            if (!artistData || !artistData.artistId) return;
-            const { artistId, totalEntries } = artistData;
-
-            items = isAllSongs ? await fetchSongs(artistId, totalEntries) : await fetchAlbums(artistId, totalEntries);
             return items;
         }
 
+        (async () => {
+            await checkAllEntriesAndFetchFunctions(artistId);
+        })();
+
+
+
+
+
+
 
         async function checkCoverImage() {
-            const listSection = document.querySelector('div[class^="ListSection-desktop__Content"]');
-            if (!listSection) return;
-            const listItems = listSection.querySelectorAll('li[class^="ListItem__Container"]');
+            let updates = [];
+
+            const discographyList = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            if (!discographyList) return;
+
+
+            const listItems = discographyList.querySelectorAll('a[class^="DiscographyItem__Container"]');
             const itemMap = new Map(items.map(item => [item.url, item]));
 
             listItems.forEach((item) => {
                 const targetDiv = item.querySelector('div[class^="SizedImage__Container"]');
-                const parentList = item.closest('ul[class^="ListSection-desktop__Items"]');
-                if (!targetDiv || !parentList || ['#99f2a5', '#fa7878', '#dddddd'].includes(targetDiv.style.backgroundColor)) return;
+                if (!targetDiv) return;
 
-                const linkElement = item.querySelector('a');
-                const itemLink = linkElement ? linkElement.href : null;
+                if (['#99f2a5', '#fa7878', '#dddddd'].includes(targetDiv.style.backgroundColor)) return;
 
+                const itemLink = item.href;
                 let artImageUrl, artistImageUrl;
+
                 if (itemLink && itemMap.has(itemLink)) {
                     const titleMatch = itemMap.get(itemLink);
                     if (isAllSongs) {
@@ -394,21 +479,21 @@ chrome.storage.local.get([
         }
 
         const cachedSongData = new Map();
-        async function checkMetadata(artistId, totalEntries) {
-            const ul = document.querySelector('ul[class^="ListSection-desktop__Items"]');
-            if (!ul) return;
+        async function checkMetadata() {
+            const container = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            if (!container) return;
 
-            const liItems = ul.querySelectorAll('li[class^="ListItem__Container"]');
-            const targetLinks = Array.from(liItems)
-                .map(li => li.querySelector('a[href]'))
-                .filter(aTag => aTag && aTag.href.startsWith('https://genius.com/') && aTag.href.endsWith('-lyrics'))
-                .map(aTag => aTag.href);
+            const itemsDom = container.querySelectorAll('a[class^="DiscographyItem__Container"]');
+
+            const targetLinks = Array.from(itemsDom)
+                .map(a => a.href)
+                .filter(href => href.startsWith("https://genius.com/") && (href.endsWith("-lyrics") || href.endsWith("-annotated")));
 
             const matchedSongs = items.filter(song => targetLinks.includes(song.url));
             const uncachedSongs = matchedSongs.filter(song => !cachedSongData.has(song.id));
 
             const chunkSize = 5;
-            const delayMs = 250;
+            const delayMs = 400;
 
             for (let i = 0; i < uncachedSongs.length; i += chunkSize) {
                 const chunk = uncachedSongs.slice(i, i + chunkSize);
@@ -447,29 +532,29 @@ chrome.storage.local.get([
         }
 
         function updateSongUI(song, songData) {
-            const listItem = document.querySelector(`li[class^="ListItem__Container"] a[href="${song.url}"]`)?.closest('li');
-            if (!listItem) return;
+            const discographyList = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            if (!discographyList) return;
+            const link = discographyList.querySelector(`a[class^="DiscographyItem__Container"][href="${song.url}"]`);
+            if (!link) return;
 
-            const infoContainer = listItem.querySelector('div[class^="ListItem__InfoContainer"]');
-            if (infoContainer) {
-                if (songData.lyrics_marked_complete_by) {
-                    infoContainer.style.backgroundColor = '#99f2a5';
-                } else if (songData.lyrics_state === 'complete') {
-                    infoContainer.style.backgroundColor = '#ffff64';
-                } else {
-                    infoContainer.style.backgroundColor = '#ff7878';
-                }
+            const infoContainer = link.querySelector('div[class^="DiscographyItem__Content"]');
+            if (!infoContainer) return;
+
+            if (songData.lyrics_marked_complete_by) {
+                infoContainer.style.backgroundColor = '#99f2a5';
+            } else if (songData.lyrics_state === 'complete') {
+                infoContainer.style.backgroundColor = '#ffff64';
+            } else {
+                infoContainer.style.backgroundColor = '#ff7878';
             }
 
             if (!songData.album) {
-                listItem.style.borderTop = '3.5px dashed';
-                listItem.style.borderBottom = '3.5px dashed';
+                link.style.borderTop = '3.5px dashed';
+                link.style.borderBottom = '3.5px dashed';
             }
         }
 
-        (async () => {
-            await checkAllEntriesAndFetchFunctions();
-        })();
+
 
         document.addEventListener('click', async () => {
             if ((isAllSongs && isGeniusArtistAllSongsAlbumsPage) || (isAllAlbums && isGeniusArtistAllSongsAlbumsPage) && isGeniusArtistAllSongsAlbumsPage) {
@@ -488,6 +573,5 @@ chrome.storage.local.get([
             }
         });
     }
-
 
 });
