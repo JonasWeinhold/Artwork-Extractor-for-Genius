@@ -65,7 +65,7 @@ chrome.storage.local.get([
             //const response = await fetch(`https://genius.com/api/albums/${albumId}`);
             //const json = await response.json();
 
-    
+
 
             if (userId == 4670957) {
                 const columnContainer = document.querySelector(".column_layout-column_span.column_layout-column_span--one_quarter");
@@ -410,7 +410,7 @@ chrome.storage.local.get([
                 'Content-Type': 'application/json',
                 'Cookie': document.cookie,
                 'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
             },
             body: JSON.stringify({})
         });
@@ -749,7 +749,7 @@ chrome.storage.local.get([
                             "Content-Type": "application/json",
                             "Cookie": document.cookie,
                             "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)"
+                            "User-Agent": "ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)"
                         },
                         body: JSON.stringify(payload)
                     });
@@ -774,7 +774,7 @@ chrome.storage.local.get([
                             "Content-Type": "application/json",
                             "Cookie": document.cookie,
                             "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)"
+                            "User-Agent": "ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)"
                         },
                     });
 
@@ -813,7 +813,7 @@ chrome.storage.local.get([
                             "Content-Type": "application/json",
                             "Cookie": document.cookie,
                             "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)"
+                            "User-Agent": "ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)"
                         },
                         body: JSON.stringify(payload)
                     });
@@ -1184,19 +1184,24 @@ chrome.storage.local.get([
                 };
 
                 const languageType = {
+                    'bosanski': 'bs',
+                    'crnogorski': 'cnr',
                     'Deutsch': 'de',
                     'Österreichisches Deutsch': 'de-at',
                     'English': 'en',
                     'Español': 'es',
                     'Français': 'fr',
                     'Schweizerdeutsch': 'gsw',
+                    'hrvatski': 'hr',
                     'Italiano': 'it',
                     'Kölsch': 'ksh',
+                    'Македонски': 'mk',
                     'Nederlands': 'nl',
                     'Norsk': 'no',
                     'Polski': 'pl',
                     'Português': 'pt',
                     'Русский (Russian)': 'ru',
+                    'srpski': 'sr',
                     'Svenska': 'sv',
                     'Türkçe': 'tr',
                     'o‘zbekcha': 'uz',
@@ -1731,7 +1736,7 @@ chrome.storage.local.get([
                             'Content-Type': 'application/json',
                             'Cookie': document.cookie,
                             'X-CSRF-Token': getCsrfToken(),
-                            'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                            'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
                         },
                         body: JSON.stringify(payload)
                     });
@@ -2104,19 +2109,24 @@ chrome.storage.local.get([
                 languageSelect.id = 'languageSelect';
 
                 const languages = [
+                    'bosanski',
+                    'crnogorski',
                     'Deutsch',
                     'Österreichisches Deutsch',
                     'English',
                     'Español',
                     'Français',
                     'Schweizerdeutsch',
+                    'hrvatski',
                     'Italiano',
                     'Kölsch',
+                    'Македонски',
                     'Nederlands',
                     'Norsk',
                     'Polski',
                     'Português',
                     'Русский (Russian)',
+                    'srpski',
                     'Svenska',
                     'Türkçe',
                     'o‘zbekcha',
@@ -2951,7 +2961,7 @@ chrome.storage.local.get([
                         'Content-Type': 'application/json',
                         'Cookie': document.cookie,
                         'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                        'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
                     }
                 });
 
@@ -3262,7 +3272,7 @@ chrome.storage.local.get([
             if (chartRow.querySelector('.lyric-status-box')) return;
 
             // Lyrics are marked complete, staff approved, or verified
-            const lyricsAreValidated =  songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
+            const lyricsAreValidated = songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
 
             let color = '#ff7878';
             if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
@@ -3515,7 +3525,7 @@ chrome.storage.local.get([
     function addCleanupButton(songs, actionType, label, metadataUpdate) {
         if (songs.length === 0) return;
 
-                const albumAdminMenu = document.querySelector('album-admin-menu');
+        const albumAdminMenu = document.querySelector('album-admin-menu');
         if (!albumAdminMenu) return;
 
         const actionButton = document.createElement('button');
@@ -3746,7 +3756,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });
@@ -3773,7 +3783,7 @@ chrome.storage.local.get([
                         'Content-Type': 'application/json',
                         'Cookie': document.cookie,
                         'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                        'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
                     }
                 });
 
@@ -3789,7 +3799,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });
@@ -3806,7 +3816,7 @@ chrome.storage.local.get([
                         'Content-Type': 'application/json',
                         'Cookie': document.cookie,
                         'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                        'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
                     }
                 });
 

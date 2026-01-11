@@ -6,12 +6,14 @@ chrome.storage.local.get([
     'isGeniusSongSongId',
     'isGeniusSongCheckIndex',
     'isGeniusSongFollowButton',
+    'isGeniusSongShellyButton',
     'isGeniusSongCleanupMetadataButton',
     'isGeniusSongLanguageButton',
     'isGeniusSongCleanupButton',
     'isGeniusSongSectionsButtons',
     'isGeniusSongExpandSectionsButtons',
     'isGeniusSongAnnotationsButtons',
+    'isGeniusSongFilterActivity',
     'isGeniusSongCopyCover',
     'isGeniusSongAppleMusicPlayer',
     'isGeniusSongYouTubePlayer',
@@ -26,12 +28,14 @@ chrome.storage.local.get([
     const isGeniusSongSongId = result.isGeniusSongSongId ?? false;
     const isGeniusSongCheckIndex = result.isGeniusSongCheckIndex ?? false;
     const isGeniusSongFollowButton = result.isGeniusSongFollowButton ?? true;
+    const isGeniusSongShellyButton = result.isGeniusSongShellyButton ?? true;
     const isGeniusSongCleanupMetadataButton = result.isGeniusSongCleanupMetadataButton ?? true;
     const isGeniusSongLanguageButton = result.isGeniusSongLanguageButton ?? true;
     const isGeniusSongCleanupButton = result.isGeniusSongCleanupButton ?? true;
     const isGeniusSongSectionsButtons = result.isGeniusSongSectionsButtons ?? true;
     const isGeniusSongExpandSectionsButtons = result.isGeniusSongExpandSectionsButtons ?? false;
     const isGeniusSongAnnotationsButtons = result.isGeniusSongAnnotationsButtons ?? true;
+    const isGeniusSongFilterActivity = result.isGeniusSongFilterActivity ?? true;
     const isGeniusSongCopyCover = result.isGeniusSongCopyCover ?? true;
     const isGeniusSongAppleMusicPlayer = result.isGeniusSongAppleMusicPlayer ?? true;
     const isGeniusSongYouTubePlayer = result.isGeniusSongYouTubePlayer ?? true;
@@ -69,6 +73,7 @@ chrome.storage.local.get([
         if (isGeniusSongSongPage) checkSongCover(songData)
 
         if (isGeniusSongFollowButton) addFollowButton();
+        if (isGeniusSongShellyButton) addShellyButton(songId, songData);
 
         if (isGeniusSongCleanupMetadataButton) cleanupMetadata(userId, songData);
 
@@ -76,6 +81,8 @@ chrome.storage.local.get([
         if (isGeniusSongCleanupButton) selectDropdown(songData, "Cleanup");
         if (isGeniusSongSectionsButtons) lyricsSectionsButtons(songData);
         if (isGeniusSongAnnotationsButtons) lyricsAnnotationsButtons();
+
+        if (isGeniusSongFilterActivity) filterRecentActivity();
 
         if (songData.primary_tag.name !== "Non-Music") {
             if (isGeniusSongSpotifyPlayer) addSpotifyPlayer(songData);
@@ -122,7 +129,7 @@ chrome.storage.local.get([
         if (metadataContainer && !document.getElementById("song-id-button")) {
             const songIdElement = document.createElement('span');
             songIdElement.id = "song-id-button";
-            songIdElement.className = document.querySelector('span[class^="LabelWithIcon__Label-"]').className;
+            songIdElement.className = metadataContainer.querySelector('span[class^="LabelWithIcon__Label-"]').className;
 
             const songIdLink = document.createElement('a');
             songIdLink.href = `https://genius.com/api/songs/${songId}`;
@@ -147,7 +154,7 @@ chrome.storage.local.get([
         if (adminButton && metadataContainer && !document.getElementById("index-button")) {
             const indexElement = document.createElement('span');
             indexElement.id = "index-button";
-            indexElement.className = document.querySelector('span[class^="LabelWithIcon__Label-"]').className;
+            indexElement.className = metadataContainer.querySelector('span[class^="LabelWithIcon__Label-"]').className;
 
             const siteQuery = `site:${window.location.href}`;
             const indexLink = document.createElement('a');
@@ -410,6 +417,83 @@ chrome.storage.local.get([
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                 SHELLY BUTTON                                  //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    function addShellyButton(songId, songData) {
+        const lyricsAreValidated = songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
+        if (lyricsAreValidated) return;
+
+        const list = document.querySelector('[class^="AdminMenu__Dropdown-"]');
+        if (!list) return;
+
+        if (document.getElementById("shelly-cleanup-btn")) return;
+
+        const existingButton = list.querySelector("button");
+        const existingLi = list.querySelector("li");
+        if (!existingButton || !existingLi) return;
+
+        const li = document.createElement("li");
+        li.className = existingLi.className;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.id = "shelly-cleanup-btn";
+        btn.textContent = "Shelly (Cleanup Bot)";
+        btn.className = existingButton.className;
+
+        btn.addEventListener("click", async () => {
+            const message = "⚠️ Are you absolutely sure you want to run 'Shelly The Cleanup Bot'?";
+            if (!confirm(message)) return;
+
+            const payload = {
+                text_format: "html,markdown",
+                react: true,
+                client_timestamps: {
+                    updated_by_human_at: songData.updated_by_human_at,
+                    lyrics_updated_at: songData.lyrics_updated_at
+                },
+                lyrics: {
+                    body: {
+                        html: "Page needs help... Paging ShellPageBot"
+                    }
+                }
+            };
+
+            await updateSongLyrics(songId, payload);
+
+            const container = list.parentElement?.parentElement;
+            const toggle = container?.querySelector('[class^="Dropdown__Toggle-"]');
+            toggle?.click();
+            main()
+        });
+
+        li.appendChild(btn);
+        list.appendChild(li);
+    }
+
+    async function updateSongLyrics(songId, payload) {
+        try {
+            const response = await fetch(`https://genius.com/api/songs/${songId}/lyrics`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cookie': document.cookie,
+                    'X-CSRF-Token': getCsrfToken(),
+                    'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                console.error(`Error updating song lyrics: ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error(`Error: ${error}`);
+        }
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                CLEANUP METADATA                                //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -509,6 +593,7 @@ chrome.storage.local.get([
         actionButton.addEventListener('click', () => {
             updateSongMetadata(song, metadataUpdate);
             actionButton.style.display = 'none';
+            main();
         });
 
         toolbarDiv.appendChild(actionButton);
@@ -523,7 +608,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });
@@ -535,6 +620,7 @@ chrome.storage.local.get([
             console.error(`Error: ${error}`);
         }
     }
+
 
     function getCsrfToken() {
         const match = document.cookie.match(/_csrf_token=([^;]+)/);
@@ -654,11 +740,14 @@ chrome.storage.local.get([
             { code: 'KO', value: 'ko', name: 'Korean' },
             { code: 'LA', value: 'la', name: 'Latin' },
             { code: 'LT', value: 'lt', name: 'Lithuanian' },
+            //{ code: 'MK', value: 'mk', name: 'Macedonian' },
             { code: 'MN', value: 'mn', name: 'Mongolian' },
             { code: 'NO', value: 'no', name: 'Norwegian' },
             { code: 'PL', value: 'pl', name: 'Polish' },
             { code: 'RU', value: 'ru', name: 'Russian' },
             { code: 'SC', value: 'sc', name: 'Sardinian' },
+            //{ code: 'SH-E', value: 'sr', name: 'Serbo-Croatian (ekavica)' },
+            //{ code: 'SH-I', value: 'bs', name: 'Serbo-Croatian (ijekavica)' },
             { code: 'SK', value: 'sk', name: 'Slovak' },
             { code: 'ES', value: 'es', name: 'Spanish' },
             { code: 'SV', value: 'sv', name: 'Swedish' },
@@ -895,7 +984,7 @@ chrome.storage.local.get([
 
                 { label: "Horizontal Rule", openTag: "---", closeTag: "", hoverText: "Horizontal Rule" },
                 { label: "Em dash", openTag: "—", closeTag: "", hoverText: "Em dash" },
-                { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
+                //{ label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
             ];
 
             const referenceButton = document.querySelector("button[class*='EditMetadataButton']");
@@ -1060,6 +1149,7 @@ chrome.storage.local.get([
             const textFormats = {
                 Header: {
                     'bg': `[Текст на песента "${songTitle}"${featuringText}]`,
+                    'bs': `[Tekst pjesme „${songTitle}”${featuringText}]`,
                     'ca': `[Lletra de "${songTitle}"${featuringText}]`,
                     'cs': `[Text skladby „${songTitle}“${featuringText}]`,
                     'da': `[Tekst til „${songTitle}“${featuringText}]`,
@@ -1074,6 +1164,7 @@ chrome.storage.local.get([
                     'it': `[Testo di "${songTitle}"${featuringText}]`,
                     'la': `[Lyricis "${songTitle}"${featuringText}]`,
                     'lt': `[Dainos žodžiai „${songTitle}”${featuringText}]`,
+                    'mk': `[Текст за песната „${songTitle}”${featuringText}]`,
                     'mn': `[«${songTitle}» Үгнүүд${featuringText}]`,
                     'nl': `[Songtekst van "${songTitle}"${featuringText}]`,
                     'no': `[Tekst til «${songTitle}»${featuringText}]`,
@@ -1082,6 +1173,7 @@ chrome.storage.local.get([
                     'sc': `[Testu de "${songTitle}"${featuringText}]`,
                     'sk': `[Text skladby „${songTitle}“${featuringText}]`,
                     'sq': `[Teksti i "${songTitle}"${featuringText}]`,
+                    'sr': `[Tekst pesme „${songTitle}”${featuringText}]`,
                     'tr': `["${songTitle}"${featuringText} için şarkı sözleri]`,
                     'uk': `[Текст пісні «${songTitle}»${featuringText}]`,
                     'uz': `[«${songTitle}» qoʻshigʻi matni${featuringText}]`,
@@ -1153,17 +1245,28 @@ chrome.storage.local.get([
                     `(<b>\\[(?:${otherTags.join('|')})(?: [IVXLCDM]+)?[^<]*<\\/b>)`,
                     "g"
                 );
-                const ownRegex = new RegExp(`\\[${fullText}(?: \\d+)?\\]`, "g");
+                const ownRegex = new RegExp(`\\[${fullText}(?: \\d+)?(?:: ([^\\]]+))?\\]`, "g");
 
                 const renumberTags = (text) => {
                     const matches = text.match(ownRegex);
+
                     if (matches && matches.length > 1) {
                         let i = 1;
-                        return text.replace(ownRegex, () => `[${fullText} ${i++}]`);
+                        return text.replace(ownRegex, (_, sub) => {
+                            return sub
+                                ? `[${fullText} ${i++}: ${sub}]`
+                                : `[${fullText} ${i++}]`;
+                        });
                     }
+
                     if (matches && matches.length === 1) {
-                        return text.replace(ownRegex, `[${fullText}]`);
+                        return text.replace(ownRegex, (_, sub) => {
+                            return sub
+                                ? `[${fullText}: ${sub}]`
+                                : `[${fullText}]`;
+                        });
                     }
+
                     return text;
                 };
 
@@ -1256,7 +1359,7 @@ chrome.storage.local.get([
             if (storedLanguage === "auto") storedLanguage = songData.language;
             if (!storedLanguage) return;
 
-            const LABELS = {
+            const HEADERS = {
                 "bg": { // Bulgarian
                     Default: [
                         { displayText: "Header", fullText: "Header", hoverText: "Header" },
@@ -1273,6 +1376,28 @@ chrome.storage.local.get([
                         { displayText: "Следприпев", fullText: "Следприпев", hoverText: "Post-Chorus" },
                         { displayText: "Рефрен", fullText: "Рефрен", hoverText: "Refrain" },
                         { displayText: "Мост", fullText: "Мост", hoverText: "Bridge" },
+                    ]
+                },
+                "bs": { // Serbian (Serbo-Croatian (ijekavica))
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Uvod", fullText: "Uvod", hoverText: "Intro" },
+                        { displayText: "Završetak", fullText: "Završetak", hoverText: "Outro" },
+                        { displayText: "Skeč", fullText: "Skeč", hoverText: "Skit" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Strofa", fullText: "Strofa", hoverText: "Verse" },
+                        { displayText: "Predrefren", fullText: "Predrefren", hoverText: "Pre-Chorus" },
+                        { displayText: "Refren", fullText: "Refren", hoverText: "Chorus" },
+                        { displayText: "Postrefren", fullText: "Postrefren", hoverText: "Post-Chorus" },
+                        { displayText: "Pripev", fullText: "Pripev", hoverText: "Refrain" },
+                        { displayText: "Most", fullText: "Most", hoverText: "Bridge" },
+                        { displayText: "Interludijum", fullText: "Interludijum", hoverText: "Interlude" },
+                        { displayText: "Pauza", fullText: "Pauza", hoverText: "Break" },
+                        { displayText: "Uzdizanje", fullText: "Uzdizanje", hoverText: "Build" },
+                        { displayText: "Drop", fullText: "Drop", hoverText: "Drop" }
                     ]
                 },
                 "ca": { // Catalan
@@ -1506,6 +1631,26 @@ chrome.storage.local.get([
                         { displayText: null, fullText: null, hoverText: null },
                     ]
                 },
+                "mk": { // Macedonian
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Увод", fullText: "Увод", hoverText: "Intro" },
+                        { displayText: "Завршеток", fullText: "Завршеток", hoverText: "Outro" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Строфа", fullText: "Строфа", hoverText: "Verse" },
+                        { displayText: "Предрефрен", fullText: "Предрефрен", hoverText: "Pre-Chorus" },
+                        { displayText: "Рефрен", fullText: "Рефрен", hoverText: "Chorus" },
+                        { displayText: "Пострефрен", fullText: "Пострефрен", hoverText: "Post-Chorus" },
+                        { displayText: "Рефрен", fullText: "Рефрен", hoverText: "Refrain" },
+                        { displayText: "Мост", fullText: "Мост", hoverText: "Bridge" },
+                        { displayText: "Пауза", fullText: "Пауза", hoverText: "Breakdown" },
+                        { displayText: "Инстр. пауза", fullText: "Инструментална пауза", hoverText: "Instrumental" },
+                    ]
+                },
                 "nl": { // Dutch
                     Default: [
                         { displayText: "Header", fullText: "Header", hoverText: "Header" },
@@ -1645,6 +1790,28 @@ chrome.storage.local.get([
                         { displayText: "Drop", fullText: "Drop", hoverText: "Drop" },
                     ]
                 },
+                "sr": { // Serbian (Serbo-Croatian (ekavica))
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Uvod", fullText: "Uvod", hoverText: "Intro" },
+                        { displayText: "Završetak", fullText: "Završetak", hoverText: "Outro" },
+                        { displayText: "Skeč", fullText: "Skeč", hoverText: "Skit" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Strofa", fullText: "Strofa", hoverText: "Verse" },
+                        { displayText: "Predrefren", fullText: "Predrefren", hoverText: "Pre-Chorus" },
+                        { displayText: "Refren", fullText: "Refren", hoverText: "Chorus" },
+                        { displayText: "Postrefren", fullText: "Postrefren", hoverText: "Post-Chorus" },
+                        { displayText: "Pripev", fullText: "Pripev", hoverText: "Refrain" },
+                        { displayText: "Most", fullText: "Most", hoverText: "Bridge" },
+                        { displayText: "Interludijum", fullText: "Interludijum", hoverText: "Interlude" },
+                        { displayText: "Pauza", fullText: "Pauza", hoverText: "Break" },
+                        { displayText: "Uzdizanje", fullText: "Uzdizanje", hoverText: "Build" },
+                        { displayText: "Drop", fullText: "Drop", hoverText: "Drop" }
+                    ]
+                },
                 "sv": { // Swedish
                     Default: [
                         { displayText: null, fullText: null, hoverText: null },
@@ -1773,7 +1940,7 @@ chrome.storage.local.get([
                 },
             };
 
-            const langLabels = LABELS[storedLanguage];
+            const langLabels = HEADERS[storedLanguage];
             const tagName = songData.primary_tag?.name;
             const buttonLabels = langLabels?.[tagName] || langLabels?.Default || [];
 
@@ -1793,15 +1960,36 @@ chrome.storage.local.get([
             // STYLE BUTTONS
             const styleDiv = createGridContainer("lyricsStyleButtonsContainer");
 
-            const styleButtons = [
-                { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
-                { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
-                { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
-                { label: null, openTag: null, closeTag: null, hoverText: null },
-                { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
-                { label: "THSP", openTag: "&thinsp;", closeTag: "", hoverText: "Thin Space" },
-                { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "", hoverText: "Zero-width space" },
-            ];
+            const STYLES = {
+                default: [
+                    { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
+                    { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
+                    { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
+                    { label: null, openTag: null, closeTag: null, hoverText: null },
+                    { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "", hoverText: "Zero-width space" },
+                    { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
+                ],
+
+                de: {
+                    Default: [
+                        { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
+                        { label: "(&lt;i&gt;)", openTag: "(<i>", closeTag: "</i>)", hoverText: "(<i></i>)" },
+                        { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "", hoverText: "Zero-width space" },
+                        { label: "„...“", openTag: "„", closeTag: "“", hoverText: "German Quotation Marks" },
+                        { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
+                        { label: "(&lt;b&gt;)", openTag: "(<b>", closeTag: "</b>)", hoverText: "(<b></b>)" },
+                        { label: "THSP", openTag: "&thinsp;", closeTag: "", hoverText: "Thin Space" },
+                        { label: "En Dash", openTag: "–", closeTag: "", hoverText: "En Dash" },
+                        { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
+                        { label: "(&lt;i&gt;&lt;b&gt;)", openTag: "(<b><i>", closeTag: "</i></b>)", hoverText: "(<b><i></i></b>)" },
+                        { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
+                        { label: "Em Dash", openTag: "—", closeTag: "", hoverText: "Em Dash" },
+                    ]
+                },
+            };
+
+            const langStyleButtons = STYLES[storedLanguage];
+            const styleButtons = langStyleButtons?.Default || STYLES.default;
 
             renderButtons(
                 styleDiv,
@@ -2140,6 +2328,613 @@ chrome.storage.local.get([
         }
     }
 
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                RECENT ACTIVITY                                 //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    const arrowSvgClosed = createArrowSvg('M4.488 7 0 0h8.977L4.488 7Z');
+    const arrowSvgOpen = createArrowSvg('M4.488.5 0 7.5h8.977L4.488.5Z');
+
+    function createArrowSvg(pathData) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 9 7');
+        svg.setAttribute('width', '8');
+        svg.setAttribute('height', '6.21');
+        svg.style.display = "block";
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        svg.appendChild(path);
+
+        return svg;
+    }
+
+    function filterRecentActivity() {
+        console.log("Run function filterRecentActivity()");
+
+        const svgUpvoted = `
+            <svg data-icon-upvoted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.62 21.36">
+                <path d="M16.52 21.29H6V8.5l.84-.13a3.45 3.45 0 0 0 1.82-1.09 13.16 13.16 0 0 0 .82-1.85c1.06-2.69 2-4.78 3.52-5.31a2.06 2.06 0 0 1 1.74.17c2.5 1.42 1 5 .16 6.95-.11.27-.25.6-.31.77a.78.78 0 0 0 .6.36h4.1a2.29 2.29 0 0 1 2.37 2.37c0 .82-1.59 5.4-2.92 9.09a2.39 2.39 0 0 1-2.22 1.46zm-8.52-2h8.56a.48.48 0 0 0 .31-.17c1.31-3.65 2.73-7.82 2.79-8.44 0-.22-.1-.32-.37-.32h-4.1A2.61 2.61 0 0 1 12.54 8 4.29 4.29 0 0 1 13 6.46c.45-1.06 1.64-3.89.7-4.43-.52 0-1.3 1.4-2.38 4.14a10 10 0 0 1-1.13 2.38A5.28 5.28 0 0 1 8 10.11zM0 8.4h4.86v12.96H0z"></path>
+            </svg>`;
+        const svgDownvoted = `
+            <svg data-icon-downvoted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.62 21.36">
+                <path d="M8 21.36a2.12 2.12 0 0 1-1.06-.29c-2.5-1.42-1-5-.16-6.95.11-.27.25-.6.31-.77a.78.78 0 0 0-.6-.36H2.37A2.29 2.29 0 0 1 0 10.64c0-.82 1.59-5.4 2.92-9.09A2.39 2.39 0 0 1 5.1.07h10.56v12.79l-.84.13A3.45 3.45 0 0 0 13 14.08a13.16 13.16 0 0 0-.82 1.85c-1.06 2.69-2 4.79-3.49 5.31a2.06 2.06 0 0 1-.69.12zM5.1 2.07a.48.48 0 0 0-.31.17C3.48 5.89 2.07 10.06 2 10.68c0 .22.1.32.37.32h4.1a2.61 2.61 0 0 1 2.61 2.4 4.29 4.29 0 0 1-.48 1.51c-.46 1.09-1.65 3.89-.7 4.42.52 0 1.3-1.4 2.38-4.14a10 10 0 0 1 1.13-2.38 5.27 5.27 0 0 1 2.25-1.56V2.07zM16.76 0h4.86v12.96h-4.86z"></path>
+            </svg>`;
+        const svgPinned = `
+            <svg data-icon-pinned width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.82 22">
+                <path d="M21.82 20.62L17 15.83l3.59-3.59-3.04-3.07-3.36.12-4.1-4.1v-3L7.91 0 0 7.91l2.16 2.16 2.84.18 4.1 4.12-.1 3.36 3.08 3.08 3.59-3.59L20.43 22zM11 16.94l.12-3.36-5.27-5.24L3 8.16l-.25-.25 5.16-5.14.22.23v3l5.27 5.27 3.36-.12 1.09 1.09L12.06 18z"></path>
+            </svg>`;
+        const svgUnpinned = `
+            <svg data-icon-unpinned width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.82 22">
+                <path d="M21.82 20.62L17 15.83l3.59-3.59-3.04-3.07-3.36.12-4.1-4.1v-3L7.91 0 0 7.91l2.16 2.16 2.84.18 4.1 4.12-.1 3.36 3.08 3.08 3.59-3.59L20.43 22zM11 16.94l.12-3.36-5.27-5.24L3 8.16l-.25-.25 5.16-5.14.22.23v3l5.27 5.27 3.36-.12 1.09 1.09L12.06 18z"></path>
+            </svg>`;
+        const svgLocked = `
+            <svg data-icon-locked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17.08 22">
+                <path d="M15.08 10.86V20H2v-9.14h13.08M8.54 0a6.31 6.31 0 0 0-6.31 6.31v2.55H0V22h17.08V8.86h-2.23V6.31A6.31 6.31 0 0 0 8.54 0zM4.63 8.86V6.31a3.91 3.91 0 0 1 7.81 0v2.55z"></path>
+            </svg>`;
+        const svgUnlocked = `
+            <svg data-icon-unlocked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16.56 22">
+                <path d="M14.56 11.26V20H2v-8.74h12.56M8.28 0a6.12 6.12 0 0 0-6.12 6.12v3.14H0V22h16.56V9.26H4.49V6.12a3.79 3.79 0 0 1 7.58 0h2.33A6.12 6.12 0 0 0 8.28 0z"></path>
+            </svg>`;
+        const svgAccepted = `
+            <svg data-icon-accepted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 16.2">
+                <path d="M8.83 16.2L0 7.97l2.06-2.21 6.62 6.17L19.79 0 22 2.06 8.83 16.2"></path>
+            </svg>`;
+        const svgRejected = `
+            <svg data-icon-deleted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
+                <path d="M22 1.39L20.61 0 11 9.62 1.39 0 0 1.39 9.62 11 0 20.61 1.39 22 11 12.38 20.61 22 22 20.61 12.38 11 22 1.39"></path>
+            </svg>`;
+        const svgRecognized = `
+            <svg data-icon-recognized width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17.4 22">
+                <path d="M15.47 1.92v18.16H1.92V1.92h13.55M17.4 0H0v22h17.4V0z"></path>
+                <path d="M5.11 6.45h7.82v1.44H5.11zm0 8.1h7.82v1.44H5.11zm0-4.05h7.82v1.44H5.11z"></path>
+            </svg>`;
+        const svgMerged = `
+            <svg data-icon-merged width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18.59 22">
+                <path d="M16.76 5.87v14.3H6.22V5.87h10.54M18.59 4H4.39v18h14.2V4z"></path>
+                <path d="M7.73 8.45h7.44V9.9H7.73zm0 7.7h7.44v1.45H7.73zm0-3.85h7.44v1.45H7.73z"></path>
+                <path d="M3.45 19.89H0V0h16.13v3.12H14.2V1.93H1.93v16.03h1.52v1.93"></path>
+            </svg>`;
+        const svgCreated = `
+            <svg data-icon-created width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
+                <path d="M15 10.47h1.7v4.3h-4.4v-3.75c0-2.78.63-5.3 4.39-5.52v2.22c-1.26 0-1.69.88-1.69 2.75zm-7 0h1.7v4.3H5.3v-3.75c0-2.78.63-5.3 4.39-5.52v2.22C8.43 7.72 8 8.6 8 10.47z"></path>
+                <path d="M20.09 1.91v18.18H1.91V1.91h18.18M22 0H0v22h22V0z"></path>
+            </svg>`;
+        const svgEdited = `
+            <svg data-icon-edited width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 19">
+                <path d="M17.51 5.827c.654-.654.654-1.636 0-2.29L14.563.59c-.655-.655-1.637-.655-2.291 0L0 12.864V18.1h5.236L17.51 5.827Zm-4.092-4.09 2.946 2.945-2.455 2.454-2.945-2.945 2.454-2.455ZM1.636 16.463v-2.946l8.182-8.182 2.946 2.946-8.182 8.182H1.636Z"></path>
+            </svg>`;
+        const svgSuggested = `
+            <svg data-icon-added_a_suggestion_to width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.2 22">
+                <path d="M19.29 1.91v11.46H7.69l-.57.7L5 16.64v-3.27H1.91V1.91h17.38M21.2 0H0v15.28h3.12V22l5.48-6.72h12.6V0z"></path>
+                <path d="M4.14 4.29h12.93V6.2H4.14zm0 4.09h12.93v1.91H4.14z"></path>
+            </svg>`;
+        const svgFollowed = `
+            <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 15.45">
+                <path d="M11 2c4 0 7.26 3.85 8.6 5.72-1.34 1.87-4.6 5.73-8.6 5.73S3.74 9.61 2.4 7.73C3.74 5.86 7 2 11 2m0-2C4.45 0 0 7.73 0 7.73s4.45 7.73 11 7.73 11-7.73 11-7.73S17.55 0 11 0z"></path>
+                <path d="M11 5a2.73 2.73 0 1 1-2.73 2.73A2.73 2.73 0 0 1 11 5m0-2a4.73 4.73 0 1 0 4.73 4.73A4.73 4.73 0 0 0 11 3z"></path>
+            </svg>`;
+        const svgHid = `
+            <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 15.45">
+                <path d="M11 2c4 0 7.26 3.85 8.6 5.72-1.34 1.87-4.6 5.73-8.6 5.73S3.74 9.61 2.4 7.73C3.74 5.86 7 2 11 2m0-2C4.45 0 0 7.73 0 7.73s4.45 7.73 11 7.73 11-7.73 11-7.73S17.55 0 11 0z"></path>
+                <path d="M11 5a2.73 2.73 0 1 1-2.73 2.73A2.73 2.73 0 0 1 11 5m0-2a4.73 4.73 0 1 0 4.73 4.73A4.73 4.73 0 0 0 11 3z"></path>
+                <path d="M0 14.45 L1.8 15.45 L22 1 L20.2 0 Z"></path>
+            </svg>`;
+        const svgPyonged = `
+            <svg data-icon-pyonged width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11.37 22">
+                <path d="M0 7l6.16-7 3.3 7H6.89S5.5 12.1 5.5 12.17h5.87L6.09 22l.66-7H.88l2.89-8z"></path>
+            </svg>`;
+        const svgPageviews = `
+            <svg data-icon-pageviews width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 18">
+                <path d="M3.33494 0C3.33494 0 4.09484 1.88505 3.82154 4.2567C3.54779 6.62835 0.236392 9.669 0.250042 12.6792C0.263692 15.6894 5.14004 18 5.14004 18C5.14004 18 4.03634 16.0332 5.97389 12.7953C5.97389 12.7953 8.21519 14.3668 7.98599 15.7594C7.74464 17.2239 6.60914 18 6.60914 18C6.60914 18 13.4295 17.1792 13.4899 11.676C13.551 6.1722 9.49469 2.73315 9.49469 2.73315C9.49469 2.73315 9.94184 4.95165 8.72384 6.97485C8.72384 6.97485 5.67599 0.7605 3.33494 0ZM5.38739 4.30215C6.08369 5.3508 6.77669 6.5532 7.32239 7.66335L8.58509 10.2348L10.0626 7.78005C10.285 7.4103 10.4641 7.0371 10.6069 6.66915C11.3284 7.9623 11.9508 9.6618 11.9287 11.6584C11.9079 13.524 10.786 14.681 9.55904 15.3902C9.44159 13.4235 7.33139 11.8395 6.87059 11.5164L5.49629 10.5534L4.63394 11.9932C3.95714 13.1242 3.58724 14.1443 3.40754 15.03C2.53679 14.3027 1.81514 13.4493 1.81199 12.672C1.80614 11.4366 2.69579 9.9708 3.55619 8.5536C4.40819 7.1514 5.21219 5.8263 5.37299 4.4358C5.37824 4.39095 5.38274 4.34625 5.38739 4.30215Z"></path>
+            </svg>`;
+
+
+
+
+        const svgMarked = `
+            <svg data-icon-marked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="64 0 20 20">
+                <circle cx="74" cy="10" r="9"></circle>
+            </svg>`;
+        const svgVerified = `
+            <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 11">
+                <path d="M0 0h11v11H0z"></path>
+                <path fill="#FFF" d="M4.764 5.9l-2-2L1.35 5.314l3.414 3.414 4.914-4.914L8.264 2.4"></path>
+            </svg>`;
+        const svgGenius = `
+            <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <g transform="scale(0.95) translate(0.63,0.63)">
+                    <path d="M12.897 1.235c-.36.001-.722.013-1.08.017-.218-.028-.371.225-.352.416-.035 1.012.023 2.025-.016 3.036-.037.841-.555 1.596-1.224 2.08-.5.345-1.118.435-1.671.663.121.78.434 1.556 1.057 2.07 1.189 1.053 3.224.86 4.17-.426.945-1.071.453-2.573.603-3.854.286-.48.937-.132 1.317-.49-.34-1.249-.81-2.529-1.725-3.472a11.125 11.125 0 00-1.08-.04zm-10.42.006C.53 2.992-.386 5.797.154 8.361c.384 2.052 1.682 3.893 3.45 4.997.134-.23.23-.476.09-.73-.95-2.814-.138-6.119 1.986-8.19.014-.986.043-1.976-.003-2.961l-.188-.214c-1.003-.051-2.008 0-3.01-.022zm17.88.055l-.205.356c.265.938.6 1.862.72 2.834.58 3.546-.402 7.313-2.614 10.14-1.816 2.353-4.441 4.074-7.334 4.773-2.66.66-5.514.45-8.064-.543-.068.079-.207.237-.275.318 2.664 2.629 6.543 3.969 10.259 3.498 3.075-.327 5.995-1.865 8.023-4.195 1.935-2.187 3.083-5.07 3.125-7.992.122-3.384-1.207-6.819-3.636-9.19z"></path>
+                </g>
+            </svg>`;
+
+
+        const FILTERS = [
+            { key: "metadata", label: "METADATA", color: "#000000", svg: svgGenius },
+            { key: "annotations", label: "ANNOTATIONS", color: "#000000", svg: svgGenius },
+            { key: "votes", label: "VOTES", color: "#000000", svg: svgGenius },
+            { key: "lyrics", label: "LYRICS", color: "#000000", svg: svgGenius },
+            { key: "q_and_a", label: "Q&A", color: "#000000", svg: svgGenius },
+            { key: "other", label: "OTHER", color: "#000000", svg: svgGenius },
+        ];
+
+        const SUBFILTERS = {
+            votes: [
+                { key: "votes__upvoted", label: "Upvotes", regex: /.*? upvoted/i, color: "#0ecb27", svg: svgUpvoted },
+                { key: "votes__downvoted", label: "Downvotes", regex: /.*? downvoted/i, color: "#ff1414", svg: svgDownvoted },
+            ],
+
+            other: [
+                { key: "other__locked", label: "Locked / Unlocked", regex: /.*? (locked|unlocked)/i, color: "#9a9a9a", svg: svgLocked },
+                { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: svgHid },
+                { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: svgFollowed },
+                { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: svgPyonged },
+                { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#9a9a9a", svg: svgPageviews },
+            ],
+
+            q_and_a: [
+                { key: "q_and_a__edited", label: "Q&A Edits", regex: /.*? edited .*?(question|answer) on/i, color: "#9a9a9a", svg: svgEdited },
+                { key: "q_and_a__asked_answered", label: "Asked / Answered", regex: /.*?(asked a question|answered a question) on/i, color: "#9a9a9a", svg: svgCreated },
+                { key: "q_and_a__pinned_unpinned", label: "Pinned / Unpinned", regex: /.*? (pinned|unpinned) .*? question on/i, color: "#0ecb27", svg: svgPinned },
+                { key: "q_and_a__archived_cleared", label: "Archived / Cleared", regex: /.*?(archived .*? question|cleared .*? answer) on/i, color: "#ff1414", svg: svgRejected }
+            ],
+
+            annotations: [
+                { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked an annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: svgCreated },
+                { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: svgCreated },
+                { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion)/i, color: "#9a9a9a", svg: svgSuggested },
+            ],
+
+            lyrics: [
+                { key: "lyrics__edited_lyrics", label: "Lyric edits", regex: /.*? edited the lyrics of/i, color: "#9a9a9a", svg: svgEdited },
+                { key: "lyrics__lep", label: "Lyric edit proposals", regex: /.*? (rejected .*?|created a|accepted .*?|automatically archived .*?) lyrics edit proposal on/i, color: "#9a9a9a", svg: svgEdited },
+                { key: "lyrics__marked", label: "Marked real", regex: /.*?(marked as a real song|thanks! we've been looking for the lyrics to)/i, color: "#38ef51", svg: svgRecognized },
+                { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#38ef51", svg: svgVerified },
+                { key: "lyrics__complete", label: "(Un)completed lyrics", regex: /.*? (marked|un-?marked) the lyrics complete on/i, color: "#0ecb27", svg: svgAccepted }
+            ],
+
+            metadata: [
+                { key: "metadata__edited_metadata", label: "Metadata edits", regex: /.*? edited the metadata of/i, color: "#9a9a9a", svg: svgEdited },
+                { key: "metadata__created", label: "Song creation", regex: /.*? created$/i, color: "#9a9a9a", svg: svgCreated }
+            ]
+        };
+
+        let savedStates = {};
+        let applyActivityFilter = () => { };
+
+        function flexRow(el) {
+            el.style.display = "flex";
+            el.style.alignItems = "center";
+            el.style.gap = "6px";
+            el.style.cursor = "pointer";
+        }
+
+        function createIconSpan(key, svg) {
+            const span = document.createElement("span");
+            span.dataset.icon = key;
+            span.style.display = "inline-flex";
+            span.innerHTML = svg;
+            return span;
+        }
+
+        function updateIconColors(dropdown, FILTERS) {
+            FILTERS.forEach(f => {
+                const cb = dropdown.querySelector(`input[data-filter="${f.key}"]`);
+                const icon = dropdown.querySelector(`[data-icon="${f.key}"] svg`);
+                if (cb && icon) icon.setAttribute("fill", cb.checked ? f.color : "#ddd");
+            });
+
+            Object.values(SUBFILTERS).flat().forEach(sf => {
+                const cb = dropdown.querySelector(`input[data-filter="${sf.key}"]`);
+                const icon = dropdown.querySelector(`[data-icon="${sf.key}"] svg`);
+                if (cb && icon) icon.setAttribute("fill", cb.checked ? sf.color : "#ddd");
+            });
+
+            const userCb = dropdown.querySelector('input[data-filter="user"]');
+            const userIcon = dropdown.querySelector('[data-icon="user"] svg');
+            if (userIcon && userCb) userIcon.setAttribute("fill", userCb.checked ? "#000" : "#ddd");
+        }
+
+
+
+
+
+        function applyActivityFilterFn(checkboxes, userInput) {
+            const states = {};
+
+            checkboxes.forEach(cb => {
+                states[cb.dataset.filter] = cb.checked;
+            });
+
+            savedStates = {
+                ...savedStates,
+                ...states,
+                userText: userInput.value
+            };
+
+            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
+            if (!iframe) return;
+
+            const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!innerDoc) return;
+
+            const items = innerDoc.querySelectorAll('div[class^="feed_dropdown-item"]');
+            const username = userInput.value.trim().toLowerCase();
+            const usernameRegex = username ? new RegExp(`\\b${username}\\b`, "i") : null;
+
+            items.forEach(item => {
+                let visible = true;
+
+                const span = item.querySelector('.inbox_line_item-content span');
+                if (!span) return;
+
+                const clone = span.cloneNode(true);
+                clone.querySelectorAll("em").forEach(el => el.remove());
+                clone.querySelectorAll(".inbox_line_item-content-note").forEach(el => el.remove());
+                clone.querySelectorAll("[ng-bind-html]").forEach(el => el.remove());
+
+                const text = clone.innerText.trim().toLowerCase().replace(/\s+/g, " ");
+                console.log(text);
+
+                let matchedCategory = null;
+                let matchedMatcherId = null;
+
+                outer:
+                for (const [category, subfilters] of Object.entries(SUBFILTERS)) {
+                    for (const sf of subfilters) {
+                        if (sf.regex.test(text)) {
+                            matchedCategory = category;
+                            matchedMatcherId = sf.key.split("__")[1];
+                            break outer;
+                        }
+                    }
+                }
+
+                if (!matchedCategory) {
+                    item.style.display = "";
+                    return;
+                }
+
+                const subKey = `${matchedCategory}__${matchedMatcherId}`;
+                const subActive = states[subKey];
+
+                if (!subActive) visible = false;
+
+                if (visible && states.user && usernameRegex) {
+                    if (!usernameRegex.test(text)) visible = false;
+                }
+
+                const inboxItem = item.closest("inbox-line-item");
+                if (inboxItem) {
+                    inboxItem.style.display = visible ? "" : "none";
+                }
+            });
+        }
+
+        function updateActivityItemCount() {
+            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
+            if (!iframe) return;
+
+            const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!innerDoc) return;
+
+            const items = innerDoc.querySelectorAll('div[class^="feed_dropdown-item"]');
+
+            const counter = document.getElementById("activity-item-count");
+            if (counter) counter.textContent = `Pages: ${Math.ceil((items.length - 1) / 30)}`;
+        }
+
+        function createFilterGrid(FILTERS, svgGenius) {
+            const grid = document.createElement("div");
+            grid.style.display = "grid";
+            grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+            grid.style.gap = "6px 12px";
+            grid.style.marginBottom = "10px";
+
+            FILTERS.forEach(f => {
+                const wrapper = document.createElement("div");
+                wrapper.className = "filter-category";
+
+                const masterLabel = document.createElement("label");
+                flexRow(masterLabel);
+                masterLabel.style.fontWeight = "600";
+
+                const masterCb = document.createElement("input");
+                masterCb.type = "checkbox";
+                masterCb.dataset.filter = f.key;
+                masterCb.classList.add("master-filter");
+                masterCb.style.display = "none";
+
+                const masterIcon = createIconSpan(f.key, f.svg);
+
+                masterLabel.appendChild(masterCb);
+                masterLabel.appendChild(masterIcon);
+                masterLabel.append(f.label);
+
+                wrapper.appendChild(masterLabel);
+
+                const sub = document.createElement("div");
+                sub.className = "subfilters";
+
+
+                SUBFILTERS[f.key].forEach(sf => {
+                    const subLabel = document.createElement("label");
+                    flexRow(subLabel);
+                    subLabel.style.fontSize = "0.9em"
+                        ;
+                    const subCb = document.createElement("input");
+                    subCb.type = "checkbox";
+                    subCb.dataset.filter = sf.key;
+                    subCb.classList.add("subfilter");
+                    subCb.style.display = "none";
+
+                    const subIcon = createIconSpan(sf.key, sf.svg);
+
+                    subLabel.appendChild(subCb);
+                    subLabel.appendChild(subIcon);
+                    subLabel.append(sf.label);
+
+                    sub.appendChild(subLabel);
+                });
+
+                wrapper.appendChild(sub);
+                grid.appendChild(wrapper);
+            });
+
+
+            const userWrapper = document.createElement("div");
+            userWrapper.className = "filter-category";
+            userWrapper.style.gridColumn = "1 / span 3";
+
+            const userLabel = document.createElement("label");
+            userLabel.style.display = "flex";
+            userLabel.style.alignItems = "center";
+            userLabel.style.gap = "6px";
+            userLabel.style.cursor = "pointer";
+
+            const userCb = document.createElement("input");
+            userCb.type = "checkbox";
+            userCb.dataset.filter = "user";
+            userCb.classList.add("master-filter");
+            userCb.style.display = "none";
+
+            const userIcon = createIconSpan("user", svgGenius);
+
+            const userText = document.createElement("span");
+            userText.textContent = "USER";
+            userText.style.fontWeight = "600";
+
+            const userInput = document.createElement("input");
+            userInput.id = "activity-filter-text";
+            userInput.placeholder = "User name";
+            userInput.style.flex = "1";
+            userInput.style.padding = "6px";
+            userInput.style.border = "1px solid #ccc";
+            userInput.style.borderRadius = "4px";
+
+            userLabel.appendChild(userCb);
+            userLabel.appendChild(userIcon);
+            userLabel.appendChild(userText);
+            userLabel.appendChild(userInput);
+
+            userWrapper.appendChild(userLabel);
+            grid.appendChild(userWrapper);
+            return grid;
+        }
+
+        function addActivityFilterButton() {
+            const title = document.querySelector('[class^="RecentActivity__Title"]');
+            if (!title) return;
+
+            if (document.getElementById("filter-activity-button")) return;
+
+            const referenceButton = document.querySelector('button[class^="SmallButton__Container"]');
+            if (!referenceButton) return;
+
+            const parent = title.parentNode;
+
+            let wrapper = parent.querySelector('.activity-filter-wrapper');
+            if (!wrapper) {
+                wrapper = document.createElement('div');
+                wrapper.className = "activity-filter-wrapper";
+                wrapper.style.display = 'flex';
+                wrapper.style.alignItems = 'center';
+                wrapper.style.justifyContent = 'center';
+                wrapper.style.position = 'relative';
+                parent.insertBefore(wrapper, title);
+                wrapper.appendChild(title);
+            }
+
+            const controlContainer = document.createElement("div");
+            controlContainer.style.position = "absolute";
+            controlContainer.style.right = "0";
+            controlContainer.style.top = "25%";
+            controlContainer.style.transform = "translateY(-50%)";
+            controlContainer.style.display = "flex";
+            controlContainer.style.alignItems = "center";
+            wrapper.appendChild(controlContainer);
+
+            const counterSpan = document.createElement("span");
+            counterSpan.id = "activity-item-count";
+            counterSpan.style.marginRight = "0.75rem";
+            counterSpan.textContent = "Pages: ...";
+            controlContainer.appendChild(counterSpan);
+
+            const filterButton = document.createElement('button');
+            filterButton.id = "filter-activity-button";
+            filterButton.type = "button";
+            filterButton.className = referenceButton.className;
+
+            const arrowSpan = document.createElement("span");
+            arrowSpan.style.display = "inline-flex";
+            arrowSpan.style.marginLeft = "0.375rem";
+            arrowSpan.appendChild(arrowSvgClosed.cloneNode(true));
+
+            filterButton.append("Filter ", arrowSpan);
+            controlContainer.appendChild(filterButton);
+
+            const toggleAllButton = document.createElement("button");
+            toggleAllButton.id = "activity-filter-toggle-all";
+            toggleAllButton.className = referenceButton.className;
+            toggleAllButton.textContent = "All / None";
+            toggleAllButton.style.position = "absolute";
+            toggleAllButton.style.left = "0";
+            toggleAllButton.style.top = "25%";
+            toggleAllButton.style.transform = "translateY(-50%)";
+            toggleAllButton.style.display = "none";
+            wrapper.appendChild(toggleAllButton);
+
+            filterButton.addEventListener("click", () => {
+                let dropdown = document.getElementById("activity-filter-dropdown");
+
+                if (dropdown) {
+                    const isClosed = dropdown.style.display === "none";
+                    dropdown.style.display = isClosed ? "block" : "none";
+
+                    arrowSpan.replaceChildren(
+                        isClosed ? arrowSvgOpen.cloneNode(true) : arrowSvgClosed.cloneNode(true)
+                    );
+
+                    toggleAllButton.style.display = isClosed ? "block" : "none";
+                    return;
+                }
+
+                dropdown = document.createElement("div");
+                dropdown.id = "activity-filter-dropdown";
+                dropdown.style.padding = "10px";
+                dropdown.style.marginBottom = "10px";
+                dropdown.style.background = "#fafafa";
+
+                const grid = createFilterGrid(FILTERS, svgGenius);
+                dropdown.appendChild(grid);
+
+                wrapper.insertAdjacentElement("afterend", dropdown);
+
+                arrowSpan.replaceChildren(arrowSvgOpen.cloneNode(true));
+                toggleAllButton.style.display = "block";
+
+                const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+                const normalCheckboxes = [...checkboxes].filter(cb => cb.dataset.filter !== "user");
+                const userInput = dropdown.querySelector('#activity-filter-text');
+
+                FILTERS.forEach(f => {
+                    const cb = dropdown.querySelector(`input[data-filter="${f.key}"]`);
+                    cb.checked = savedStates[f.key] ?? true;
+                });
+
+                Object.values(SUBFILTERS).flat().forEach(sf => {
+                    const cb = dropdown.querySelector(`input[data-filter="${sf.key}"]`);
+                    cb.checked = savedStates[sf.key] ?? true;
+                });
+
+                const userCb = dropdown.querySelector('input[data-filter="user"]');
+                if (userCb) userCb.checked = savedStates.user ?? false;
+                if (userInput) userInput.value = savedStates.userText ?? "";
+
+                updateIconColors(dropdown, FILTERS);
+
+                applyActivityFilter = () => applyActivityFilterFn(checkboxes, userInput);
+
+                grid.addEventListener("change", e => {
+                    const target = e.target;
+
+                    // Master toggles all subfilters
+                    if (target.classList.contains("master-filter")) {
+                        const key = target.dataset.filter;
+                        const subfilters = grid.querySelectorAll(`input[data-filter^="${key}__"]`);
+                        subfilters.forEach(cb => cb.checked = target.checked);
+                    }
+
+                    // Subfilters update master state
+                    if (target.classList.contains("subfilter")) {
+                        const [key] = target.dataset.filter.split("__");
+                        const subfilters = grid.querySelectorAll(`input[data-filter^="${key}__"]`);
+                        const master = grid.querySelector(`input[data-filter="${key}"]`);
+
+                        master.checked = [...subfilters].every(cb => cb.checked);
+                    }
+
+                    updateIconColors(dropdown, FILTERS);
+
+                    applyActivityFilter();
+                });
+
+                grid.addEventListener("input", e => {
+                    if (e.target.id === "activity-filter-text") {
+                        savedStates.userText = e.target.value;
+                        applyActivityFilter();
+                    }
+                });
+
+                toggleAllButton.addEventListener("click", () => {
+                    const newState = !normalCheckboxes.every(cb => cb.checked);
+                    normalCheckboxes.forEach(cb => cb.checked = newState);
+                    updateIconColors(dropdown, FILTERS);
+                    applyActivityFilter();
+                });
+            });
+        }
+
+
+        function startIframeObserverFor(iframe) {
+            function observeIframeActivityStream() {
+                const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (!innerDoc) return;
+
+                const container = innerDoc.querySelector('.act-activity_stream_bagon');
+                if (!container) return;
+
+                const observer = new MutationObserver(() => {
+                    updateActivityItemCount();
+                    applyActivityFilter();
+                });
+
+                observer.observe(container, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+
+            iframe.addEventListener("load", observeIframeActivityStream);
+
+            if (iframe.contentDocument?.readyState === "complete") {
+                observeIframeActivityStream();
+            }
+        }
+
+
+        let filterInitialized = false;
+        let iframeObserverInitialized = false;
+
+        const modalObserver = new MutationObserver(() => {
+            const modal = document.querySelector('[class^="Modal-desktop__Contents"]');
+            const title = document.querySelector('[class^="RecentActivity__Title"]');
+
+            if (modal && title && !filterInitialized) {
+                addActivityFilterButton();
+                filterInitialized = true;
+            }
+
+            if (!modal && filterInitialized) {
+                filterInitialized = false;
+                iframeObserverInitialized = false;
+            }
+
+            if (modal && !iframeObserverInitialized) {
+                const iframe = modal.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
+                if (iframe) {
+                    iframeObserverInitialized = true;
+                    startIframeObserverFor(iframe);
+                }
+            }
+        });
+
+        modalObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////

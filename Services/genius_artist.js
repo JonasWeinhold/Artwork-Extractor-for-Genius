@@ -40,6 +40,7 @@ chrome.storage.local.get([
             if (isGeniusArtistAllSongsAlbumsPage || isGeniusArtistAllSongsAlbumsPageMetadata) checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums);
         } else if (isArtist) {
             const { artistId, userId, artistData } = await getArtistInfo();
+            if (!artistId || !userId || !artistData) return;
 
             if (isGeniusArtistArtistId) showArtistIdButton(artistId);
             if (isGeniusArtistArtistPageInfo) showCoverInfo(artistData);
@@ -52,11 +53,13 @@ chrome.storage.local.get([
     async function getArtistInfo() {
         console.log("Run function getArtistInfo()");
         // Artist ID
-        const artistId = document.querySelector("link[rel='alternate']").href.split("/").pop();
+        const artistId = document.querySelector("link[rel='alternate']")?.href?.split("/")?.pop();
 
         // User ID
         const userMatch = document.documentElement.innerHTML.match(/var CURRENT_USER = JSON.parse\('{\\"id\\":(\d+)/);
         const userId = userMatch?.[1];
+
+        if (!artistId || !userId) return { artistId: null, userId, artistData: null };
 
         // Artist Data
         const response = await fetch(`https://genius.com/api/artists/${artistId}`);
@@ -130,7 +133,6 @@ chrome.storage.local.get([
             if (existing) existing.remove();
 
             const infoElement = createResolutionInfo(artistData);
-            console.log("Created resolution info element:", infoElement);
 
             avatar.append(infoElement);
         }
@@ -352,7 +354,7 @@ chrome.storage.local.get([
                 'Content-Type': 'application/json',
                 'Cookie': document.cookie,
                 'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
+                'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
             },
             body: JSON.stringify({})
         });
