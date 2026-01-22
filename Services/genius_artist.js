@@ -354,7 +354,7 @@ chrome.storage.local.get([
                 'Content-Type': 'application/json',
                 'Cookie': document.cookie,
                 'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
+                'User-Agent': 'ArtworkExtractorForGenius/0.5.0 (Artwork Extractor for Genius)'
             },
             body: JSON.stringify({})
         });
@@ -575,5 +575,6 @@ chrome.storage.local.get([
             }
         });
     }
+
 
 });
