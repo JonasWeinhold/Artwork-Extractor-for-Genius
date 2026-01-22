@@ -59,6 +59,7 @@ chrome.storage.local.get([
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
         if (!isSong) return
 
+        getDomElements();
 
         editYouTubePlayer();
         editAppleMusicPlayer();
@@ -90,6 +91,31 @@ chrome.storage.local.get([
         if (songData.soundcloud_url) {
             if (isGeniusSongSoundCloudPlayer) addSoundCloudPlayer(songData);
         }
+    }
+
+    function getDomElements() {
+        return {
+            metadatastatsContainer: document.querySelector('div[class^="MetadataStats__Container-"]'),
+            labelwithiconLabel: document.querySelector('span[class^="LabelWithIcon__Label-"]'),
+            adminSpan: [...document.querySelectorAll('span')].find(el => el.textContent.trim() === "Admin"),
+            sizedimageImage: document.querySelector('img[class^="SizedImage__Image-"]'),
+            songheaderCoverart: document.querySelector('div[class^="SongHeader-desktop__CoverArt-"]'),
+            editmetadatabutonSmallbutton: document.querySelector('button[class*="EditMetadataButton__SmallButton-"]'),
+            sharebuttonsContainer: document.querySelector('div[class^="ShareButtons__Container-"]'),
+            stickytoolbarContainer: document.querySelector('div[class*="StickyToolbar__Container-"]'),
+            stickytoolbarLeft: document.querySelector('div[class^="StickyToolbar__Left-"]'),
+            stickytoolbarRight: document.querySelector('div[class^="StickyToolbar__Right-"]'),
+            stickyNavContainer: document.querySelector('nav[class^="StickyNav-desktop__Container-"]'),
+            texteditorTextarea: document.querySelector('textarea[class*="TextEditor__TextArea"]'),
+            lyricseditexplainerContainer: document.querySelector('div[class^="LyricsEditExplainer__Container-"]'),
+            expandingtextareaTextarea: document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]'),
+            mediaplayerscontainerContainer: document.querySelector('[class^="MediaPlayersContainer__Container-"]'),
+            transcriptionplayerContainer: document.querySelector('div[class^="TranscriptionPlayer__Container-"]'),
+            youtubebuttonPlayvideobutton: document.querySelector('[class*="YoutubeButton__PlayVideoButton-"]'),
+            applemusicplayerPositioningcontainer: document.querySelector('div[class^="AppleMusicPlayer-desktop__PositioningContainer-"]'),
+            applemusicplayerIframewrapper: document.querySelector('div[class*="AppleMusicPlayer-desktop__IframeWrapper-"]'),
+            applemusicplayerIframe: document.querySelector('iframe[class^="AppleMusicPlayer-desktop__Iframe-"]'),
+        };
     }
 
     async function getSongInfo() {
@@ -124,12 +150,12 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function showSongIdButton(songId) {
-        const metadataContainer = document.querySelector('div[class^="MetadataStats__Container-"]');
+        const { metadatastatsContainer, labelwithiconLabel } = getDomElements();
 
-        if (metadataContainer && !document.getElementById("song-id-button")) {
+        if (metadatastatsContainer && !document.getElementById("song-id-button")) {
             const songIdElement = document.createElement('span');
             songIdElement.id = "song-id-button";
-            songIdElement.className = metadataContainer.querySelector('span[class^="LabelWithIcon__Label-"]').className;
+            songIdElement.className = labelwithiconLabel?.className;
 
             const songIdLink = document.createElement('a');
             songIdLink.href = `https://genius.com/api/songs/${songId}`;
@@ -143,18 +169,17 @@ chrome.storage.local.get([
             songIdElement.textContent = "Song ID: ";
             songIdElement.appendChild(songIdLink);
 
-            metadataContainer.appendChild(songIdElement);
+            metadatastatsContainer.appendChild(songIdElement);
         }
     }
 
     function showIndexButton() {
-        const adminButton = document.querySelector('span[class*="AdminMenu__Button"]');
-        const metadataContainer = document.querySelector('div[class^="MetadataStats__Container-"]');
+        const { adminSpan, metadatastatsContainer, labelwithiconLabel } = getDomElements();
 
-        if (adminButton && metadataContainer && !document.getElementById("index-button")) {
+        if (adminSpan && metadatastatsContainer && !document.getElementById("index-button")) {
             const indexElement = document.createElement('span');
             indexElement.id = "index-button";
-            indexElement.className = metadataContainer.querySelector('span[class^="LabelWithIcon__Label-"]').className;
+            indexElement.className = labelwithiconLabel?.className;
 
             const siteQuery = `site:${window.location.href}`;
             const indexLink = document.createElement('a');
@@ -168,7 +193,7 @@ chrome.storage.local.get([
             indexLink.onmouseout = () => indexLink.style.textDecoration = "none";
 
             indexElement.appendChild(indexLink);
-            metadataContainer.appendChild(indexElement);
+            metadatastatsContainer.appendChild(indexElement);
         }
     }
 
@@ -179,19 +204,18 @@ chrome.storage.local.get([
     function showCoverInfo(songData) {
         console.log("Run function showCoverInfo()");
 
-        const coverArtElement = document.querySelector('img[class^="SizedImage__Image-"]');
-        const metadataContainer = document.querySelector('div[class^="SongHeader-desktop__CoverArt-"]');
+        const { sizedimageImage, songheaderCoverart } = getDomElements();
 
-        if (coverArtElement && metadataContainer) {
-            const existing = metadataContainer.querySelector('p[data-type="resolution-info"]');
+        if (sizedimageImage && songheaderCoverart) {
+            const existing = songheaderCoverart.querySelector('p[data-type="resolution-info"]');
             if (existing) existing.remove();
 
-            const infoElement = createResolutionInfo(songData, coverArtElement);
-            metadataContainer.prepend(infoElement);
+            const infoElement = createResolutionInfo(songData, sizedimageImage);
+            songheaderCoverart.prepend(infoElement);
         }
     }
 
-    function createResolutionInfo(songData, coverArtElement) {
+    function createResolutionInfo(songData, sizedimageImage) {
         const resolutionMatch = songData.header_image_url.match(/(\d+)x(\d+)/);
         const formatMatch = songData.header_image_url.match(/\.(\w+)$/);
 
@@ -209,7 +233,7 @@ chrome.storage.local.get([
         resolutionInfo.innerHTML = `${resolutionText} ${formatText} | ${songData.song_art_primary_color} | ${songData.song_art_secondary_color} | ${textColor}`;
 
         const updateStyles = () => {
-            const imgWidth = coverArtElement.clientWidth || 1000;
+            const imgWidth = sizedimageImage.clientWidth || 1000;
             const dynamicFontPx = imgWidth * 0.05;
             const fontSizeRem = Math.min(pxToRem(dynamicFontPx), 0.75);
             resolutionInfo.style.fontSize = `${fontSizeRem}rem`;
@@ -220,7 +244,7 @@ chrome.storage.local.get([
         updateStyles();
 
         const observer = new ResizeObserver(updateStyles);
-        observer.observe(coverArtElement);
+        observer.observe(sizedimageImage);
 
         return resolutionInfo;
     }
@@ -238,50 +262,50 @@ chrome.storage.local.get([
     function checkSongCover(songData) {
         console.log("Run function checkSongCover()");
 
-        const editButton = document.querySelector('button[class*="EditMetadataButton__SmallButton"]');
-        if (editButton) {
+        const { editmetadatabutonSmallbutton } = getDomElements();
 
-            let color, borderColor;
+        if (!editmetadatabutonSmallbutton) return;
 
-            const customSongArt = songData.custom_song_art_image_url;
-            const songArt = songData.song_art_image_url;
-            const album = songData.album;
+        let color, borderColor;
 
-            if (customSongArt) {
-                if (customSongArt.startsWith("https://images.genius.com") && customSongArt.endsWith("1000x1000x1.png")) {
+        const customSongArt = songData.custom_song_art_image_url;
+        const songArt = songData.song_art_image_url;
+        const album = songData.album;
+
+        if (customSongArt) {
+            if (customSongArt.startsWith("https://images.genius.com") && customSongArt.endsWith("1000x1000x1.png")) {
+                color = '#99f2a5'; // Green
+                borderColor = '#66bfa3';
+            } else if ((customSongArt.startsWith("http://images.genius.com") || customSongArt.startsWith("http://images.rapgenius.com") || customSongArt.startsWith("https://images.rapgenius.com")) && customSongArt.endsWith("1000x1000x1.png")) {
+                color = '#7689e8'; // Blue
+                borderColor = '#4a5e9d';
+            } else if (customSongArt.startsWith("https://filepicker-images-rapgenius.s3.amazonaws.com/filepicker-images-rapgenius/") || customSongArt.endsWith("1000x1000bb.png") || customSongArt.endsWith("10000x10000bb.png") || customSongArt.endsWith("1000x1000.png") || customSongArt.endsWith("1000x1000-000000-80-0-0.png")) {
+                color = '#ffff64'; // Yellow
+                borderColor = '#cccc00';
+            } else {
+                color = '#fa7878'; // Red
+                borderColor = '#a74d4d';
+            }
+        } else {
+            if (!album) {
+                color = '#dddddd'; // Grey
+                borderColor = '#aaaaaa';
+            } else {
+                if (songArt.endsWith("1000x1000x1.png")) {
                     color = '#99f2a5'; // Green
                     borderColor = '#66bfa3';
-                } else if ((customSongArt.startsWith("http://images.genius.com") || customSongArt.startsWith("http://images.rapgenius.com") || customSongArt.startsWith("https://images.rapgenius.com")) && customSongArt.endsWith("1000x1000x1.png")) {
-                    color = '#7689e8'; // Blue
-                    borderColor = '#4a5e9d';
-                } else if (customSongArt.startsWith("https://filepicker-images-rapgenius.s3.amazonaws.com/filepicker-images-rapgenius/") || customSongArt.endsWith("1000x1000bb.png") || customSongArt.endsWith("10000x10000bb.png") || customSongArt.endsWith("1000x1000.png") || customSongArt.endsWith("1000x1000-000000-80-0-0.png")) {
-                    color = '#ffff64'; // Yellow
-                    borderColor = '#cccc00';
-                } else {
-                    color = '#fa7878'; // Red
-                    borderColor = '#a74d4d';
-                }
-            } else {
-                if (!album) {
+                } else if (songArt.includes("default_cover_art.png")) {
                     color = '#dddddd'; // Grey
                     borderColor = '#aaaaaa';
                 } else {
-                    if (songArt.endsWith("1000x1000x1.png")) {
-                        color = '#99f2a5'; // Green
-                        borderColor = '#66bfa3';
-                    } else if (songArt.includes("default_cover_art.png")) {
-                        color = '#dddddd'; // Grey
-                        borderColor = '#aaaaaa';
-                    } else {
-                        color = '#ffa335'; // Orange
-                        borderColor = '#c76a2b';
-                    }
+                    color = '#ffa335'; // Orange
+                    borderColor = '#c76a2b';
                 }
             }
-
-            addColoredCircle(editButton, color, borderColor);
-            if (isGeniusSongSongPageZwsp) checkSongTitleForZeroWidthSpace(songData);
         }
+
+        addColoredCircle(editmetadatabutonSmallbutton, color, borderColor);
+        if (isGeniusSongSongPageZwsp) checkSongTitleForZeroWidthSpace(songData);
     }
 
     function addBlackCross(circle) {
@@ -369,8 +393,8 @@ chrome.storage.local.get([
 
     function checkSongTitleForZeroWidthSpace(songData) {
         if (songData.title.includes('\u200B')) {
-            const editButton = document.querySelector('button[class*="EditMetadataButton__SmallButton"]');
-            const circle = editButton.querySelector('.circle-indicator');
+            const { editmetadatabutonSmallbutton } = getDomElements();
+            const circle = editmetadatabutonSmallbutton.querySelector('.circle-indicator');
             if (circle) {
                 addBlackDot(circle);
             }
@@ -384,14 +408,14 @@ chrome.storage.local.get([
 
     function addFollowButton() {
         console.log("Run function addFollowButton()");
-        const existingButton = document.querySelector('div[class^="ShareButtons__Container"]')?.children[3]?.children[0];
-        const toolbarDiv = document.querySelector('div[class^="StickyContributorToolbar__Left"]');
-        const metadataButton = document.querySelector('button[class*="EditMetadataButton"]');
 
-        if (existingButton && toolbarDiv && metadataButton && !document.getElementById("follow-song-button")) {
+        const { sharebuttonsContainer, stickytoolbarLeft, editmetadatabutonSmallbutton } = getDomElements();
+        const existingButton = sharebuttonsContainer?.children[3]?.children[0];
+
+        if (existingButton && stickytoolbarLeft && editmetadatabutonSmallbutton && !document.getElementById("follow-song-button")) {
             const followButton = document.createElement('button');
             followButton.id = "follow-song-button";
-            followButton.className = metadataButton.className.replace("EditMetadataButton", "FollowButton");
+            followButton.className = editmetadatabutonSmallbutton.className.replace("EditMetadataButton", "FollowButton");
             followButton.type = 'button';
 
             function updateFollowButton() {
@@ -409,7 +433,7 @@ chrome.storage.local.get([
             const observer = new MutationObserver(updateFollowButton);
             observer.observe(existingButton, { attributes: true, childList: true, subtree: true });
 
-            toolbarDiv.appendChild(followButton);
+            stickytoolbarLeft.appendChild(followButton);
             followButton.style.float = 'right';
             followButton.style.maxWidth = 'fit-content';
         }
@@ -420,13 +444,21 @@ chrome.storage.local.get([
     //////////                                 SHELLY BUTTON                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     function addShellyButton(songId, songData) {
-        const lyricsAreValidated = songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
-        if (lyricsAreValidated) return;
+        console.log("Run function addShellyButton()");
 
-        const list = document.querySelector('[class^="AdminMenu__Dropdown-"]');
+        const { adminSpan } = getDomElements();
+        if (!adminSpan) return;
+
+        const dropdownContainer = adminSpan.closest('[class^="Dropdown__Container-"]');
+        if (!dropdownContainer) return;
+
+        const list = dropdownContainer.querySelector('[class^="StickyToolbarDropdown__DropdownItems-"]');
         if (!list) return;
 
         if (document.getElementById("shelly-cleanup-btn")) return;
+
+        const lyricsAreValidated = songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
+        if (lyricsAreValidated) return;
 
         const existingButton = list.querySelector("button");
         const existingLi = list.querySelector("li");
@@ -461,8 +493,7 @@ chrome.storage.local.get([
 
             await updateSongLyrics(songId, payload);
 
-            const container = list.parentElement?.parentElement;
-            const toggle = container?.querySelector('[class^="Dropdown__Toggle-"]');
+            const toggle = dropdownContainer.querySelector('[class^="Dropdown__Toggle-"]');
             toggle?.click();
             main()
         });
@@ -479,7 +510,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.5.0 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify(payload)
             });
@@ -580,13 +611,13 @@ chrome.storage.local.get([
     }
 
     function addCleanupButton(song, actionType, label, metadataUpdate) {
-        const toolbarDiv = document.querySelector('div[class^="StickyContributorToolbar__Left"]');
-        const metadataButton = document.querySelector('button[class*="EditMetadataButton"]');
 
-        if (!toolbarDiv || !metadataButton) return;
+        const { stickytoolbarLeft, editmetadatabutonSmallbutton } = getDomElements();
+
+        if (!stickytoolbarLeft || !editmetadatabutonSmallbutton) return;
 
         const actionButton = document.createElement('button');
-        actionButton.className = metadataButton.className.replace("EditMetadataButton", `${actionType}Button`);
+        actionButton.className = editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${actionType}Button`);
         actionButton.type = 'button';
         actionButton.textContent = label;
 
@@ -596,7 +627,7 @@ chrome.storage.local.get([
             main();
         });
 
-        toolbarDiv.appendChild(actionButton);
+        stickytoolbarLeft.appendChild(actionButton);
     }
 
     async function updateSongMetadata(song, updates) {
@@ -608,7 +639,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.9 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.5.0 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });
@@ -621,12 +652,10 @@ chrome.storage.local.get([
         }
     }
 
-
     function getCsrfToken() {
         const match = document.cookie.match(/_csrf_token=([^;]+)/);
         return match ? decodeURIComponent(match[1]) : '';
     }
-
 
 
 
@@ -637,10 +666,13 @@ chrome.storage.local.get([
     function selectDropdown(songData, dropdownType) {
         console.log(`Run function selectDropdown() for ${dropdownType} dropdown`);
 
-        const toolbarDiv = document.querySelector('div[class^="StickyContributorToolbar__Left"]');
-        if (!toolbarDiv) return;
+        const { stickytoolbarLeft } = getDomElements();
+        if (!stickytoolbarLeft) return;
+
+        if (document.getElementById(`${dropdownType}-dropdown-container`)) return;
 
         const dropdownContainer = document.createElement('div');
+        dropdownContainer.id = `${dropdownType}-dropdown-container`;
         dropdownContainer.style.position = 'relative';
 
         const dropdownButton = document.createElement('button');
@@ -678,7 +710,7 @@ chrome.storage.local.get([
         dropdownSpan.append(dropdownText, arrowSpan);
         dropdownButton.appendChild(dropdownSpan);
         dropdownContainer.append(dropdownButton, dropdownMenu);
-        toolbarDiv.appendChild(dropdownContainer);
+        stickytoolbarLeft.appendChild(dropdownContainer);
 
         dropdownButton.addEventListener('click', e => {
             e.stopPropagation();
@@ -707,8 +739,8 @@ chrome.storage.local.get([
         });
 
         const toggleDropdownButton = () => {
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            dropdownContainer.style.display = textarea ? 'block' : 'none';
+            const { expandingtextareaTextarea } = getDomElements();
+            dropdownContainer.style.display = expandingtextareaTextarea ? 'block' : 'none';
         };
 
         const observer = new MutationObserver(() => requestAnimationFrame(toggleDropdownButton));
@@ -900,19 +932,19 @@ chrome.storage.local.get([
         };
 
         const applyTextFormatting = (openTag, closeTag) => {
-            const textarea = document.querySelector('textarea[class*="TextEditor__TextArea"]');
-            if (!textarea) return;
+            const { texteditorTextarea } = getDomElements();
+            if (!texteditorTextarea) return;
 
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
+            const start = texteditorTextarea.selectionStart;
+            const end = texteditorTextarea.selectionEnd;
 
             if (start === end) {
-                textarea.setRangeText(openTag + closeTag, start, end, "end");
+                texteditorTextarea.setRangeText(openTag + closeTag, start, end, "end");
                 const cursor = start + openTag.length;
-                textarea.selectionStart = cursor;
-                textarea.selectionEnd = cursor;
+                texteditorTextarea.selectionStart = cursor;
+                texteditorTextarea.selectionEnd = cursor;
             } else {
-                let selected = textarea.value.substring(start, end);
+                let selected = texteditorTextarea.value.substring(start, end);
                 let trailing = "";
 
                 while (/[ \n\r]$/.test(selected)) {
@@ -920,10 +952,10 @@ chrome.storage.local.get([
                     selected = selected.slice(0, -1);
                 }
 
-                textarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
+                texteditorTextarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
             }
 
-            textarea.focus();
+            texteditorTextarea.focus();
         };
 
         const renderButtons = (container, buttons, classNameMapper, storedLanguage) => {
@@ -987,12 +1019,12 @@ chrome.storage.local.get([
                 //{ label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
             ];
 
-            const referenceButton = document.querySelector("button[class*='EditMetadataButton']");
+            const { editmetadatabutonSmallbutton } = getDomElements();
 
             renderButtons(
                 styleDiv,
                 styleButtons,
-                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`)
+                (name) => editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${name}Button`)
             );
 
             form.prepend(styleDiv);
@@ -1002,9 +1034,10 @@ chrome.storage.local.get([
     function lyricsSectionsButtons(songData) {
         console.log("Run function lyricsSectionsButtons()");
 
-        const explainerElement = document.querySelector('div[class^="LyricsEditExplainer__Container-"]');
-        const referenceButton = document.querySelector('button[class*="EditMetadataButton"]');
-        if (!explainerElement || !referenceButton) return;
+        const { lyricseditexplainerContainer, editmetadatabutonSmallbutton } = getDomElements();
+        if (!lyricseditexplainerContainer || !editmetadatabutonSmallbutton) return;
+
+        if (document.getElementById("lyricsSectionsButtonsContainer") && document.getElementById("lyricsStyleButtonsContainer")) return;
 
         const isNonMusic = songData.primary_tag.name === "Non-Music";
 
@@ -1058,43 +1091,43 @@ chrome.storage.local.get([
         };
 
         const insertTextAtCursor = (text) => {
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (textarea) {
-                const startPos = textarea.selectionStart;
-                const endPos = textarea.selectionEnd;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (expandingtextareaTextarea) {
+                const startPos = expandingtextareaTextarea.selectionStart;
+                const endPos = expandingtextareaTextarea.selectionEnd;
 
-                let beforeText = textarea.value.substring(0, startPos).trimEnd();
-                const afterText = textarea.value.substring(endPos);
+                let beforeText = expandingtextareaTextarea.value.substring(0, startPos).trimEnd();
+                const afterText = expandingtextareaTextarea.value.substring(endPos);
 
                 while (!beforeText.endsWith('\n\n')) {
                     beforeText += '\n';
                 }
 
-                textarea.value = beforeText + text + '\n' + afterText;
+                expandingtextareaTextarea.value = beforeText + text + '\n' + afterText;
 
                 const newCursorPos = beforeText.length + text.length + 1;
-                textarea.setSelectionRange(newCursorPos, newCursorPos);
-                textarea.focus();
+                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
+                expandingtextareaTextarea.focus();
 
-                textarea.value = textarea.value.replace(/^\s+/, '');
+                expandingtextareaTextarea.value = expandingtextareaTextarea.value.replace(/^\s+/, '');
             }
         };
 
         function insertSeoHeader(songData, headerType, storedLanguage) {
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (!textarea) return;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (!expandingtextareaTextarea) return;
 
             const insertText = (text, position = "begin") => {
-                textarea.focus();
-                const currentText = textarea.value.trim();
+                expandingtextareaTextarea.focus();
+                const currentText = expandingtextareaTextarea.value.trim();
 
                 if (position === "begin" && !currentText.startsWith(text)) {
-                    textarea.value = text + "\n\n" + currentText;
-                    textarea.setSelectionRange(text.length + 2, text.length + 2);
+                    expandingtextareaTextarea.value = text + "\n\n" + currentText;
+                    expandingtextareaTextarea.setSelectionRange(text.length + 2, text.length + 2);
                 }
 
                 if (position === "end" && !currentText.endsWith(text)) {
-                    textarea.value = currentText + "\n\n" + text;
+                    expandingtextareaTextarea.value = currentText + "\n\n" + text;
                 }
             };
 
@@ -1127,6 +1160,17 @@ chrome.storage.local.get([
                     songTitle = songTitle.substring(dashIndex + 1, lastBracketIndex).trim();
                 }
             }
+
+            const hasOpening = songTitle.includes("(");
+            const hasClosing = songTitle.includes(")");
+
+            if (hasOpening && !hasClosing) {
+                songTitle = songTitle.replace(/\(/g, "&#40;");
+            } else if (!hasOpening && hasClosing) {
+                songTitle = songTitle.replace(/\)/g, "&#41;");
+            }
+
+
 
             // Clean artist names (Disambiguation)
             const primaryArtists = songData.primary_artists.map(a => cleanName(a.name));
@@ -1210,35 +1254,35 @@ chrome.storage.local.get([
         function insertPartHeader(fullText) {
             insertTextAtCursor(`<b>[${fullText}]</b>`);
 
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (textarea) {
-                const oldCursorPos = textarea.selectionStart;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (expandingtextareaTextarea) {
+                const oldCursorPos = expandingtextareaTextarea.selectionStart;
 
                 let i = 1;
-                const oldValue = textarea.value;
+                const oldValue = expandingtextareaTextarea.value;
 
                 const newValue = oldValue.replace(
                     new RegExp(`<b>\\[${fullText}(?: [IVXLCDM]+)?`, "g"),
                     () => `<b>[${fullText} ${convertToRoman(i++)}`
                 );
 
-                textarea.value = newValue;
+                expandingtextareaTextarea.value = newValue;
 
                 const diff = newValue.length - oldValue.length;
                 const newCursorPos = oldCursorPos + diff;
-                textarea.focus();
-                textarea.setSelectionRange(newCursorPos, newCursorPos);
+                expandingtextareaTextarea.focus();
+                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
             }
         }
 
         function insertVerseHeader(fullText) {
             insertTextAtCursor(`[${fullText}]`);
 
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (textarea) {
-                const oldCursorPos = textarea.selectionStart;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (expandingtextareaTextarea) {
+                const oldCursorPos = expandingtextareaTextarea.selectionStart;
 
-                const oldValue = textarea.value;
+                const oldValue = expandingtextareaTextarea.value;
 
                 const otherTags = ["Part", "Teil", "Część", "Часть", "Pjesa", "Kısım", "Qism"];
                 const sectionRegex = new RegExp(
@@ -1282,13 +1326,13 @@ chrome.storage.local.get([
                 }
 
                 updatedText += renumberTags(oldValue.substring(lastIndex));
-                textarea.value = updatedText;
+                expandingtextareaTextarea.value = updatedText;
 
                 const diff = updatedText.length - oldValue.length;
                 const newCursorPos = oldCursorPos + diff;
 
-                textarea.focus();
-                textarea.setSelectionRange(newCursorPos, newCursorPos);
+                expandingtextareaTextarea.focus();
+                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
             }
         }
 
@@ -1307,19 +1351,19 @@ chrome.storage.local.get([
         };
 
         const applyTextFormatting = (openTag, closeTag) => {
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (!textarea) return;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (!expandingtextareaTextarea) return;
 
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
+            const start = expandingtextareaTextarea.selectionStart;
+            const end = expandingtextareaTextarea.selectionEnd;
 
             if (start === end) {
-                textarea.setRangeText(openTag + closeTag, start, end, "end");
+                expandingtextareaTextarea.setRangeText(openTag + closeTag, start, end, "end");
                 const cursor = start + openTag.length;
-                textarea.selectionStart = cursor;
-                textarea.selectionEnd = cursor;
+                expandingtextareaTextarea.selectionStart = cursor;
+                expandingtextareaTextarea.selectionEnd = cursor;
             } else {
-                let selected = textarea.value.substring(start, end);
+                let selected = expandingtextareaTextarea.value.substring(start, end);
                 let trailing = "";
 
                 while (/[ \n\r]$/.test(selected)) {
@@ -1327,10 +1371,10 @@ chrome.storage.local.get([
                     selected = selected.slice(0, -1);
                 }
 
-                textarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
+                expandingtextareaTextarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
             }
 
-            textarea.focus();
+            expandingtextareaTextarea.focus();
         };
 
         const renderButtons = (container, buttons, classNameMapper, storedLanguage) => {
@@ -1951,11 +1995,11 @@ chrome.storage.local.get([
                     fullText: b.fullText,
                     hoverText: b.hoverText
                 })),
-                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`),
+                (name) => editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${name}Button`),
                 storedLanguage
             );
 
-            explainerElement.parentNode.insertBefore(headerDiv, explainerElement);
+            lyricseditexplainerContainer.parentNode.insertBefore(headerDiv, lyricseditexplainerContainer);
 
             // STYLE BUTTONS
             const styleDiv = createGridContainer("lyricsStyleButtonsContainer");
@@ -1994,11 +2038,11 @@ chrome.storage.local.get([
             renderButtons(
                 styleDiv,
                 styleButtons,
-                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`),
+                (name) => editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${name}Button`),
                 storedLanguage
             );
 
-            explainerElement.parentNode.insertBefore(styleDiv, explainerElement);
+            lyricseditexplainerContainer.parentNode.insertBefore(styleDiv, lyricseditexplainerContainer);
 
         } else {
             // NON-MUSIC STYLE BUTTONS
@@ -2075,19 +2119,20 @@ chrome.storage.local.get([
             renderButtons(
                 styleDiv,
                 styleButtons,
-                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`)
+                (name) => editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${name}Button`)
             );
 
-            explainerElement.parentNode.insertBefore(styleDiv, explainerElement);
+            lyricseditexplainerContainer.parentNode.insertBefore(styleDiv, lyricseditexplainerContainer);
         }
     }
 
     function lyricsCleanupLogic(cleanupType) {
-        const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-        if (textarea) {
-            const originalText = textarea.value;
+        const { expandingtextareaTextarea } = getDomElements();
 
-            let text = textarea.value;
+        if (expandingtextareaTextarea) {
+            const originalText = expandingtextareaTextarea.value;
+
+            let text = expandingtextareaTextarea.value;
 
             const storedLanguage = localStorage.getItem("selectedLanguage");
 
@@ -2318,11 +2363,11 @@ chrome.storage.local.get([
                 return line;
             });
 
-            textarea.value = processedLines.join('\n');
+            expandingtextareaTextarea.value = processedLines.join('\n');
 
             document.addEventListener('keydown', (event) => {
                 if (event.ctrlKey && event.shiftKey && event.key === 'Z') {
-                    textarea.value = originalText;
+                    expandingtextareaTextarea.value = originalText;
                 }
             });
         }
@@ -2768,6 +2813,8 @@ chrome.storage.local.get([
 
             const arrowSpan = document.createElement("span");
             arrowSpan.style.display = "inline-flex";
+            arrowSpan.style.alignItems = "center";
+            arrowSpan.style.justifyContent = "center";
             arrowSpan.style.marginLeft = "0.375rem";
             arrowSpan.appendChild(arrowSvgClosed.cloneNode(true));
 
@@ -2943,9 +2990,10 @@ chrome.storage.local.get([
 
     function editYouTubePlayer() {
         if (!isGeniusSongYouTubePlayer) {
-            const playVideoButton = document.querySelector('[class*="YoutubeButton__PlayVideoButton"]');
-            if (playVideoButton) {
-                playVideoButton.style.display = 'none';
+            const { youtubebuttonPlayvideobutton } = getDomElements();
+
+            if (youtubebuttonPlayvideobutton) {
+                youtubebuttonPlayvideobutton.style.display = 'none';
             }
         }
     }
@@ -2956,12 +3004,13 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function editAppleMusicPlayer() {
-        console.log("Run editAppleMusicPlayer()");
+        console.log("Run function editAppleMusicPlayer()");
 
         function checkAppleMusicPlayer() {
-            const iframe = document.querySelector(`iframe[class^="AppleMusicPlayer-desktop__Iframe"]`);
-            if (iframe) {
-                const playerDocument = iframe.contentDocument;
+            const { applemusicplayerIframe } = getDomElements();
+
+            if (applemusicplayerIframe) {
+                const playerDocument = applemusicplayerIframe.contentDocument;
                 const player = playerDocument?.querySelector('apple-music-player');
                 if (player) {
                     const titleDiv = player.querySelector('.apple_music_player-player-info-title');
@@ -3046,9 +3095,9 @@ chrome.storage.local.get([
 
             checkAppleMusicPlayer();
         } else {
-            const appleContainer = document.querySelector('div[class*="AppleMusicPlayer-desktop__IframeWrapper-"]');
-            if (appleContainer) {
-                appleContainer.remove();
+            const { applemusicplayerIframewrapper } = getDomElements();
+            if (applemusicplayerIframewrapper) {
+                applemusicplayerIframewrapper.remove();
             }
         }
     }
@@ -3165,12 +3214,13 @@ chrome.storage.local.get([
         }`;
             document.body.appendChild(style);
 
-            const appleContainer = document.querySelector('div[class^="AppleMusicPlayer-desktop__PositioningContainer"]');
-            if (appleContainer) appleContainer.style.padding = "0";
+            const { applemusicplayerPositioningcontainer } = getDomElements();
+            if (applemusicplayerPositioningcontainer) applemusicplayerPositioningcontainer.style.padding = "0";
 
             let spotifyIframe = document.createElement("iframe");
             spotifyIframe.style.width = "100%";
             spotifyIframe.style.height = "80px";
+            spotifyIframe.style.marginRight = "0rem";
             spotifyIframe.style.gridColumn = "left-start / right-end";
             spotifyIframe.style.pointerEvents = "auto";
             spotifyIframe.className = savedClasses.spotifyIframe;
@@ -3181,35 +3231,34 @@ chrome.storage.local.get([
             spotifyIframeWrapper.appendChild(spotifyIframe);
             spotifyContainer.appendChild(spotifyIframeWrapper);
 
-            const mediaPlayersContainer = document.querySelector('[class^="MediaPlayersContainer"]');
-            if (mediaPlayersContainer) {
-                mediaPlayersContainer.append(spotifyContainer);
+            const { mediaplayerscontainerContainer } = getDomElements();
+            if (mediaplayerscontainerContainer) {
+                mediaplayerscontainerContainer.append(spotifyContainer);
             }
             if (isGeniusSongLyricEditor) {
+                console.log("Adjust Spotify player for lyric editor");
                 function adjustSpotifyPlayerGridColumn() {
-                    const expandingTextarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]');
-                    const stickyToolbar = document.querySelector('div[class*="StickyContributorToolbar__Container-"]');
-                    const stickyNavbar = document.querySelector('nav[class^="StickyNav-desktop__Container-"]');
+                    const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea } = getDomElements();
 
-                    if (expandingTextarea) {
+                    if (expandingtextareaTextarea) {
                         spotifyIframe.style.gridColumn = "right-start / page-end";
                         spotifyIframe.style.marginRight = "1rem";
-                        if (appleContainer) {
+                        if (applemusicplayerPositioningcontainer) {
                             spotifyIframe.style.paddingLeft = "2.25rem";
                         } else {
                             spotifyIframe.style.paddingLeft = "1.25rem"; spotifyIframe.style.paddingRight = "1rem";
                         }
-                        expandingTextarea.style.marginRight = "0rem";
-                        expandingTextarea.style.position = "relative";
-                        expandingTextarea.style.zIndex = "5";
-                        stickyToolbar.style.zIndex = "7";
-                        stickyNavbar.style.zIndex = "8";
+                        expandingtextareaTextarea.style.marginRight = "0rem";
+                        expandingtextareaTextarea.style.position = "relative";
+                        expandingtextareaTextarea.style.zIndex = "5";
+                        stickytoolbarContainer.style.zIndex = "6";
+                        stickyNavContainer.style.zIndex = "8";
                     } else {
                         spotifyIframe.style.gridColumn = "left-start / right-end";
                         spotifyIframe.style.marginRight = "0rem";
                         spotifyIframe.style.paddingLeft = "0rem";
-                        stickyToolbar.style.zIndex = "3";
-                        stickyNavbar.style.zIndex = "6";
+                        stickytoolbarContainer.style.zIndex = "3";
+                        stickyNavContainer.style.zIndex = "6";
                     }
                 }
 
@@ -3304,11 +3353,12 @@ chrome.storage.local.get([
 
             const soundCloudUrl = songData.soundcloud_url;
             if (!soundCloudUrl) return;
-            const toolbar = document.querySelector('div[class^="StickyContributorToolbar__Right-"]');
+
+            const { stickytoolbarRight } = getDomElements();
             const soundCloudButtonClass = savedClasses.soundCloudButton;
 
-            if (toolbar) {
-                let existingButton = toolbar.querySelector('button[class*="SoundcloudButton"]');
+            if (stickytoolbarRight) {
+                let existingButton = stickytoolbarRight.querySelector('button[class*="SoundcloudButton"]');
                 if (existingButton) return;
 
                 const soundCloudButton = document.createElement('button');
@@ -3325,7 +3375,7 @@ chrome.storage.local.get([
                     isSoundCloudPlaying = !isSoundCloudPlaying;
                 });
 
-                toolbar.insertBefore(soundCloudButton, toolbar.firstChild);
+                stickytoolbarRight.insertBefore(soundCloudButton, stickytoolbarRight.firstChild);
             }
         }
 
@@ -3353,15 +3403,15 @@ chrome.storage.local.get([
             soundCloudContainer.appendChild(soundCloudIframeWrapper);
             soundCloudContainer.classList.add('soundcloud-player');
 
-            const mediaPlayersContainer = document.querySelector('[class^="MediaPlayersContainer"]');
-            if (mediaPlayersContainer) {
-                mediaPlayersContainer.insertBefore(soundCloudContainer, mediaPlayersContainer.firstChild);
+            const { mediaplayerscontainerContainer } = getDomElements();
+            if (mediaplayerscontainerContainer) {
+                mediaplayerscontainerContainer.insertBefore(soundCloudContainer, mediaplayerscontainerContainer.firstChild);
             }
 
             function adjustSoundCloudPlayerGridColumn() {
-                const expandingTextarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]');
+                const { expandingtextareaTextarea } = getDomElements();
 
-                if (expandingTextarea) {
+                if (expandingtextareaTextarea) {
                     soundCloudIframe.style.gridColumn = "span 6 / page-end";
                 } else {
                     soundCloudIframe.style.gridColumn = "span 4 / page-end";
@@ -3376,9 +3426,9 @@ chrome.storage.local.get([
 
         function stopSoundCloudPlayer() {
             if (soundCloudContainer) {
-                const mediaPlayersContainer = document.querySelector('[class^="MediaPlayersContainer"]');
-                if (mediaPlayersContainer && soundCloudContainer.parentNode) {
-                    mediaPlayersContainer.removeChild(soundCloudContainer);
+                const { mediaplayerscontainerContainer } = getDomElements();
+                if (mediaplayerscontainerContainer && soundCloudContainer.parentNode) {
+                    mediaplayerscontainerContainer.removeChild(soundCloudContainer);
                 }
                 soundCloudContainer = null;
             }
@@ -3403,21 +3453,20 @@ chrome.storage.local.get([
     };
 
     function updateClasses() {
-        const youtubeButton = document.querySelector('button[class*="YoutubeButton__PlayVideoButton-"]');
-        if (youtubeButton) {
-            savedClasses.soundCloudButton = youtubeButton.className.replace("YoutubeButton", "SoundcloudButton");
+        const { youtubebuttonPlayvideobutton } = getDomElements();
+
+        if (youtubebuttonPlayvideobutton) {
+            savedClasses.soundCloudButton = youtubebuttonPlayvideobutton.className.replace("YoutubeButton", "SoundcloudButton");
             localStorage.setItem("soundCloudButton", savedClasses.soundCloudButton);
         }
-        const appleContainer = document.querySelector('div[class^="AppleMusicPlayer-desktop__PositioningContainer"]');
-        const appleIframeWrapper = document.querySelector('div[class*="AppleMusicPlayer-desktop__IframeWrapper"]');
-        const appleIframe = document.querySelector('iframe[class^="AppleMusicPlayer-desktop__Iframe"]');
-        if (appleContainer && appleIframeWrapper && appleIframe) {
-            savedClasses.soundCloudContainer = appleContainer.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.soundCloudIframeWrapper = appleIframeWrapper.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.soundCloudIframe = appleIframe.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.spotifyContainer = appleContainer.className.replace("AppleMusicPlayer", "SpotifyPlayer");
-            savedClasses.spotifyIframeWrapper = appleIframeWrapper.className.replace("AppleMusicPlayer", "SpotifyPlayer");
-            savedClasses.spotifyIframe = appleIframe.className.replace("AppleMusicPlayer", "SpotifyPlayer");
+        const { applemusicplayerPositioningcontainer, applemusicplayerIframewrapper, applemusicplayerIframe } = getDomElements();
+        if (applemusicplayerPositioningcontainer && applemusicplayerIframewrapper && applemusicplayerIframe) {
+            savedClasses.soundCloudContainer = applemusicplayerPositioningcontainer.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
+            savedClasses.soundCloudIframeWrapper = applemusicplayerIframewrapper.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
+            savedClasses.soundCloudIframe = applemusicplayerIframe.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
+            savedClasses.spotifyContainer = applemusicplayerPositioningcontainer.className.replace("AppleMusicPlayer", "SpotifyPlayer");
+            savedClasses.spotifyIframeWrapper = applemusicplayerIframewrapper.className.replace("AppleMusicPlayer", "SpotifyPlayer");
+            savedClasses.spotifyIframe = applemusicplayerIframe.className.replace("AppleMusicPlayer", "SpotifyPlayer");
             localStorage.setItem("soundCloudContainer", savedClasses.soundCloudContainer);
             localStorage.setItem("soundCloudIframeWrapper", savedClasses.soundCloudIframeWrapper);
             localStorage.setItem("soundCloudIframe", savedClasses.soundCloudIframe);
@@ -3445,26 +3494,23 @@ chrome.storage.local.get([
 
     if (isGeniusSongLyricEditor) {
         function adjustAppleMusicPlayerGridColumn() {
-            const appleIframe = document.querySelector('iframe[class^="AppleMusicPlayer-desktop__Iframe"]');
-            const expandingTextarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]');
-            const stickyToolbar = document.querySelector('div[class*="StickyContributorToolbar__Container-"]');
-            const stickyNavbar = document.querySelector('nav[class^="StickyNav-desktop__Container-"]');
+            const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea, applemusicplayerIframe } = getDomElements();
 
-            if (appleIframe) {
-                if (expandingTextarea) {
-                    appleIframe.style.gridColumn = "right-start / page-end";
-                    appleIframe.style.marginRight = "0rem";
-                    appleIframe.style.paddingLeft = "2.25rem";
-                    expandingTextarea.style.position = "relative";
-                    expandingTextarea.style.zIndex = "5";
-                    stickyToolbar.style.zIndex = "7";
-                    stickyNavbar.style.zIndex = "8";
+            if (applemusicplayerIframe) {
+                if (expandingtextareaTextarea) {
+                    applemusicplayerIframe.style.gridColumn = "right-start / page-end";
+                    applemusicplayerIframe.style.marginRight = "0rem";
+                    applemusicplayerIframe.style.paddingLeft = "2.25rem";
+                    expandingtextareaTextarea.style.position = "relative";
+                    expandingtextareaTextarea.style.zIndex = "5";
+                    stickytoolbarContainer.style.zIndex = "6";
+                    stickyNavContainer.style.zIndex = "8";
                 } else {
-                    appleIframe.style.gridColumn = "left-start / right-end";
-                    appleIframe.style.marginRight = "-1rem";
-                    appleIframe.style.paddingLeft = "0rem";
-                    stickyToolbar.style.zIndex = "3";
-                    stickyNavbar.style.zIndex = "6";
+                    applemusicplayerIframe.style.gridColumn = "left-start / right-end";
+                    applemusicplayerIframe.style.marginRight = "-1rem";
+                    applemusicplayerIframe.style.paddingLeft = "0rem";
+                    stickytoolbarContainer.style.zIndex = "3";
+                    stickyNavContainer.style.zIndex = "6";
                 }
             }
         }
@@ -3478,11 +3524,11 @@ chrome.storage.local.get([
 
     if (isGeniusSongLyricEditor) {
         function adjustYouTubeMargin() {
-            const transcriptionPlayer = document.querySelector('div[class^="TranscriptionPlayer__Container-"]');
 
-            if (transcriptionPlayer) {
-                transcriptionPlayer.style.margin = "0rem";
-                transcriptionPlayer.style.marginRight = "1rem";
+            const { transcriptionplayerContainer } = getDomElements();
+            if (transcriptionplayerContainer) {
+                transcriptionplayerContainer.style.margin = "0rem";
+                transcriptionplayerContainer.style.marginRight = "1rem";
             }
         }
 
@@ -3496,11 +3542,10 @@ chrome.storage.local.get([
 
             if (button) {
                 const checkPlayerInterval = setInterval(() => {
-                    const mediaPlayersContainer = document.querySelector('[class^="MediaPlayersContainer"]');
-                    const transcriptionPlayer = document.querySelector('div[class^="TranscriptionPlayer__Container-"]');
+                    const { mediaplayerscontainerContainer, transcriptionplayerContainer } = getDomElements();
 
-                    if (mediaPlayersContainer && transcriptionPlayer) {
-                        mediaPlayersContainer.insertBefore(transcriptionPlayer, mediaPlayersContainer.firstChild);
+                    if (mediaplayerscontainerContainer && transcriptionplayerContainer) {
+                        mediaplayerscontainerContainer.insertBefore(transcriptionplayerContainer, mediaplayerscontainerContainer.firstChild);
                         clearInterval(checkPlayerInterval);
                     }
                 }, 1);
@@ -3509,11 +3554,11 @@ chrome.storage.local.get([
     }
 
     if (isGeniusSongRenameButtons) {
-        const youtubeButton = document.querySelector('button[class*="YoutubeButton__PlayVideoButton-"]');
-        if (youtubeButton) {
-            const svgElement = youtubeButton.querySelector('svg');
+        const { youtubebuttonPlayvideobutton } = getDomElements();
+        if (youtubebuttonPlayvideobutton) {
+            const svgElement = youtubebuttonPlayvideobutton.querySelector('svg');
             svgElement.remove();
-            youtubeButton.textContent = 'YouTube';
+            youtubebuttonPlayvideobutton.textContent = 'YouTube';
         }
     }
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Artwork Extractor for Genius",
-  "version": "0.4.9",
+  "version": "0.5.0",
   "description": "Copy the artwork URL to the clipboard for genius.com by clicking the copy button on Apple Music, Deezer, Spotify, and more.",
   "permissions": [
     "activeTab",
@@ -149,4 +149,5 @@
     "*://genius.com/*",
     "*://genius-staging.com/*"
   ]
+
 }
