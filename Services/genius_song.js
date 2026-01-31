@@ -57,6 +57,7 @@ chrome.storage.local.get([
 
     async function main() {
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
+
         if (!isSong) return
 
         getDomElements();
@@ -65,7 +66,7 @@ chrome.storage.local.get([
         editAppleMusicPlayer();
 
 
-        const { songId, userId, songData } = await getSongInfo();
+        const { songId, userId, profilePath, songData } = await getSongInfo();
 
         if (isGeniusSongSongId) showSongIdButton(songId);
         if (isGeniusSongCheckIndex) showIndexButton();
@@ -93,10 +94,13 @@ chrome.storage.local.get([
         }
     }
 
+
     function getDomElements() {
+        const metadatastatsContainer = document.querySelector('div[class^="MetadataStats__Container-"]');
+
         return {
-            metadatastatsContainer: document.querySelector('div[class^="MetadataStats__Container-"]'),
-            labelwithiconLabel: document.querySelector('span[class^="LabelWithIcon__Label-"]'),
+            metadatastatsContainer,
+            labelwithiconLabel: metadatastatsContainer?.querySelector('span[class^="LabelWithIcon__Label-"]'),
             adminSpan: [...document.querySelectorAll('span')].find(el => el.textContent.trim() === "Admin"),
             sizedimageImage: document.querySelector('img[class^="SizedImage__Image-"]'),
             songheaderCoverart: document.querySelector('div[class^="SongHeader-desktop__CoverArt-"]'),
@@ -127,13 +131,19 @@ chrome.storage.local.get([
 
         // User ID
         const userMatch = document.documentElement.innerHTML.match(/let current_user = JSON.parse\('{\\"id\\":(\d+)/);
-        const userId = userMatch?.[1];
+        const userId = userMatch?.[1] ?? null;
+        if (userId) chrome.storage.local.set({ userId });
+
+        // Profile Path
+        const profileMatch = document.documentElement.innerHTML.match(/\\"profile_path\\":\\"([^"]+)\\"/);
+        const profilePath = profileMatch?.[1] ?? null;
+        if (profilePath) chrome.storage.local.set({ profilePath });
 
         // Song Data
         const response = await fetch(`https://genius.com/api/songs/${songId}`);
         const json = await response.json();
 
-        return { songId, userId, songData: json.response.song };
+        return { songId, userId, profilePath, songData: json.response.song };
     }
 
     document.addEventListener('click', function (event) {
@@ -410,7 +420,7 @@ chrome.storage.local.get([
         console.log("Run function addFollowButton()");
 
         const { sharebuttonsContainer, stickytoolbarLeft, editmetadatabutonSmallbutton } = getDomElements();
-        const existingButton = sharebuttonsContainer?.children[3]?.children[0];
+        const existingButton = sharebuttonsContainer?.children[3];
 
         if (existingButton && stickytoolbarLeft && editmetadatabutonSmallbutton && !document.getElementById("follow-song-button")) {
             const followButton = document.createElement('button');
@@ -510,7 +520,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.5.0 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.5.1 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify(payload)
             });
@@ -592,6 +602,7 @@ chrome.storage.local.get([
 
         const labelCorrections = {
             //"Primary Artists": "Group Members",
+            "Trompeta": "Trumpet",
         };
 
         const updatedCustomPerformances = customPerformances.map(perf => {
@@ -639,7 +650,7 @@ chrome.storage.local.get([
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.5.0 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.5.1 (Artwork Extractor for Genius)'
                 },
                 body: JSON.stringify({ song: updates })
             });
@@ -1161,6 +1172,7 @@ chrome.storage.local.get([
                 }
             }
 
+            // Round brackets
             const hasOpening = songTitle.includes("(");
             const hasClosing = songTitle.includes(")");
 
@@ -1168,6 +1180,16 @@ chrome.storage.local.get([
                 songTitle = songTitle.replace(/\(/g, "&#40;");
             } else if (!hasOpening && hasClosing) {
                 songTitle = songTitle.replace(/\)/g, "&#41;");
+            }
+
+            // Angle brackets
+            const hasLt = songTitle.includes("<") || songTitle.includes("˂");
+            const hasGt = songTitle.includes(">") || songTitle.includes("˃");
+
+            if (hasLt && !hasGt) {
+                songTitle = songTitle.replace(/[<˂]/g, "&lt;");
+            } else if (!hasLt && hasGt) {
+                songTitle = songTitle.replace(/[>˃]/g, "&gt;");
             }
 
 
@@ -1378,21 +1400,118 @@ chrome.storage.local.get([
         };
 
         const renderButtons = (container, buttons, classNameMapper, storedLanguage) => {
-            buttons.forEach(({ label, openTag, closeTag, hoverText, fullText }) => {
+            buttons.forEach(item => {
+                const { label, openTag, closeTag, hoverText, fullText, isDropdown, items } = item;
                 const className = classNameMapper(hoverText || fullText);
-                const btn = createButton(label, hoverText, className);
 
-                btn.addEventListener("click", () => {
-                    if (openTag !== undefined) {
-                        applyTextFormatting(openTag, closeTag);
-                    } else {
-                        insertSectionHeader(fullText, hoverText, storedLanguage);
-                    }
-                });
+                const btn = isDropdown
+                    ? createDropdownButton(label, hoverText, className, items, storedLanguage)
+                    : createButton(label, hoverText, className);
+
+                if (!isDropdown) {
+                    btn.addEventListener("click", () => {
+                        if (openTag !== undefined) {
+                            applyTextFormatting(openTag, closeTag);
+                        } else {
+                            insertSectionHeader(fullText, hoverText, storedLanguage);
+                        }
+                    });
+                }
 
                 container.appendChild(btn);
             });
         };
+
+        function createDropdownButton(label, hoverText, className, items, storedLanguage) {
+            const wrapper = document.createElement("div");
+            wrapper.style.position = "relative";
+
+            const btn = document.createElement("button");
+            btn.title = hoverText;
+            btn.type = "button";
+            btn.className = className;
+
+            btn.style.display = "grid";
+            btn.style.gridTemplateColumns = "1fr auto";
+            btn.style.alignItems = "center";
+            btn.style.width = "100%";
+
+            const svgDown = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 7" width="8" height="6.21">
+                    <path d="M4.488 7 0 0h8.977L4.488 7Z"></path>
+                </svg>`;
+            const svgUp = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 8" width="8" height="6.21">
+                    <path d="M4.488.5 0 7.5h8.977L4.488.5Z"></path>
+                </svg>`;
+
+            const textSpan = document.createElement("span");
+            textSpan.textContent = label;
+            textSpan.style.justifySelf = "center";
+
+            const iconSpan = document.createElement("span");
+            iconSpan.innerHTML = svgDown;
+            iconSpan.style.justifySelf = "end";
+
+            btn.appendChild(textSpan);
+            btn.appendChild(iconSpan);
+
+            const menu = document.createElement("div");
+            menu.style.position = "absolute";
+            menu.style.top = "107.5%";
+            menu.style.background = "white";
+            menu.style.border = "1px solid #000000";
+            menu.style.padding = "0.25rem";
+            menu.style.display = "none";
+            menu.style.zIndex = "9999";
+            menu.style.borderRadius = "0.5rem";
+            menu.style.width = "100%";
+            menu.style.gridTemplateColumns = "repeat(auto-fit, minmax(1rem, 1fr))";
+            menu.style.gap = "0.125rem";
+
+            items.forEach(entry => {
+                const isObject = typeof entry === "object";
+
+                const label = isObject ? entry.label : entry;
+                const openTag = isObject ? entry.openTag : entry;
+                const closeTag = isObject ? entry.closeTag ?? "" : "";
+
+                const item = document.createElement("button");
+                item.textContent = label;
+
+                item.style.paddingTop = "0.25rem";
+                item.style.paddingBottom = "0.25rem";
+                item.style.cursor = "pointer";
+                item.style.borderRadius = "0.125rem";
+                item.style.fontSize = "0.75rem";
+
+                const isSymbolsDropdown = hoverText === "Symbols";
+                const wideSymbolsDefault = ["ZWSP", "NBSP", "„...“"];
+                const wideSymbolsDE = ["ZWSP", "THSP", "NBSP", "„...“", "–", "—"];
+
+                const wideList = storedLanguage === "de" ? wideSymbolsDE : wideSymbolsDefault;
+
+                if (isSymbolsDropdown && wideList.includes(label)) {
+                    item.style.gridColumn = "span 2";
+                }
+
+                item.addEventListener("click", () => {
+                    applyTextFormatting(openTag, closeTag);
+                });
+
+                menu.appendChild(item);
+            });
+
+            btn.addEventListener("click", () => {
+                const isClosed = menu.style.display === "none";
+                menu.style.display = isClosed ? "grid" : "none";
+                iconSpan.innerHTML = isClosed ? svgUp : svgDown;
+            });
+
+            wrapper.appendChild(btn);
+            wrapper.appendChild(menu);
+            return wrapper;
+        }
 
 
         if (!isNonMusic) {
@@ -2010,24 +2129,113 @@ chrome.storage.local.get([
                     { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
                     { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
                     { label: null, openTag: null, closeTag: null, hoverText: null },
-                    { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "", hoverText: "Zero-width space" },
-                    { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
+                    {
+                        label: "Diacritics",
+                        isDropdown: true,
+                        hoverText: "Diacritics (uppercase)",
+                        items: [
+                            "Á", "À", "Â", "Ä",
+                            "É", "È", "Ê", "Ë",
+                            "Í", "Ì", "Î", "Ï",
+                            "Ó", "Ò", "Ô", "Ö",
+                            "Ú", "Ù", "Û", "Ü",
+                            "Č", "Ğ", "Š", "Ž",
+                            "Ç", "Ş", "İ", "Ñ",
+                            "Æ", "Œ", "ẞ",
+                        ]
+                    },
+                    {
+                        label: "Diacritics",
+                        isDropdown: true,
+                        hoverText: "Diacritics (lowercase)",
+                        items: [
+                            "á", "à", "â", "ä",
+                            "é", "è", "ê", "ë",
+                            "í", "ì", "î", "ï",
+                            "ó", "ò", "ô", "ö",
+                            "ú", "ù", "û", "ü",
+                            "č", "ğ", "š", "ž",
+                            "ç", "ş", "ı", "ñ",
+                            "æ", "œ", "ß",
+                        ]
+                    },
+                    {
+                        label: "Symbols",
+                        isDropdown: true,
+                        hoverText: "Symbols",
+                        items: [
+                            { label: "(", openTag: "&#40;", closeTag: "" },
+                            { label: ")", openTag: "&#41;", closeTag: "" },
+                            { label: "<", openTag: "&lt;", closeTag: "" },
+                            { label: ">", openTag: "&gt;", closeTag: "" },
+                            { label: "–", openTag: "–", closeTag: "" },
+                            { label: "—", openTag: "—", closeTag: "" },
+                            { label: "„...“", openTag: "„", closeTag: "“" },
+                            { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "" },
+                            { label: "NBSP", openTag: "&nbsp;", closeTag: "" },
+                        ]
+                    }
                 ],
 
                 de: {
                     Default: [
                         { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
-                        { label: "(&lt;i&gt;)", openTag: "(<i>", closeTag: "</i>)", hoverText: "(<i></i>)" },
-                        { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "", hoverText: "Zero-width space" },
-                        { label: "„...“", openTag: "„", closeTag: "“", hoverText: "German Quotation Marks" },
                         { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
-                        { label: "(&lt;b&gt;)", openTag: "(<b>", closeTag: "</b>)", hoverText: "(<b></b>)" },
-                        { label: "THSP", openTag: "&thinsp;", closeTag: "", hoverText: "Thin Space" },
-                        { label: "En Dash", openTag: "–", closeTag: "", hoverText: "En Dash" },
                         { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
-                        { label: "(&lt;i&gt;&lt;b&gt;)", openTag: "(<b><i>", closeTag: "</i></b>)", hoverText: "(<b><i></i></b>)" },
-                        { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
-                        { label: "Em Dash", openTag: "—", closeTag: "", hoverText: "Em Dash" },
+                        { label: null, openTag: null, closeTag: null, hoverText: null },
+
+                        { label: "(<i>Italic</i>)", openTag: "(<i>", closeTag: "</i>)", hoverText: "(<i></i>)" },
+                        { label: "(<b>Bold</b>)", openTag: "(<b>", closeTag: "</b>)", hoverText: "(<b></b>)" },
+                        { label: "(<b><i>Italic + Bold</i></b>)", openTag: "(<b><i>", closeTag: "</i></b>)", hoverText: "(<b><i></i></b>)" },
+                        { label: null, openTag: null, closeTag: null, hoverText: null },
+
+                        {
+                            label: "Diacritics",
+                            isDropdown: true,
+                            hoverText: "Diacritics (uppercase)",
+                            items: [
+                                "Á", "À", "Â", "Ä",
+                                "É", "È", "Ê", "Ë",
+                                "Í", "Ì", "Î", "Ï",
+                                "Ó", "Ò", "Ô", "Ö",
+                                "Ú", "Ù", "Û", "Ü",
+                                "Č", "Ğ", "Š", "Ž",
+                                "Ç", "Ş", "İ", "Ñ",
+                                "Æ", "Œ", "ẞ",
+                            ]
+                        },
+                        {
+                            label: "Diacritics",
+                            isDropdown: true,
+                            hoverText: "Diacritics (lowercase)",
+                            items: [
+                                "á", "à", "â", "ä",
+                                "é", "è", "ê", "ë",
+                                "í", "ì", "î", "ï",
+                                "ó", "ò", "ô", "ö",
+                                "ú", "ù", "û", "ü",
+                                "č", "ğ", "š", "ž",
+                                "ç", "ş", "ı", "ñ",
+                                "æ", "œ", "ß",
+                            ]
+                        },
+                        {
+                            label: "Symbols",
+                            isDropdown: true,
+                            hoverText: "Symbols",
+                            items: [
+                                { label: "(", openTag: "&#40;", closeTag: "" },
+                                { label: ")", openTag: "&#41;", closeTag: "" },
+                                { label: "<", openTag: "&lt;", closeTag: "" },
+                                { label: ">", openTag: "&gt;", closeTag: "" },
+                                { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "" },
+                                { label: "–", openTag: "–", closeTag: "" },
+                                { label: "THSP", openTag: "&thinsp;", closeTag: "" },
+                                { label: "—", openTag: "—", closeTag: "" },
+                                { label: "NBSP", openTag: "&nbsp;", closeTag: "" },
+                                { label: "„...“", openTag: "„", closeTag: "“" },
+                            ]
+                        }
                     ]
                 },
             };
@@ -3236,7 +3444,6 @@ chrome.storage.local.get([
                 mediaplayerscontainerContainer.append(spotifyContainer);
             }
             if (isGeniusSongLyricEditor) {
-                console.log("Adjust Spotify player for lyric editor");
                 function adjustSpotifyPlayerGridColumn() {
                     const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea } = getDomElements();
 
@@ -3251,7 +3458,7 @@ chrome.storage.local.get([
                         expandingtextareaTextarea.style.marginRight = "0rem";
                         expandingtextareaTextarea.style.position = "relative";
                         expandingtextareaTextarea.style.zIndex = "5";
-                        stickytoolbarContainer.style.zIndex = "6";
+                        stickytoolbarContainer.style.zIndex = "7";
                         stickyNavContainer.style.zIndex = "8";
                     } else {
                         spotifyIframe.style.gridColumn = "left-start / right-end";
@@ -3503,7 +3710,7 @@ chrome.storage.local.get([
                     applemusicplayerIframe.style.paddingLeft = "2.25rem";
                     expandingtextareaTextarea.style.position = "relative";
                     expandingtextareaTextarea.style.zIndex = "5";
-                    stickytoolbarContainer.style.zIndex = "6";
+                    stickytoolbarContainer.style.zIndex = "7";
                     stickyNavContainer.style.zIndex = "8";
                 } else {
                     applemusicplayerIframe.style.gridColumn = "left-start / right-end";
