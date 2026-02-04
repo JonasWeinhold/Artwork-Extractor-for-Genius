@@ -14,6 +14,7 @@ chrome.storage.local.get([
     'isGeniusSongExpandSectionsButtons',
     'isGeniusSongAnnotationsButtons',
     'isGeniusSongFilterActivity',
+    'isGeniusSongSaveFilters',
     'isGeniusSongCopyCover',
     'isGeniusSongAppleMusicPlayer',
     'isGeniusSongYouTubePlayer',
@@ -36,6 +37,7 @@ chrome.storage.local.get([
     const isGeniusSongExpandSectionsButtons = result.isGeniusSongExpandSectionsButtons ?? false;
     const isGeniusSongAnnotationsButtons = result.isGeniusSongAnnotationsButtons ?? true;
     const isGeniusSongFilterActivity = result.isGeniusSongFilterActivity ?? true;
+    const isGeniusSongSaveFilters = result.isGeniusSongSaveFilters ?? false;
     const isGeniusSongCopyCover = result.isGeniusSongCopyCover ?? true;
     const isGeniusSongAppleMusicPlayer = result.isGeniusSongAppleMusicPlayer ?? true;
     const isGeniusSongYouTubePlayer = result.isGeniusSongYouTubePlayer ?? true;
@@ -75,7 +77,7 @@ chrome.storage.local.get([
         if (isGeniusSongSongPage) checkSongCover(songData)
 
         if (isGeniusSongFollowButton) addFollowButton();
-        if (isGeniusSongShellyButton) addShellyButton(songId, songData);
+        if (isGeniusSongShellyButton) addShellyButton(songData);
 
         if (isGeniusSongCleanupMetadataButton) cleanupMetadata(userId, songData);
 
@@ -453,7 +455,7 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                 SHELLY BUTTON                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    function addShellyButton(songId, songData) {
+    function addShellyButton(songData) {
         console.log("Run function addShellyButton()");
 
         const { adminSpan } = getDomElements();
@@ -501,7 +503,7 @@ chrome.storage.local.get([
                 }
             };
 
-            await updateSongLyrics(songId, payload);
+            await updateSongLyrics(songData, payload);
 
             const toggle = dropdownContainer.querySelector('[class^="Dropdown__Toggle-"]');
             toggle?.click();
@@ -512,26 +514,7 @@ chrome.storage.local.get([
         list.appendChild(li);
     }
 
-    async function updateSongLyrics(songId, payload) {
-        try {
-            const response = await fetch(`https://genius.com/api/songs/${songId}/lyrics`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cookie': document.cookie,
-                    'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.5.1 (Artwork Extractor for Genius)'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                console.error(`Error updating song lyrics: ${response.statusText}`);
-            }
-        } catch (error) {
-            console.error(`Error: ${error}`);
-        }
-    }
+    
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -641,32 +624,7 @@ chrome.storage.local.get([
         stickytoolbarLeft.appendChild(actionButton);
     }
 
-    async function updateSongMetadata(song, updates) {
-        if (Object.keys(updates).length === 0) return;
-        try {
-            const updateResponse = await fetch(`https://genius.com/api/songs/${song.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cookie': document.cookie,
-                    'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.5.1 (Artwork Extractor for Genius)'
-                },
-                body: JSON.stringify({ song: updates })
-            });
-
-            if (!updateResponse.ok) {
-                console.error(`Error updating song metadata: ${updateResponse.statusText}`);
-            }
-        } catch (error) {
-            console.error(`Error: ${error}`);
-        }
-    }
-
-    function getCsrfToken() {
-        const match = document.cookie.match(/_csrf_token=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    }
+      
 
 
 
@@ -2139,9 +2097,10 @@ chrome.storage.local.get([
                             "Í", "Ì", "Î", "Ï",
                             "Ó", "Ò", "Ô", "Ö",
                             "Ú", "Ù", "Û", "Ü",
+                            "Ć", "Ń", "Ś", "Ź",
                             "Č", "Ğ", "Š", "Ž",
-                            "Ç", "Ş", "İ", "Ñ",
-                            "Æ", "Œ", "ẞ",
+                            "Ç", "Ş", "I", "Ñ",
+                            "Đ", "Æ", "Œ", "ẞ",
                         ]
                     },
                     {
@@ -2154,9 +2113,10 @@ chrome.storage.local.get([
                             "í", "ì", "î", "ï",
                             "ó", "ò", "ô", "ö",
                             "ú", "ù", "û", "ü",
+                            "ć", "ń", "ś", "ź",
                             "č", "ğ", "š", "ž",
                             "ç", "ş", "ı", "ñ",
-                            "æ", "œ", "ß",
+                            "đ", "æ", "œ", "ß",
                         ]
                     },
                     {
@@ -2199,9 +2159,10 @@ chrome.storage.local.get([
                                 "Í", "Ì", "Î", "Ï",
                                 "Ó", "Ò", "Ô", "Ö",
                                 "Ú", "Ù", "Û", "Ü",
+                                "Ć", "Ń", "Ś", "Ź",
                                 "Č", "Ğ", "Š", "Ž",
-                                "Ç", "Ş", "İ", "Ñ",
-                                "Æ", "Œ", "ẞ",
+                                "Ç", "Ş", "I", "Ñ",
+                                "Đ", "Æ", "Œ", "ẞ",
                             ]
                         },
                         {
@@ -2214,9 +2175,10 @@ chrome.storage.local.get([
                                 "í", "ì", "î", "ï",
                                 "ó", "ò", "ô", "ö",
                                 "ú", "ù", "û", "ü",
+                                "ć", "ń", "ś", "ź",
                                 "č", "ğ", "š", "ž",
                                 "ç", "ş", "ı", "ñ",
-                                "æ", "œ", "ß",
+                                "đ", "æ", "œ", "ß",
                             ]
                         },
                         {
@@ -2603,105 +2565,108 @@ chrome.storage.local.get([
         return svg;
     }
 
-    function filterRecentActivity() {
-        console.log("Run function filterRecentActivity()");
-
-        const svgUpvoted = `
+    const ICONS = {
+        svgUpvoted: `
             <svg data-icon-upvoted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.62 21.36">
                 <path d="M16.52 21.29H6V8.5l.84-.13a3.45 3.45 0 0 0 1.82-1.09 13.16 13.16 0 0 0 .82-1.85c1.06-2.69 2-4.78 3.52-5.31a2.06 2.06 0 0 1 1.74.17c2.5 1.42 1 5 .16 6.95-.11.27-.25.6-.31.77a.78.78 0 0 0 .6.36h4.1a2.29 2.29 0 0 1 2.37 2.37c0 .82-1.59 5.4-2.92 9.09a2.39 2.39 0 0 1-2.22 1.46zm-8.52-2h8.56a.48.48 0 0 0 .31-.17c1.31-3.65 2.73-7.82 2.79-8.44 0-.22-.1-.32-.37-.32h-4.1A2.61 2.61 0 0 1 12.54 8 4.29 4.29 0 0 1 13 6.46c.45-1.06 1.64-3.89.7-4.43-.52 0-1.3 1.4-2.38 4.14a10 10 0 0 1-1.13 2.38A5.28 5.28 0 0 1 8 10.11zM0 8.4h4.86v12.96H0z"></path>
-            </svg>`;
-        const svgDownvoted = `
+            </svg>`,
+        svgDownvoted: `
             <svg data-icon-downvoted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.62 21.36">
                 <path d="M8 21.36a2.12 2.12 0 0 1-1.06-.29c-2.5-1.42-1-5-.16-6.95.11-.27.25-.6.31-.77a.78.78 0 0 0-.6-.36H2.37A2.29 2.29 0 0 1 0 10.64c0-.82 1.59-5.4 2.92-9.09A2.39 2.39 0 0 1 5.1.07h10.56v12.79l-.84.13A3.45 3.45 0 0 0 13 14.08a13.16 13.16 0 0 0-.82 1.85c-1.06 2.69-2 4.79-3.49 5.31a2.06 2.06 0 0 1-.69.12zM5.1 2.07a.48.48 0 0 0-.31.17C3.48 5.89 2.07 10.06 2 10.68c0 .22.1.32.37.32h4.1a2.61 2.61 0 0 1 2.61 2.4 4.29 4.29 0 0 1-.48 1.51c-.46 1.09-1.65 3.89-.7 4.42.52 0 1.3-1.4 2.38-4.14a10 10 0 0 1 1.13-2.38 5.27 5.27 0 0 1 2.25-1.56V2.07zM16.76 0h4.86v12.96h-4.86z"></path>
-            </svg>`;
-        const svgPinned = `
+            </svg>`,
+        svgPinned: `
             <svg data-icon-pinned width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.82 22">
                 <path d="M21.82 20.62L17 15.83l3.59-3.59-3.04-3.07-3.36.12-4.1-4.1v-3L7.91 0 0 7.91l2.16 2.16 2.84.18 4.1 4.12-.1 3.36 3.08 3.08 3.59-3.59L20.43 22zM11 16.94l.12-3.36-5.27-5.24L3 8.16l-.25-.25 5.16-5.14.22.23v3l5.27 5.27 3.36-.12 1.09 1.09L12.06 18z"></path>
-            </svg>`;
-        const svgUnpinned = `
+            </svg>`,
+        svgUnpinned: `
             <svg data-icon-unpinned width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.82 22">
                 <path d="M21.82 20.62L17 15.83l3.59-3.59-3.04-3.07-3.36.12-4.1-4.1v-3L7.91 0 0 7.91l2.16 2.16 2.84.18 4.1 4.12-.1 3.36 3.08 3.08 3.59-3.59L20.43 22zM11 16.94l.12-3.36-5.27-5.24L3 8.16l-.25-.25 5.16-5.14.22.23v3l5.27 5.27 3.36-.12 1.09 1.09L12.06 18z"></path>
-            </svg>`;
-        const svgLocked = `
+            </svg>`,
+        svgLocked: `
             <svg data-icon-locked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17.08 22">
                 <path d="M15.08 10.86V20H2v-9.14h13.08M8.54 0a6.31 6.31 0 0 0-6.31 6.31v2.55H0V22h17.08V8.86h-2.23V6.31A6.31 6.31 0 0 0 8.54 0zM4.63 8.86V6.31a3.91 3.91 0 0 1 7.81 0v2.55z"></path>
-            </svg>`;
-        const svgUnlocked = `
+            </svg>`,
+        svgUnlocked: `
             <svg data-icon-unlocked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16.56 22">
                 <path d="M14.56 11.26V20H2v-8.74h12.56M8.28 0a6.12 6.12 0 0 0-6.12 6.12v3.14H0V22h16.56V9.26H4.49V6.12a3.79 3.79 0 0 1 7.58 0h2.33A6.12 6.12 0 0 0 8.28 0z"></path>
-            </svg>`;
-        const svgAccepted = `
+            </svg>`,
+        svgAccepted: `
             <svg data-icon-accepted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 16.2">
                 <path d="M8.83 16.2L0 7.97l2.06-2.21 6.62 6.17L19.79 0 22 2.06 8.83 16.2"></path>
-            </svg>`;
-        const svgRejected = `
+            </svg>`,
+        svgRejected: `
             <svg data-icon-deleted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
                 <path d="M22 1.39L20.61 0 11 9.62 1.39 0 0 1.39 9.62 11 0 20.61 1.39 22 11 12.38 20.61 22 22 20.61 12.38 11 22 1.39"></path>
-            </svg>`;
-        const svgRecognized = `
+            </svg>`,
+        svgRecognized: `
             <svg data-icon-recognized width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17.4 22">
                 <path d="M15.47 1.92v18.16H1.92V1.92h13.55M17.4 0H0v22h17.4V0z"></path>
                 <path d="M5.11 6.45h7.82v1.44H5.11zm0 8.1h7.82v1.44H5.11zm0-4.05h7.82v1.44H5.11z"></path>
-            </svg>`;
-        const svgMerged = `
+            </svg>`,
+        svgMerged: `
             <svg data-icon-merged width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18.59 22">
                 <path d="M16.76 5.87v14.3H6.22V5.87h10.54M18.59 4H4.39v18h14.2V4z"></path>
                 <path d="M7.73 8.45h7.44V9.9H7.73zm0 7.7h7.44v1.45H7.73zm0-3.85h7.44v1.45H7.73z"></path>
                 <path d="M3.45 19.89H0V0h16.13v3.12H14.2V1.93H1.93v16.03h1.52v1.93"></path>
-            </svg>`;
-        const svgCreated = `
+            </svg>`,
+        svgCreated: `
             <svg data-icon-created width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
                 <path d="M15 10.47h1.7v4.3h-4.4v-3.75c0-2.78.63-5.3 4.39-5.52v2.22c-1.26 0-1.69.88-1.69 2.75zm-7 0h1.7v4.3H5.3v-3.75c0-2.78.63-5.3 4.39-5.52v2.22C8.43 7.72 8 8.6 8 10.47z"></path>
                 <path d="M20.09 1.91v18.18H1.91V1.91h18.18M22 0H0v22h22V0z"></path>
-            </svg>`;
-        const svgEdited = `
+            </svg>`,
+        svgEdited: `
             <svg data-icon-edited width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 19">
                 <path d="M17.51 5.827c.654-.654.654-1.636 0-2.29L14.563.59c-.655-.655-1.637-.655-2.291 0L0 12.864V18.1h5.236L17.51 5.827Zm-4.092-4.09 2.946 2.945-2.455 2.454-2.945-2.945 2.454-2.455ZM1.636 16.463v-2.946l8.182-8.182 2.946 2.946-8.182 8.182H1.636Z"></path>
-            </svg>`;
-        const svgSuggested = `
+            </svg>`,
+        svgSuggested: `
             <svg data-icon-added_a_suggestion_to width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.2 22">
                 <path d="M19.29 1.91v11.46H7.69l-.57.7L5 16.64v-3.27H1.91V1.91h17.38M21.2 0H0v15.28h3.12V22l5.48-6.72h12.6V0z"></path>
                 <path d="M4.14 4.29h12.93V6.2H4.14zm0 4.09h12.93v1.91H4.14z"></path>
-            </svg>`;
-        const svgFollowed = `
+            </svg>`,
+        svgFollowed: `
             <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 15.45">
                 <path d="M11 2c4 0 7.26 3.85 8.6 5.72-1.34 1.87-4.6 5.73-8.6 5.73S3.74 9.61 2.4 7.73C3.74 5.86 7 2 11 2m0-2C4.45 0 0 7.73 0 7.73s4.45 7.73 11 7.73 11-7.73 11-7.73S17.55 0 11 0z"></path>
                 <path d="M11 5a2.73 2.73 0 1 1-2.73 2.73A2.73 2.73 0 0 1 11 5m0-2a4.73 4.73 0 1 0 4.73 4.73A4.73 4.73 0 0 0 11 3z"></path>
-            </svg>`;
-        const svgHid = `
+            </svg>`,
+        svgHid: `
             <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 15.45">
                 <path d="M11 2c4 0 7.26 3.85 8.6 5.72-1.34 1.87-4.6 5.73-8.6 5.73S3.74 9.61 2.4 7.73C3.74 5.86 7 2 11 2m0-2C4.45 0 0 7.73 0 7.73s4.45 7.73 11 7.73 11-7.73 11-7.73S17.55 0 11 0z"></path>
                 <path d="M11 5a2.73 2.73 0 1 1-2.73 2.73A2.73 2.73 0 0 1 11 5m0-2a4.73 4.73 0 1 0 4.73 4.73A4.73 4.73 0 0 0 11 3z"></path>
                 <path d="M0 14.45 L1.8 15.45 L22 1 L20.2 0 Z"></path>
-            </svg>`;
-        const svgPyonged = `
+            </svg>`,
+        svgPyonged: `
             <svg data-icon-pyonged width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11.37 22">
                 <path d="M0 7l6.16-7 3.3 7H6.89S5.5 12.1 5.5 12.17h5.87L6.09 22l.66-7H.88l2.89-8z"></path>
-            </svg>`;
-        const svgPageviews = `
+            </svg>`,
+        svgPageviews: `
             <svg data-icon-pageviews width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 18">
                 <path d="M3.33494 0C3.33494 0 4.09484 1.88505 3.82154 4.2567C3.54779 6.62835 0.236392 9.669 0.250042 12.6792C0.263692 15.6894 5.14004 18 5.14004 18C5.14004 18 4.03634 16.0332 5.97389 12.7953C5.97389 12.7953 8.21519 14.3668 7.98599 15.7594C7.74464 17.2239 6.60914 18 6.60914 18C6.60914 18 13.4295 17.1792 13.4899 11.676C13.551 6.1722 9.49469 2.73315 9.49469 2.73315C9.49469 2.73315 9.94184 4.95165 8.72384 6.97485C8.72384 6.97485 5.67599 0.7605 3.33494 0ZM5.38739 4.30215C6.08369 5.3508 6.77669 6.5532 7.32239 7.66335L8.58509 10.2348L10.0626 7.78005C10.285 7.4103 10.4641 7.0371 10.6069 6.66915C11.3284 7.9623 11.9508 9.6618 11.9287 11.6584C11.9079 13.524 10.786 14.681 9.55904 15.3902C9.44159 13.4235 7.33139 11.8395 6.87059 11.5164L5.49629 10.5534L4.63394 11.9932C3.95714 13.1242 3.58724 14.1443 3.40754 15.03C2.53679 14.3027 1.81514 13.4493 1.81199 12.672C1.80614 11.4366 2.69579 9.9708 3.55619 8.5536C4.40819 7.1514 5.21219 5.8263 5.37299 4.4358C5.37824 4.39095 5.38274 4.34625 5.38739 4.30215Z"></path>
-            </svg>`;
+            </svg>`,
 
 
 
 
-        const svgMarked = `
+        svgMarked: `
             <svg data-icon-marked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="64 0 20 20">
                 <circle cx="74" cy="10" r="9"></circle>
-            </svg>`;
-        const svgVerified = `
+            </svg>`,
+        svgVerified: `
             <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 11">
                 <path d="M0 0h11v11H0z"></path>
                 <path fill="#FFF" d="M4.764 5.9l-2-2L1.35 5.314l3.414 3.414 4.914-4.914L8.264 2.4"></path>
-            </svg>`;
-        const svgGenius = `
+            </svg>`,
+        svgGenius: `
             <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <g transform="scale(0.95) translate(0.63,0.63)">
                     <path d="M12.897 1.235c-.36.001-.722.013-1.08.017-.218-.028-.371.225-.352.416-.035 1.012.023 2.025-.016 3.036-.037.841-.555 1.596-1.224 2.08-.5.345-1.118.435-1.671.663.121.78.434 1.556 1.057 2.07 1.189 1.053 3.224.86 4.17-.426.945-1.071.453-2.573.603-3.854.286-.48.937-.132 1.317-.49-.34-1.249-.81-2.529-1.725-3.472a11.125 11.125 0 00-1.08-.04zm-10.42.006C.53 2.992-.386 5.797.154 8.361c.384 2.052 1.682 3.893 3.45 4.997.134-.23.23-.476.09-.73-.95-2.814-.138-6.119 1.986-8.19.014-.986.043-1.976-.003-2.961l-.188-.214c-1.003-.051-2.008 0-3.01-.022zm17.88.055l-.205.356c.265.938.6 1.862.72 2.834.58 3.546-.402 7.313-2.614 10.14-1.816 2.353-4.441 4.074-7.334 4.773-2.66.66-5.514.45-8.064-.543-.068.079-.207.237-.275.318 2.664 2.629 6.543 3.969 10.259 3.498 3.075-.327 5.995-1.865 8.023-4.195 1.935-2.187 3.083-5.07 3.125-7.992.122-3.384-1.207-6.819-3.636-9.19z"></path>
                 </g>
-            </svg>`;
+            </svg>`,
+    }
 
+    function filterRecentActivity() {
+        console.log("Run function filterRecentActivity()");
+
+        const { svgUpvoted, svgDownvoted, svgPinned, svgUnpinned, svgLocked, svgUnlocked, svgAccepted, svgRejected, svgRecognized, svgMerged, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgMarked, svgVerified, svgGenius } = ICONS;
 
         const FILTERS = [
             { key: "metadata", label: "METADATA", color: "#000000", svg: svgGenius },
@@ -2753,8 +2718,133 @@ chrome.storage.local.get([
             ]
         };
 
-        let savedStates = {};
-        let applyActivityFilter = () => { };
+        const ALL_SUBFILTERS = Object.values(SUBFILTERS).flat();
+
+        const STORAGE_KEY = "geniusRecentActivityFilters";
+
+        let savedStates = {
+            filters: {},
+            userText: ""
+        };
+
+        let currentUIState = {
+            checkboxes: null,
+            userInput: null
+        };
+
+        let filterInitialized = false;
+        let iframeObserverInitialized = false;
+
+
+        function saveStateToStorage() {
+            if (!isGeniusSongSaveFilters) return;
+
+            chrome.storage.local.set({
+                [STORAGE_KEY]: {
+                    filters: savedStates.filters,
+                    userText: savedStates.userText
+                }
+            });
+        }
+
+        function loadStateFromStorage(callback) {
+            if (!isGeniusSongSaveFilters) {
+                callback();
+                return;
+            }
+
+            chrome.storage.local.get(STORAGE_KEY, data => {
+                if (data && data[STORAGE_KEY]) {
+                    const stored = data[STORAGE_KEY];
+                    savedStates.filters = stored.filters || {};
+                    savedStates.userText = stored.userText || "";
+                }
+                callback();
+            });
+        }
+
+
+        function filterItems(items, filters, userText) {
+            const username = userText?.trim().toLowerCase();
+            const usernameRegex = username
+                ? new RegExp(`\\b${username}\\b`, "i")
+                : null;
+
+            items.forEach(item => {
+                let visible = true;
+
+                const span = item.querySelector('.inbox_line_item-content span');
+                if (!span) return;
+
+                const clone = span.cloneNode(true);
+                clone.querySelectorAll(
+                    "em, .inbox_line_item-content-note, [ng-bind-html]"
+                ).forEach(el => el.remove());
+
+                const text = clone.innerText
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, " ");
+
+                const match = ALL_SUBFILTERS.find(sf => sf.regex.test(text));
+
+                if (match) {
+                    const enabled = filters[match.key] ?? true;
+                    if (!enabled) visible = false;
+                }
+
+                if (visible && filters.user && usernameRegex) {
+                    if (!usernameRegex.test(text)) visible = false;
+                }
+
+                const inboxItem = item.closest("inbox-line-item");
+                if (inboxItem) {
+                    inboxItem.style.display = visible ? "" : "none";
+                }
+            });
+        }
+
+        function getActivityItems() {
+            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
+            if (!iframe) return null;
+
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!doc) return null;
+
+            return doc.querySelectorAll('div[class^="feed_dropdown-item"]');
+        }
+
+        function applyActivityFilter(checkboxes, userInput) {
+            const states = {};
+            checkboxes.forEach(cb => {
+                states[cb.dataset.filter] = cb.checked;
+            });
+
+            savedStates.filters = { ...savedStates.filters, ...states };
+            savedStates.userText = userInput.value;
+            saveStateToStorage();
+
+            const items = getActivityItems();
+            if (!items) return;
+
+            filterItems(items, savedStates.filters, savedStates.userText);
+        }
+
+        function applyActivityFilterFromState() {
+            if (!currentUIState.checkboxes || !currentUIState.userInput) return;
+            applyActivityFilter(
+                currentUIState.checkboxes,
+                currentUIState.userInput
+            );
+        }
+
+        function applyActivityFilterFromSavedState() {
+            const items = getActivityItems();
+            if (!items) return;
+
+            filterItems(items, savedStates.filters, savedStates.userText);
+        }
+
 
         function flexRow(el) {
             el.style.display = "flex";
@@ -2778,7 +2868,7 @@ chrome.storage.local.get([
                 if (cb && icon) icon.setAttribute("fill", cb.checked ? f.color : "#ddd");
             });
 
-            Object.values(SUBFILTERS).flat().forEach(sf => {
+            ALL_SUBFILTERS.forEach(sf => {
                 const cb = dropdown.querySelector(`input[data-filter="${sf.key}"]`);
                 const icon = dropdown.querySelector(`[data-icon="${sf.key}"] svg`);
                 if (cb && icon) icon.setAttribute("fill", cb.checked ? sf.color : "#ddd");
@@ -2789,94 +2879,6 @@ chrome.storage.local.get([
             if (userIcon && userCb) userIcon.setAttribute("fill", userCb.checked ? "#000" : "#ddd");
         }
 
-
-
-
-
-        function applyActivityFilterFn(checkboxes, userInput) {
-            const states = {};
-
-            checkboxes.forEach(cb => {
-                states[cb.dataset.filter] = cb.checked;
-            });
-
-            savedStates = {
-                ...savedStates,
-                ...states,
-                userText: userInput.value
-            };
-
-            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
-            if (!iframe) return;
-
-            const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!innerDoc) return;
-
-            const items = innerDoc.querySelectorAll('div[class^="feed_dropdown-item"]');
-            const username = userInput.value.trim().toLowerCase();
-            const usernameRegex = username ? new RegExp(`\\b${username}\\b`, "i") : null;
-
-            items.forEach(item => {
-                let visible = true;
-
-                const span = item.querySelector('.inbox_line_item-content span');
-                if (!span) return;
-
-                const clone = span.cloneNode(true);
-                clone.querySelectorAll("em").forEach(el => el.remove());
-                clone.querySelectorAll(".inbox_line_item-content-note").forEach(el => el.remove());
-                clone.querySelectorAll("[ng-bind-html]").forEach(el => el.remove());
-
-                const text = clone.innerText.trim().toLowerCase().replace(/\s+/g, " ");
-                console.log(text);
-
-                let matchedCategory = null;
-                let matchedMatcherId = null;
-
-                outer:
-                for (const [category, subfilters] of Object.entries(SUBFILTERS)) {
-                    for (const sf of subfilters) {
-                        if (sf.regex.test(text)) {
-                            matchedCategory = category;
-                            matchedMatcherId = sf.key.split("__")[1];
-                            break outer;
-                        }
-                    }
-                }
-
-                if (!matchedCategory) {
-                    item.style.display = "";
-                    return;
-                }
-
-                const subKey = `${matchedCategory}__${matchedMatcherId}`;
-                const subActive = states[subKey];
-
-                if (!subActive) visible = false;
-
-                if (visible && states.user && usernameRegex) {
-                    if (!usernameRegex.test(text)) visible = false;
-                }
-
-                const inboxItem = item.closest("inbox-line-item");
-                if (inboxItem) {
-                    inboxItem.style.display = visible ? "" : "none";
-                }
-            });
-        }
-
-        function updateActivityItemCount() {
-            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
-            if (!iframe) return;
-
-            const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!innerDoc) return;
-
-            const items = innerDoc.querySelectorAll('div[class^="feed_dropdown-item"]');
-
-            const counter = document.getElementById("activity-item-count");
-            if (counter) counter.textContent = `Pages: ${Math.ceil((items.length - 1) / 30)}`;
-        }
 
         function createFilterGrid(FILTERS, svgGenius) {
             const grid = document.createElement("div");
@@ -3073,23 +3075,32 @@ chrome.storage.local.get([
                 const normalCheckboxes = [...checkboxes].filter(cb => cb.dataset.filter !== "user");
                 const userInput = dropdown.querySelector('#activity-filter-text');
 
-                FILTERS.forEach(f => {
-                    const cb = dropdown.querySelector(`input[data-filter="${f.key}"]`);
-                    cb.checked = savedStates[f.key] ?? true;
+                loadStateFromStorage(() => {
+                    FILTERS.forEach(f => {
+                        const cb = dropdown.querySelector(`input[data-filter="${f.key}"]`);
+                        if (cb) cb.checked = savedStates.filters[f.key] ?? true;
+                    });
+
+                    ALL_SUBFILTERS.forEach(sf => {
+                        const cb = dropdown.querySelector(`input[data-filter="${sf.key}"]`);
+                        if (cb) cb.checked = savedStates.filters[sf.key] ?? true;
+                    });
+
+                    const userCb = dropdown.querySelector('input[data-filter="user"]');
+                    if (userCb) userCb.checked = savedStates.filters.user ?? false;
+
+                    if (userInput) userInput.value = savedStates.userText ?? "";
+
+                    updateIconColors(dropdown, FILTERS);
+                    applyActivityFilterFromState();
                 });
 
-                Object.values(SUBFILTERS).flat().forEach(sf => {
-                    const cb = dropdown.querySelector(`input[data-filter="${sf.key}"]`);
-                    cb.checked = savedStates[sf.key] ?? true;
-                });
-
-                const userCb = dropdown.querySelector('input[data-filter="user"]');
-                if (userCb) userCb.checked = savedStates.user ?? false;
-                if (userInput) userInput.value = savedStates.userText ?? "";
 
                 updateIconColors(dropdown, FILTERS);
 
-                applyActivityFilter = () => applyActivityFilterFn(checkboxes, userInput);
+                currentUIState.checkboxes = checkboxes;
+                currentUIState.userInput = userInput;
+
 
                 grid.addEventListener("change", e => {
                     const target = e.target;
@@ -3112,13 +3123,13 @@ chrome.storage.local.get([
 
                     updateIconColors(dropdown, FILTERS);
 
-                    applyActivityFilter();
+                    applyActivityFilterFromState();
                 });
 
                 grid.addEventListener("input", e => {
                     if (e.target.id === "activity-filter-text") {
                         savedStates.userText = e.target.value;
-                        applyActivityFilter();
+                        applyActivityFilterFromState();
                     }
                 });
 
@@ -3126,11 +3137,23 @@ chrome.storage.local.get([
                     const newState = !normalCheckboxes.every(cb => cb.checked);
                     normalCheckboxes.forEach(cb => cb.checked = newState);
                     updateIconColors(dropdown, FILTERS);
-                    applyActivityFilter();
+                    applyActivityFilterFromState();
                 });
             });
         }
 
+        function updateActivityItemCount() {
+            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
+            if (!iframe) return;
+
+            const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!innerDoc) return;
+
+            const items = innerDoc.querySelectorAll('div[class^="feed_dropdown-item"]');
+
+            const counter = document.getElementById("activity-item-count");
+            if (counter) counter.textContent = `Pages: ${Math.ceil((items.length - 1) / 30)}`;
+        }
 
         function startIframeObserverFor(iframe) {
             function observeIframeActivityStream() {
@@ -3140,10 +3163,15 @@ chrome.storage.local.get([
                 const container = innerDoc.querySelector('.act-activity_stream_bagon');
                 if (!container) return;
 
+                loadStateFromStorage(() => {
+                    applyActivityFilterFromSavedState();
+                });
+
                 const observer = new MutationObserver(() => {
                     updateActivityItemCount();
-                    applyActivityFilter();
+                    applyActivityFilterFromSavedState();
                 });
+
 
                 observer.observe(container, {
                     childList: true,
@@ -3157,10 +3185,6 @@ chrome.storage.local.get([
                 observeIframeActivityStream();
             }
         }
-
-
-        let filterInitialized = false;
-        let iframeObserverInitialized = false;
 
         const modalObserver = new MutationObserver(() => {
             const modal = document.querySelector('[class^="Modal-desktop__Contents"]');
