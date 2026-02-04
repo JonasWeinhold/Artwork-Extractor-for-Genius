@@ -438,26 +438,6 @@ chrome.storage.local.get([
         return songIds;
     }
 
-    async function toggleFollowSong(songId, action) {
-        const url = `https://genius.com/api/songs/${songId}/${action}`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Cookie': document.cookie,
-                'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.5.1 (Artwork Extractor for Genius)'
-            },
-            body: JSON.stringify({})
-        });
-        return response.ok;
-    }
-
-    function getCsrfToken() {
-        const match = document.cookie.match(/_csrf_token=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    }
-
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                               SPREADSHEET BUTTON                               //////////
@@ -824,7 +804,7 @@ chrome.storage.local.get([
                             escapeCSV(getReleaseDate(song.release_date_components)),
                             escapeCSV(song.albums.map(album => album.name).join(", ")),
                             escapeCSV(getCoverInfo(song.song_art_image_url)),
-                            escapeCSV(song.tags.map(tag => tag.name).sort((a, b) => a.localeCompare(b)).join(", ")),
+                            escapeCSV([song.primary_tag?.name, ...song.tags.map(tag => tag.name).filter(name => name !== song.primary_tag?.name).sort((a, b) => a.localeCompare(b))].join(", ")),
                             escapeCSV(song.language),
                             escapeCSV(getLyricsStatus(song)),
                             escapeCSV(song.pending_lyrics_edits_count),
