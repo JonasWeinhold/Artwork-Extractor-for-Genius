@@ -277,6 +277,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isAppleMusicCopyTracklist = document.getElementById('isAppleMusicCopyTracklist').checked;
         const isAppleMusicCopyCover = document.getElementById('isAppleMusicCopyCover').checked;
         const isAppleMusicCopyAnimatedCover = document.getElementById('isAppleMusicCopyAnimatedCover').checked;
+        const isAppleMusicCopyLyrics = document.getElementById('isAppleMusicCopyLyrics').checked;
         const isAppleMusicCopyArtist = document.getElementById('isAppleMusicCopyArtist').checked;
         const isAppleMusicCopyCredits = document.getElementById('isAppleMusicCopyCredits').checked;
         const isAppleMusicPopup = document.getElementById('isAppleMusicPopup').checked;
@@ -387,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function () {
             isAppleMusicCopyTracklist: isAppleMusicCopyTracklist,
             isAppleMusicCopyCover: isAppleMusicCopyCover,
             isAppleMusicCopyAnimatedCover: isAppleMusicCopyAnimatedCover,
+            isAppleMusicCopyLyrics: isAppleMusicCopyLyrics,
             isAppleMusicCopyArtist: isAppleMusicCopyArtist,
             isAppleMusicCopyCredits: isAppleMusicCopyCredits,
             isAppleMusicPopup: isAppleMusicPopup,
@@ -453,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'isGeniusAlbumAlbumPage', 'isGeniusAlbumAlbumPageZwsp', 'isGeniusAlbumAlbumPageLyrics', 'isGeniusAlbumExpandTracklist', 'isGeniusAlbumEditTracklist', 'isGeniusAlbumUploadCover', 'isGeniusAlbumRenameButtons', 'isGeniusAlbumSongCreditsButton', 'isGeniusAlbumFollowButton', 'isGeniusAlbumCleanupButton',
         'isGeniusArtistArtistPage', 'isGeniusArtistArtistPageZwsp', 'isGeniusArtistArtistPageInfo', 'isGeniusArtistArtistId', 'isGeniusArtistAllSongsAlbumsPage', 'isGeniusArtistAllSongsAlbumsPageMetadata', 'isGeniusArtistAllSongsAlbumsPageZwsp', 'isGeniusArtistFollowButton', 'isGeniusArtistSpreadsheetButton',
         'is45CopyCover', 'is45Popup', 'is45ConvertPNG', 'is45SaveImage', 'is45HostImgBB', 'is45HostFilestack', 'is45RightClick',
-        'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage',
+        'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyLyrics','isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage',
         'isBandcampCopyCover', 'isBandcampPopup', 'isBandcampSaveImage',
         'isDeezerCopyCover', 'isDeezerCopyArtist', 'isDeezerTrack', 'isDeezerPopup', 'isDeezerPremiumPopup', 'isDeezerSaveImage',
         'isSoundCloudCopyCover', 'isSoundCloudPopup', 'isSoundCloudArtistBanner', 'isSoundCloudConvertPNG', 'isSoundCloudSaveImage', 'isSoundCloudHostImgBB', 'isSoundCloudHostFilestack',
@@ -514,6 +516,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isAppleMusicCopyTracklist').checked = result.isAppleMusicCopyTracklist !== undefined ? result.isAppleMusicCopyTracklist : true;
         document.getElementById('isAppleMusicCopyCover').checked = result.isAppleMusicCopyCover !== undefined ? result.isAppleMusicCopyCover : true;
         document.getElementById('isAppleMusicCopyAnimatedCover').checked = result.isAppleMusicCopyAnimatedCover !== undefined ? result.isAppleMusicCopyAnimatedCover : true;
+        document.getElementById('isAppleMusicCopyLyrics').checked = result.isAppleMusicCopyLyrics !== undefined ? result.isAppleMusicCopyLyrics : false;
         document.getElementById('isAppleMusicCopyArtist').checked = result.isAppleMusicCopyArtist !== undefined ? result.isAppleMusicCopyArtist : true;
         document.getElementById('isAppleMusicCopyCredits').checked = result.isAppleMusicCopyCredits !== undefined ? result.isAppleMusicCopyCredits : true;
         document.getElementById('isAppleMusicPopup').checked = result.isAppleMusicPopup !== undefined ? result.isAppleMusicPopup : true;
@@ -626,6 +629,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isAppleMusicCopyTracklist').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicCopyCover').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicCopyAnimatedCover').addEventListener('change', saveSettings);
+    document.getElementById('isAppleMusicCopyLyrics').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicCopyArtist').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicCopyCredits').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicPopup').addEventListener('change', saveSettings);

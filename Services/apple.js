@@ -1,7 +1,8 @@
-chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage'], function (result) {
+chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyLyrics', 'isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage'], function (result) {
     const isAppleMusicCopyTracklist = result.isAppleMusicCopyTracklist !== undefined ? result.isAppleMusicCopyTracklist : true;
     const isAppleMusicCopyCover = result.isAppleMusicCopyCover !== undefined ? result.isAppleMusicCopyCover : true;
     const isAppleMusicCopyAnimatedCover = result.isAppleMusicCopyAnimatedCover !== undefined ? result.isAppleMusicCopyAnimatedCover : true;
+    const isAppleMusicCopyLyrics = result.isAppleMusicCopyLyrics !== undefined ? result.isAppleMusicCopyLyrics : false;
     const isAppleMusicCopyArtist = result.isAppleMusicCopyArtist !== undefined ? result.isAppleMusicCopyArtist : true;
     const isAppleMusicCopyCredits = result.isAppleMusicCopyCredits !== undefined ? result.isAppleMusicCopyCredits : true;
     const isAppleMusicPopup = result.isAppleMusicPopup !== undefined ? result.isAppleMusicPopup : true;
@@ -83,6 +84,141 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
         }
     }
 
+    // Copy Lyrics Button
+    function addCopyLyricsButton() {
+        const primaryActions = document.querySelector(".primary-actions");
+        const playButton = document.querySelector(".primary-actions__button--play");
+
+        if (primaryActions && playButton && !document.getElementById("copy-lyrics-button")) {
+            const copyWrapper = playButton.cloneNode(true);
+
+            const copyButton = copyWrapper.querySelector("button");
+            copyButton.id = "copy-lyrics-button";
+            copyButton.innerText = "Copy Lyrics";
+
+            copyButton.replaceWith(copyButton.cloneNode(true));
+            const freshButton = copyWrapper.querySelector("button");
+
+            freshButton.addEventListener("click", async (event) => {
+                event.preventDefault();
+                sessionStorage.setItem("mouseX", event.clientX);
+                sessionStorage.setItem("mouseY", event.clientY);
+
+                const tracklist = document.querySelector('[data-testid="tracklist"]');
+                if (!tracklist) return;
+
+                const links = tracklist.querySelectorAll('a[data-testid="click-action"][href]');
+                const songUrls = [...links].map(a => a.href).filter(url => url.includes("/song/"));
+                if (!songUrls.length) return;
+
+                const allLyrics = [];
+
+                for (let i = 0; i < songUrls.length; i++) {
+                    const url = songUrls[i];
+
+                    const lyrics = await fetchLyricsInNewTab(url);
+
+                    if (lyrics) {
+                        allLyrics.push(`--- Track ${i + 1} ---\n${lyrics}`);
+                    } else {
+                        allLyrics.push(`--- Track ${i + 1} ---\n(No lyrics found: ${url})`);
+                    }
+                }
+
+                const finalText = allLyrics.join("\n\n");
+
+                await waitForFocus();
+
+                await navigator.clipboard.writeText(finalText);
+
+                const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+                const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+
+                const design = {
+                    position: "fixed",
+                    backgroundColor: "#d60017",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "5px",
+                    padding: "10px 20px",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    zIndex: "9999",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                    top: `${mouseY + 30}px`,
+                    left: `${mouseX + 40}px`
+                };
+
+                showPopupNotification(design);
+            });
+
+            primaryActions.appendChild(copyWrapper);
+        }
+    }
+
+    async function fetchLyricsInNewTab(url) {
+        const screenW = window.screen.width;
+        const screenH = window.screen.height;
+        const w = Math.floor(screenW * 0.7);
+        const h = Math.floor(screenH * 0.6);
+        const left = Math.floor((screenW - w) / 2);
+        const top = Math.floor((screenH - h) / 2);
+
+        return new Promise((resolve) => {
+            const win = window.open(url, "_blank", `popup,width=${w},height=${h},left=${left},top=${top}`);
+            if (!win) return resolve(null);
+
+            const startTime = Date.now();
+
+            const interval = setInterval(async () => {
+                try {
+                    if (Date.now() - startTime > 10000) {
+                        clearInterval(interval);
+                        try { win.close(); } catch (e) { }
+                        resolve(null);
+                        return;
+                    }
+
+                    const doc = win.document;
+                    if (!doc || doc.readyState !== "complete") return;
+
+                    await startPlayback(doc);
+                    await openLyrics(doc);
+
+                    const lyrics = await extractLyrics(doc);
+                    if (!lyrics) return;
+
+                    clearInterval(interval);
+                    try { win.close(); } catch (e) { }
+
+                    resolve(lyrics);
+
+                } catch (e) {
+                    clearInterval(interval);
+                    try { win.close(); } catch (e) { }
+                    resolve(null);
+                }
+            }, 500);
+        });
+    }
+
+    function waitForFocus() {
+        return new Promise(resolve => {
+            if (document.hasFocus()) {
+                resolve();
+                return;
+            }
+            const handler = () => {
+                if (document.hasFocus()) {
+                    window.removeEventListener("focus", handler);
+                    resolve();
+                }
+            };
+            window.addEventListener("focus", handler);
+        });
+    }
+
+
     // Copy Primary Artist Button
     function addCopyArtistButton() {
         const secondaryActions = document.querySelector(".secondary-actions");
@@ -114,7 +250,6 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
     }
 
     // Copy Tracklist Button
-
     function addCopyTracklistButton() {
         const songs = document.querySelectorAll("[data-testid='track-title']");
         const playButton = document.querySelector(".primary-actions__button--play");
@@ -286,27 +421,6 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
         return imageUrl;
     }
 
-    async function getAppleMusicArtworkOld() {
-        const coverUrl = document.querySelector('picture')?.querySelector('source')?.getAttribute('srcset')?.split(',')[0].trim().split(' ')[0];
-        if (coverUrl) {
-            let imageUrl = coverUrl;
-
-            if (coverUrl.endsWith('200x200cc.webp')) {
-                imageUrl = coverUrl.replace(/200x200cc\.webp$/, '1000x1000cc.png');
-            } else if (coverUrl.endsWith('200x200bb.webp')) {
-                imageUrl = coverUrl.replace(/200x200bb\.webp$/, '1000x1000bb.png');
-            } else if (coverUrl.endsWith('296x296bb.webp')) {
-                imageUrl = coverUrl.replace(/296x296bb\.webp$/, '1000x1000bb.png');
-            } else if (coverUrl.endsWith('296x296bb.webp')) {
-                imageUrl = coverUrl.replace(/296x296bb\.webp$/, '1000x1000bb.png');
-            } else if (coverUrl.match(/200x200SC\.(.+?)\.webp(\?l=[a-zA-Z-]*)?$/)) {
-                const identifier = coverUrl.match(/200x200SC\.(.+?)\.webp(\?l=[a-zA-Z-]*)?$/)[1];
-                imageUrl = coverUrl.replace(/200x200SC\..+?\.webp(\?l=[a-zA-Z-]*)?$/, `1000x1000SC.${identifier}.png`);
-            }
-            return imageUrl;
-        }
-    }
-
 
     function getFileNameFromUrl(url) {
         const parts = url.split('/');
@@ -369,7 +483,212 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
         setTimeout(checkXhrEntries, 1500);
     }
 
+    function addCopyLyricsAlternative() {
+        const buttonContainer = document.querySelector(".song-header-page__buttons");
+        const playButton = buttonContainer?.querySelector('[data-testid="button-action"]');
+        const ampLyrics = document.querySelector("amp-lyrics");
 
+        if (!buttonContainer || !playButton || !ampLyrics) return;
+        if (document.getElementById("copy-lyrics-button")) return;
+
+        const root1 = ampLyrics.shadowRoot;
+
+        const lyricsContainer = root1.querySelector(".lyrics__lyrics");
+        if (!lyricsContainer) return;
+        const empty = lyricsContainer.querySelector(".lyrics__empty");
+        if (empty) return;
+
+        const copyWrapper = playButton.cloneNode(true);
+        const copyButton = copyWrapper.querySelector("button");
+        copyButton.id = "copy-lyrics-button";
+        copyButton.innerText = "Copy Lyrics";
+        copyWrapper.style.marginLeft = "12px";
+
+        copyButton.replaceWith(copyButton.cloneNode(true));
+        const freshButton = copyWrapper.querySelector("button");
+
+        freshButton.addEventListener("click", async (event) => {
+            event.preventDefault();
+            sessionStorage.setItem("mouseX", event.clientX);
+            sessionStorage.setItem("mouseY", event.clientY);
+
+            const lyricNodes = ampLyrics?.shadowRoot?.querySelector("amp-lyrics-display-static")?.shadowRoot?.querySelectorAll(".primary-vocalist");
+            if (!lyricNodes.length) return;
+
+            const lyrics = [...lyricNodes].map(n => n.textContent.trim()).join("\n");
+
+            await navigator.clipboard.writeText(lyrics);
+
+            const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+            const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+
+            const design = {
+                position: "fixed",
+                backgroundColor: "#f2f2f2",
+                color: "#d60017",
+                border: "none",
+                borderRadius: "5px",
+                padding: "10px 20px",
+                fontSize: "12px",
+                fontWeight: "bold",
+                zIndex: "9999",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                top: `${mouseY + 30}px`,
+                left: `${mouseX + 40}px`,
+            };
+
+            showPopupNotification(design);
+        });
+
+        buttonContainer.appendChild(copyWrapper);
+    }
+
+    async function addCopyLyrics() {
+        const buttonContainer = document.querySelector(".song-header-page__buttons");
+        const playButton = buttonContainer?.querySelector('[data-testid="button-action"]');
+
+        if (!buttonContainer || !playButton) return;
+        if (document.getElementById("copy-lyrics-button")) return;
+
+        const copyWrapper = playButton.cloneNode(true);
+        const copyButton = copyWrapper.querySelector("button");
+        copyButton.id = "copy-lyrics-button";
+        copyButton.innerText = "Copy Lyrics";
+        copyWrapper.style.marginLeft = "12px";
+
+        copyButton.replaceWith(copyButton.cloneNode(true));
+        const freshButton = copyWrapper.querySelector("button");
+
+        freshButton.addEventListener("click", async (event) => {
+            event.preventDefault();
+            sessionStorage.setItem("mouseX", event.clientX);
+            sessionStorage.setItem("mouseY", event.clientY);
+
+            await startPlayback(document);
+            await openLyrics(document);
+
+            const lyrics = await extractLyrics(document);
+            if (!lyrics) return;
+
+            await navigator.clipboard.writeText(lyrics);
+
+            const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+            const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+
+            showPopupNotification({
+                position: "fixed",
+                backgroundColor: "#f2f2f2",
+                color: "#d60017",
+                border: "none",
+                borderRadius: "5px",
+                padding: "10px 20px",
+                fontSize: "12px",
+                fontWeight: "bold",
+                zIndex: "9999",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                top: `${mouseY + 30}px`,
+                left: `${mouseX + 40}px`,
+            });
+        });
+
+        buttonContainer.appendChild(copyWrapper);
+    }
+
+    async function startPlayback(doc) {
+        const playBtn = doc.querySelector('[data-testid="button-action"] button');
+        if (!playBtn) return;
+
+        playBtn.click();
+        await new Promise(r => setTimeout(r, 100));
+    }
+
+    async function openLyrics(doc) {
+        const lyricsBtn = doc.querySelector('[data-testid="lyrics-button"]');
+        if (!lyricsBtn) return;
+
+        const expanded = lyricsBtn.getAttribute("aria-expanded") === "true";
+        if (expanded) return;
+
+        lyricsBtn.click();
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    async function extractLyrics(doc = document, maxAttempts = 3) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const ampLyrics = doc.querySelector("amp-lyrics");
+            if (!ampLyrics) {
+                await new Promise(r => setTimeout(r, 500));
+                continue;
+            }
+
+            const lyricsContainer = ampLyrics.shadowRoot?.querySelector(".lyrics__lyrics");
+            if (!lyricsContainer) {
+                await new Promise(r => setTimeout(r, 500));
+                continue;
+            }
+
+            const empty = lyricsContainer.querySelector(".lyrics__empty");
+            if (empty) {
+                await new Promise(r => setTimeout(r, 500));
+                continue;
+            }
+
+            const lyricParts = extractLyricNodes(ampLyrics);
+            if (lyricParts && lyricParts.length > 0) {
+                return lyricParts.join("\n");
+            }
+
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        return null;
+    }
+
+    function extractLyricNodes(ampLyrics) {
+        if (!ampLyrics) return null;
+
+        const root = ampLyrics.shadowRoot;
+        if (!root) return null;
+
+        // Normal lyrics (amp-lyrics-display-static)
+        const staticDisplay = root.querySelector("amp-lyrics-display-static")?.shadowRoot;
+        if (staticDisplay) {
+            const nodes = staticDisplay.querySelectorAll(".primary-vocalist");
+            if (nodes?.length) {
+                return [...nodes].map(n => n.textContent.trim());
+            }
+        }
+
+        // Time‑synced lyrics (amp-lyrics-display-time-synced)
+        const timeSyncedDisplay = root.querySelector("amp-lyrics-display-time-synced")?.shadowRoot;
+        if (timeSyncedDisplay) {
+            const lines = timeSyncedDisplay.querySelectorAll("amp-lyrics-display-synced-line");
+
+            if (lines?.length) {
+                const result = [...lines].map(line => {
+                    const syllables = line.querySelectorAll(".primary-vocals .syllable");
+                    const words = [...syllables].map(s => s.textContent.trim()).filter(Boolean);
+
+                    // Words
+                    if (words.length > 0) {
+                        return words.join(" ");
+                    }
+
+                    // Lines
+                    const fullLine = line.querySelector(".primary-vocals");
+                    if (fullLine) {
+                        return fullLine.textContent.trim();
+                    }
+
+                    return "";
+                });
+
+                return result.filter(Boolean);
+            }
+        }
+
+        return null;
+    }
 
     function addCopyCredits() {
         const artistNames = document.querySelectorAll('.artist-name');
@@ -413,7 +732,6 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
         });
     }
 
-
     function copyCreditToClipboard(text, element) {
         const originalColor = window.getComputedStyle(element).color;
         const textToCopy = replaceWords(text);
@@ -448,9 +766,11 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
     document.addEventListener('click', (event) => {
         if (isAppleMusicCopyCover) addCopyCoverButton();
         if (isAppleMusicCopyAnimatedCover) addAnimatedCoverButton();
+        if (isAppleMusicCopyLyrics) addCopyLyricsButton();
         if (isAppleMusicCopyTracklist) addCopyArtistButton();
         if (isAppleMusicCopyTracklist) addCopyTracklistButton();
         if (isAppleMusicCopyArtist) addCopyArtistArtwork();
+        if (isAppleMusicCopyLyrics) addCopyLyrics();
         if (isAppleMusicCopyCredits) addCopyCredits();
     });
 

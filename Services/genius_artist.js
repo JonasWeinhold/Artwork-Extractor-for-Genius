@@ -741,6 +741,7 @@ chrome.storage.local.get([
                         "Release Date",
                         "Cover Image Info",
                         "Lyrics Status",
+                        "Pageviews",
                     ];
 
                     const rows = songs.map(song =>
@@ -752,6 +753,7 @@ chrome.storage.local.get([
                             escapeCSV(getReleaseDate(song.release_date_components)),
                             escapeCSV(getCoverInfo(song.song_art_image_url)),
                             escapeCSV(getLyricsStatus(song)),
+                            escapeCSV(song.stats.pageviews),
                         ].join(",")
                     );
 
@@ -792,6 +794,7 @@ chrome.storage.local.get([
                         "Language",
                         "Lyrics Status",
                         "Pending LEPs",
+                        "Pageviews",
                     ];
 
                     const rows = details.map(item => {
@@ -808,6 +811,7 @@ chrome.storage.local.get([
                             escapeCSV(song.language),
                             escapeCSV(getLyricsStatus(song)),
                             escapeCSV(song.pending_lyrics_edits_count),
+                            escapeCSV(song.stats.pageviews),
                         ].join(",");
                     });
 
@@ -826,6 +830,7 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums) {
+        console.log("Run function checkAllSongsAlbumsPage()");
 
         let cachedSongs = null;
         let cachedAlbums = null;
@@ -883,15 +888,14 @@ chrome.storage.local.get([
         async function checkCoverImage() {
             let updates = [];
 
-            const discographyList = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            const discographyList = document.querySelector('ul[class^="DiscographyItemList__ListSingleContainer"]');
             if (!discographyList) return;
-
 
             const listItems = discographyList.querySelectorAll('a[class^="DiscographyItem__Container"]');
             const itemMap = new Map(items.map(item => [item.url, item]));
 
             listItems.forEach((item) => {
-                const targetDiv = item.querySelector('div[class^="SizedImage__Container"]');
+                const targetDiv = item.querySelector('div[class^="DiscographyItem__CoverArt"]');
                 if (!targetDiv) return;
 
                 if (['#99f2a5', '#fa7878', '#dddddd'].includes(targetDiv.style.backgroundColor)) return;
@@ -901,6 +905,7 @@ chrome.storage.local.get([
 
                 if (itemLink && itemMap.has(itemLink)) {
                     const titleMatch = itemMap.get(itemLink);
+                    console.log("Match found for URL:", itemLink, titleMatch);
                     if (isAllSongs) {
                         artImageUrl = titleMatch.song_art_image_url;
                         artistImageUrl = titleMatch.primary_artist.image_url;
@@ -929,7 +934,7 @@ chrome.storage.local.get([
 
         const cachedSongData = new Map();
         async function checkMetadata() {
-            const container = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            const container = document.querySelector('ul[class^="DiscographyItemList__ListSingleContainer"]');
             if (!container) return;
 
             const itemsDom = container.querySelectorAll('a[class^="DiscographyItem__Container"]');
@@ -981,7 +986,7 @@ chrome.storage.local.get([
         }
 
         function updateSongUI(song, songData) {
-            const discographyList = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            const discographyList = document.querySelector('ul[class^="DiscographyItemList__ListSingleContainer"]');
             if (!discographyList) return;
 
             const link = discographyList.querySelector(`a[class^="DiscographyItem__Container"][href="${song.url}"]`);
