@@ -77,26 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    function setupEventListener1(prefix) {
-        const convertCheckbox = document.getElementById(`${prefix}ConvertPNG`);
-        const saveCheckbox = document.getElementById(`${prefix}SaveImage`);
-        const hostCheckbox = document.getElementById(`${prefix}HostImage`);
-        const hostImageSpan = document.querySelector(`#${prefix}HostImage`).parentElement.nextElementSibling;
-
-        convertCheckbox.addEventListener("change", function () {
-            hostImageSpan.textContent = this.checked ? "Host Image" : "Copy Image";
-        });
-
-        saveCheckbox.addEventListener("change", function () {
-            hostCheckbox.checked = !this.checked;
-        });
-
-        hostCheckbox.addEventListener("change", function () {
-            saveCheckbox.checked = !this.checked;
-        });
-    }
-
-    function setupEventListener2(prefix) {
+    function setupEventListener(prefix) {
         const convertCheckbox = document.getElementById(`${prefix}ConvertPNG`);
         const saveCheckbox = document.getElementById(`${prefix}SaveImage`);
         const hostImgBB = document.getElementById(`${prefix}HostImgBB`);
@@ -218,12 +199,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    setupEventListener2("is45");
-    setupEventListener2("isSoundCloud");
-    setupEventListener2("isSpotify");
-    setupEventListener2("isTidal");
-    setupEventListener2("isYandexMusic");
-    setupEventListener1("isInstagram");
+    setupEventListener("is45");
+    setupEventListener("isDistroKid");
+    setupEventListener("isSoundCloud");
+    setupEventListener("isSpotify");
+    setupEventListener("isTidal");
+    setupEventListener("isYandexMusic");
 
     function saveSettings() {
         const isGeniusSongSongPage = document.getElementById('isGeniusSongSongPage').checked;
@@ -293,6 +274,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const isDeezerPopup = document.getElementById('isDeezerPopup').checked;
         const isDeezerPremiumPopup = document.getElementById('isDeezerPremiumPopup').checked;
         const isDeezerSaveImage = document.getElementById('isDeezerSaveImage').checked;
+        const isDistroKidCopyCover = document.getElementById('isDistroKidCopyCover').checked;
+        const isDistroKidPopup = document.getElementById('isDistroKidPopup').checked;
+        const isDistroKidConvertPNG = document.getElementById('isDistroKidConvertPNG').checked;
+        const isDistroKidSaveImage = document.getElementById('isDistroKidSaveImage').checked;
+        const isDistroKidHostImgBB = document.getElementById('isDistroKidHostImgBB').checked;
+        const isDistroKidHostFilestack = document.getElementById('isDistroKidHostFilestack').checked;
         const isSoundCloudCopyCover = document.getElementById('isSoundCloudCopyCover').checked;
         const isSoundCloudPopup = document.getElementById('isSoundCloudPopup').checked;
         const isSoundCloudArtistBanner = document.getElementById('isSoundCloudArtistBanner').checked;
@@ -331,10 +318,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const isYouTubeMusicCopyLink = document.getElementById('isYouTubeMusicCopyLink').checked;
         const isYouTubeMusicPopup = document.getElementById('isYouTubeMusicPopup').checked;
         const isYouTubeMusicSaveImage = document.getElementById('isYouTubeMusicSaveImage').checked;
-        const isInstagramPopup = document.getElementById('isInstagramPopup').checked;
-        const isInstagramConvertPNG = document.getElementById('isInstagramConvertPNG').checked;
-        const isInstagramSaveImage = document.getElementById('isInstagramSaveImage').checked;
-        const isInstagramHostImage = document.getElementById('isInstagramHostImage').checked;
 
         chrome.storage.local.set({
             isGeniusSongSongPage: isGeniusSongSongPage,
@@ -404,6 +387,12 @@ document.addEventListener('DOMContentLoaded', function () {
             isDeezerPopup: isDeezerPopup,
             isDeezerPremiumPopup: isDeezerPremiumPopup,
             isDeezerSaveImage: isDeezerSaveImage,
+            isDistroKidCopyCover: isDistroKidCopyCover,
+            isDistroKidPopup: isDistroKidPopup,
+            isDistroKidConvertPNG: isDistroKidConvertPNG,
+            isDistroKidSaveImage: isDistroKidSaveImage,
+            isDistroKidHostImgBB: isDistroKidHostImgBB,
+            isDistroKidHostFilestack: isDistroKidHostFilestack,
             isSoundCloudCopyCover: isSoundCloudCopyCover,
             isSoundCloudPopup: isSoundCloudPopup,
             isSoundCloudArtistBanner: isSoundCloudArtistBanner,
@@ -442,10 +431,6 @@ document.addEventListener('DOMContentLoaded', function () {
             isYouTubeMusicCopyLink: isYouTubeMusicCopyLink,
             isYouTubeMusicPopup: isYouTubeMusicPopup,
             isYouTubeMusicSaveImage: isYouTubeMusicSaveImage,
-            isInstagramPopup: isInstagramPopup,
-            isInstagramConvertPNG: isInstagramConvertPNG,
-            isInstagramSaveImage: isInstagramSaveImage,
-            isInstagramHostImage: isInstagramHostImage
         });
     }
 
@@ -455,15 +440,15 @@ document.addEventListener('DOMContentLoaded', function () {
         'isGeniusAlbumAlbumPage', 'isGeniusAlbumAlbumPageZwsp', 'isGeniusAlbumAlbumPageLyrics', 'isGeniusAlbumExpandTracklist', 'isGeniusAlbumEditTracklist', 'isGeniusAlbumUploadCover', 'isGeniusAlbumRenameButtons', 'isGeniusAlbumSongCreditsButton', 'isGeniusAlbumFollowButton', 'isGeniusAlbumCleanupButton',
         'isGeniusArtistArtistPage', 'isGeniusArtistArtistPageZwsp', 'isGeniusArtistArtistPageInfo', 'isGeniusArtistArtistId', 'isGeniusArtistAllSongsAlbumsPage', 'isGeniusArtistAllSongsAlbumsPageMetadata', 'isGeniusArtistAllSongsAlbumsPageZwsp', 'isGeniusArtistFollowButton', 'isGeniusArtistSpreadsheetButton',
         'is45CopyCover', 'is45Popup', 'is45ConvertPNG', 'is45SaveImage', 'is45HostImgBB', 'is45HostFilestack', 'is45RightClick',
-        'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyLyrics','isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage',
+        'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyLyrics', 'isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage',
         'isBandcampCopyCover', 'isBandcampPopup', 'isBandcampSaveImage',
         'isDeezerCopyCover', 'isDeezerCopyArtist', 'isDeezerTrack', 'isDeezerPopup', 'isDeezerPremiumPopup', 'isDeezerSaveImage',
+        'isDistroKidCopyCover', 'isDistroKidPopup', 'isDistroKidConvertPNG', 'isDistroKidSaveImage', 'isDistroKidHostImgBB', 'isDistroKidHostFilestack',
         'isSoundCloudCopyCover', 'isSoundCloudPopup', 'isSoundCloudArtistBanner', 'isSoundCloudConvertPNG', 'isSoundCloudSaveImage', 'isSoundCloudHostImgBB', 'isSoundCloudHostFilestack',
         'isSpotifyCopyTracklist', 'isSpotifyCopyCover', 'isSpotifyCopyArtist', 'isSpotifyPopup', 'isSpotifySidebar', 'isSpotifyRightClick', 'isSpotifyConvertPNG', 'isSpotifySaveImage', 'isSpotifyHostImgBB', 'isSpotifyHostFilestack',
         'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalPremiumPopup', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImgBB', 'isTidalHostFilestack',
         'isYandexMusicCopyCover', 'isYandexMusicPopup', 'isYandexMusicConvertPNG', 'isYandexMusicSaveImage', 'isYandexMusicHostImgBB', 'isYandexMusicHostFilestack',
         'isYouTubeMusicCopyCoverPlaylist', 'isYouTubeMusicCopyCoverChannel', 'isYouTubeMusicCopyLink', 'isYouTubeMusicPopup', 'isYouTubeMusicSaveImage',
-        'isInstagramPopup', 'isInstagramConvertPNG', 'isInstagramSaveImage', 'isInstagramHostImage'
     ], function (result) {
         document.getElementById('isGeniusSongSongPage').checked = result.isGeniusSongSongPage !== undefined ? result.isGeniusSongSongPage : true;
         document.getElementById('isGeniusSongSongPageZwsp').checked = result.isGeniusSongSongPageZwsp !== undefined ? result.isGeniusSongSongPageZwsp : true;
@@ -532,6 +517,12 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isDeezerPopup').checked = result.isDeezerPopup !== undefined ? result.isDeezerPopup : true;
         document.getElementById('isDeezerPremiumPopup').checked = result.isDeezerPremiumPopup !== undefined ? result.isDeezerPremiumPopup : false;
         document.getElementById('isDeezerSaveImage').checked = result.isDeezerSaveImage !== undefined ? result.isDeezerSaveImage : false;
+        document.getElementById('isDistroKidCopyCover').checked = result.isDistroKidCopyCover !== undefined ? result.isDistroKidCopyCover : true;
+        document.getElementById('isDistroKidPopup').checked = result.isDistroKidPopup !== undefined ? result.isDistroKidPopup : true;
+        document.getElementById('isDistroKidConvertPNG').checked = result.isDistroKidConvertPNG !== undefined ? result.isDistroKidConvertPNG : true;
+        document.getElementById('isDistroKidSaveImage').checked = result.isDistroKidSaveImage !== undefined ? result.isDistroKidSaveImage : false;
+        document.getElementById('isDistroKidHostImgBB').checked = result.isDistroKidHostImgBB !== undefined ? result.isDistroKidHostImgBB : false;
+        document.getElementById('isDistroKidHostFilestack').checked = result.isDistroKidHostFilestack !== undefined ? result.isDistroKidHostFilestack : true;
         document.getElementById('isSoundCloudCopyCover').checked = result.isSoundCloudCopyCover !== undefined ? result.isSoundCloudCopyCover : true;
         document.getElementById('isSoundCloudPopup').checked = result.isSoundCloudPopup !== undefined ? result.isSoundCloudPopup : true;
         document.getElementById('isSoundCloudArtistBanner').checked = result.isSoundCloudArtistBanner !== undefined ? result.isSoundCloudArtistBanner : false;
@@ -570,10 +561,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isYouTubeMusicCopyLink').checked = result.isYouTubeMusicCopyLink !== undefined ? result.isYouTubeMusicCopyLink : true;
         document.getElementById('isYouTubeMusicPopup').checked = result.isYouTubeMusicPopup !== undefined ? result.isYouTubeMusicPopup : true;
         document.getElementById('isYouTubeMusicSaveImage').checked = result.isYouTubeMusicSaveImage !== undefined ? result.isYouTubeMusicSaveImage : false;
-        document.getElementById('isInstagramPopup').checked = result.isInstagramPopup !== undefined ? result.isInstagramPopup : true;
-        document.getElementById('isInstagramConvertPNG').checked = result.isInstagramConvertPNG !== undefined ? result.isInstagramConvertPNG : true;
-        document.getElementById('isInstagramSaveImage').checked = result.isInstagramSaveImage !== undefined ? result.isInstagramSaveImage : false;
-        document.getElementById('isInstagramHostImage').checked = result.isInstagramHostImage !== undefined ? result.isInstagramHostImage : true;
     });
 
     // Event Listener für die Schieberegler
@@ -645,6 +632,12 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isDeezerPopup').addEventListener('change', saveSettings);
     document.getElementById('isDeezerPremiumPopup').addEventListener('change', saveSettings);
     document.getElementById('isDeezerSaveImage').addEventListener('change', saveSettings);
+    document.getElementById('isDistroKidCopyCover').addEventListener('change', saveSettings);
+    document.getElementById('isDistroKidPopup').addEventListener('change', saveSettings);
+    document.getElementById('isDistroKidConvertPNG').addEventListener('change', saveSettings);
+    document.getElementById('isDistroKidSaveImage').addEventListener('change', saveSettings);
+    document.getElementById('isDistroKidHostImgBB').addEventListener('change', saveSettings);
+    document.getElementById('isDistroKidHostFilestack').addEventListener('change', saveSettings);
     document.getElementById('isSoundCloudCopyCover').addEventListener('change', saveSettings);
     document.getElementById('isSoundCloudPopup').addEventListener('change', saveSettings);
     document.getElementById('isSoundCloudArtistBanner').addEventListener('change', saveSettings);
@@ -683,8 +676,4 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isYouTubeMusicCopyLink').addEventListener('change', saveSettings);
     document.getElementById('isYouTubeMusicPopup').addEventListener('change', saveSettings);
     document.getElementById('isYouTubeMusicSaveImage').addEventListener('change', saveSettings);
-    document.getElementById('isInstagramPopup').addEventListener('change', saveSettings);
-    document.getElementById('isInstagramConvertPNG').addEventListener('change', saveSettings);
-    document.getElementById('isInstagramSaveImage').addEventListener('change', saveSettings);
-    document.getElementById('isInstagramHostImage').addEventListener('change', saveSettings);
 });
