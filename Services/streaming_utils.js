@@ -70,7 +70,14 @@ async function uploadToFilestackPNG(imageUrl, urlName) {
         if (!metadataResponse.ok) throw new Error("Error fetching metadata");
 
         const metadata = await metadataResponse.json();
-        const filename = `${urlName}-${metadata.filename.replace(/\.(jpe?g|webp|gif)$/i, ".png")}`;
+
+        let filename;
+        if (metadata.link_path.startsWith("https://images.weserv.nl/")) {
+            const originalUrl = decodeURIComponent(metadata.link_path.split("url=")[1].split("&")[0]);
+            filename = `${urlName}-${originalUrl.split("/").pop().split(".")[0]}.png`;
+        } else {
+            filename = `${urlName}-${metadata.filename.replace(/\.(jpe?g|webp|gif)$/i, ".png")}`;
+        }
 
         const processResponse = await fetch("https://process.filestackapi.com/process", {
             method: "POST",
@@ -271,6 +278,7 @@ async function processJpgImage(extractedUrl, urlName, fileName, isHostFilestack,
         }
     } else {
         if (isHostImgBB || isHostFilestack) {
+            console.log('extractedUrl:', extractedUrl);
             await navigator.clipboard.writeText(extractedUrl);
             if (isPopup) {
                 showPopupNotification(design);
