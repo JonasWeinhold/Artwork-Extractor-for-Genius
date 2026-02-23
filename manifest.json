@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Artwork Extractor for Genius",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Copy the artwork URL to the clipboard for genius.com by clicking the copy button on Apple Music, Deezer, Spotify, and more.",
   "permissions": [
     "activeTab",
@@ -43,15 +43,6 @@
     },
     {
       "matches": [
-        "*://*.deezer.com/*"
-      ],
-      "js": [
-        "Services/streaming_utils.js",
-        "Services/deezer.js"
-      ]
-    },
-    {
-      "matches": [
         "*://*.bandcamp.com/*"
       ],
       "js": [
@@ -61,20 +52,20 @@
     },
     {
       "matches": [
-        "*://*.spotify.com/*"
+        "*://*.deezer.com/*"
       ],
       "js": [
         "Services/streaming_utils.js",
-        "Services/spotify.js"
+        "Services/deezer.js"
       ]
     },
     {
       "matches": [
-        "*://music.youtube.com/*"
+        "*://*.distrokid.com/*"
       ],
       "js": [
         "Services/streaming_utils.js",
-        "Services/youtubemusic.js"
+        "Services/distrokid.js"
       ]
     },
     {
@@ -88,6 +79,15 @@
     },
     {
       "matches": [
+        "*://*.spotify.com/*"
+      ],
+      "js": [
+        "Services/streaming_utils.js",
+        "Services/spotify.js"
+      ]
+    },
+    {
+      "matches": [
         "*://*.tidal.com/*"
       ],
       "js": [
@@ -97,7 +97,11 @@
     },
     {
       "matches": [
-        "*://*.yandex.ru/*"
+        "*://*.yandex.ru/*",
+        "*://*.yandex.by/*",
+        "*://*.yandex.kz/*",
+        "*://*.yandex.uz/*",
+        "*://*.yandex.com/*"
       ],
       "js": [
         "Services/streaming_utils.js",
@@ -106,10 +110,11 @@
     },
     {
       "matches": [
-        "*://*.instagram.com/*"
+        "*://music.youtube.com/*"
       ],
       "js": [
-        "Services/instagram.js"
+        "Services/streaming_utils.js",
+        "Services/youtubemusic.js"
       ]
     },
     {
@@ -139,19 +144,15 @@
     "*://45worlds.com/*",
     "*://45spaces.com/*",
     "*://*.apple.com/*",
-    "*://*.deezer.com/*",
     "*://*.bandcamp.com/*",
-    "*://*.spotify.com/*",
-    "*://music.youtube.com/*",
+    "*://*.deezer.com/*",
+    "*://*.distrokid.com/*",
     "*://*.soundcloud.com/*",
+    "*://*.spotify.com/*",
     "*://*.tidal.com/*",
     "*://*.yandex.ru/*",
-    "*://*.instagram.com/*",
+    "*://music.youtube.com/*",
     "*://genius.com/*",
     "*://genius-staging.com/*"
   ]
-
 }
-
-
-
