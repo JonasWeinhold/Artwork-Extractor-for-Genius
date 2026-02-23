@@ -86,7 +86,7 @@ chrome.storage.local.get([
         if (isGeniusSongSectionsButtons) lyricsSectionsButtons(songData);
         if (isGeniusSongAnnotationsButtons) lyricsAnnotationsButtons();
 
-        if (isGeniusSongFilterActivity) filterRecentActivity();
+        if (isGeniusSongFilterActivity) filterRecentActivity(profilePath);
 
         if (songData.primary_tag.name !== "Non-Music") {
             if (isGeniusSongSpotifyPlayer) addSpotifyPlayer(songData);
@@ -514,7 +514,7 @@ chrome.storage.local.get([
         list.appendChild(li);
     }
 
-    
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -624,7 +624,7 @@ chrome.storage.local.get([
         stickytoolbarLeft.appendChild(actionButton);
     }
 
-      
+
 
 
 
@@ -1079,6 +1079,7 @@ chrome.storage.local.get([
                 expandingtextareaTextarea.focus();
 
                 expandingtextareaTextarea.value = expandingtextareaTextarea.value.replace(/^\s+/, '');
+                expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
             }
         };
 
@@ -1092,11 +1093,13 @@ chrome.storage.local.get([
 
                 if (position === "begin" && !currentText.startsWith(text)) {
                     expandingtextareaTextarea.value = text + "\n\n" + currentText;
+                    expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                     expandingtextareaTextarea.setSelectionRange(text.length + 2, text.length + 2);
                 }
 
                 if (position === "end" && !currentText.endsWith(text)) {
                     expandingtextareaTextarea.value = currentText + "\n\n" + text;
+                    expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             };
 
@@ -2663,7 +2666,7 @@ chrome.storage.local.get([
             </svg>`,
     }
 
-    function filterRecentActivity() {
+    function filterRecentActivity(profilePath) {
         console.log("Run function filterRecentActivity()");
 
         const { svgUpvoted, svgDownvoted, svgPinned, svgUnpinned, svgLocked, svgUnlocked, svgAccepted, svgRejected, svgRecognized, svgMerged, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgMarked, svgVerified, svgGenius } = ICONS;
@@ -2765,10 +2768,16 @@ chrome.storage.local.get([
 
 
         function filterItems(items, filters, userText) {
-            const username = userText?.trim().toLowerCase();
-            const usernameRegex = username
-                ? new RegExp(`\\b${username}\\b`, "i")
-                : null;
+            let username = userText?.trim().toLowerCase();
+
+            if (username && profilePath) {
+                const normalizedProfilePath = profilePath.replace(/^\//, "").trim().toLowerCase();
+                if (username === normalizedProfilePath) {
+                    username = "you";
+                }
+            }
+
+            const usernameRegex = username ? new RegExp(`\\b${username}\\b`, "i") : null;
 
             items.forEach(item => {
                 let visible = true;
