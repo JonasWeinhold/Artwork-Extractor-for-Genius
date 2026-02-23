@@ -13,7 +13,7 @@
 &#xa0;
 
 <div align="center">
-  <a href="#card_file_box-changelog"><img alt="Last version released" src="https://img.shields.io/badge/release-v0.4.8-blue?logo=semver" /></a>
+  <a href="#card_file_box-changelog"><img alt="Last version released" src="https://img.shields.io/github/v/release/JonasWeinhold/Artwork-Extractor-for-Genius?logo=semver&color=blue" /></a>
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/commits/main"><img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/JonasWeinhold/Artwork-Extractor-for-Genius?color=blueviolet&logo=clarifai" /></a>
 </div>
 <div align="center">
@@ -42,15 +42,15 @@ It's primarily built to quickly grab cover artwork URLs (and optionally convert/
   - SoundCloud: `*.soundcloud.com`
   - Bandcamp: `*.bandcamp.com`
   - Yandex Music: `*.yandex.ru`
-  - Instagram: `*.instagram.com`
   - 45cat / 45worlds / 45spaces
+  - DistroKid: `*.distrokid.com`
 - Adds a popup UI to enable/disable each supported site script per-browser.
 - Adds a settings page with lots of per-site toggles (copy cover, copy tracklist, popups, conversions, hosting options, etc.).
 - On Genius pages, it can also add various editing/utility helpers (song/album/artist tools).
 
 ## :rocket: Installation
 
-Either install the extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/bc-plume-bandcamp-player/ldojecagppaiodalfjnhandfjkiljplm) or the [Mozilla Add-ons site](https://addons.mozilla.org/fr/firefox/addon/bc-plume).  
+Either install the extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/artwork-extractor-for-gen/oifdmdbfhcamieniopjddpohkbbmoaeb) or the [Mozilla Add-ons site](https://addons.mozilla.org/de/firefox/addon/artwork-extractor-for-genius/).  
 If you want to install it manually (for local build or development), follow these instructions:
 
 1. Open your browser's extensions page.
