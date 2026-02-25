@@ -7,7 +7,8 @@ chrome.storage.local.get([
     'isGeniusArtistAllSongsAlbumsPage',
     'isGeniusArtistAllSongsAlbumsPageMetadata',
     'isGeniusArtistAllSongsAlbumsPageZwsp',
-    'isGeniusArtistFollowButton'
+    'isGeniusArtistFollowButton',
+    'isGeniusArtistSpreadsheetButton'
 ], async function (result) {
     const isGeniusArtistArtistPage = result.isGeniusArtistArtistPage ?? true;
     const isGeniusArtistArtistPageZwsp = result.isGeniusArtistArtistPageZwsp ?? true;
@@ -17,6 +18,7 @@ chrome.storage.local.get([
     const isGeniusArtistAllSongsAlbumsPageMetadata = result.isGeniusArtistAllSongsAlbumsPageMetadata ?? true;
     const isGeniusArtistAllSongsAlbumsPageZwsp = result.isGeniusArtistAllSongsAlbumsPageZwsp ?? true;
     const isGeniusArtistFollowButton = result.isGeniusArtistFollowButton ?? false;
+    const isGeniusArtistSpreadsheetButton = result.isGeniusArtistSpreadsheetButton ?? false;
 
 
     if (result['Services/genius_artist.js'] === false) {
@@ -30,9 +32,25 @@ chrome.storage.local.get([
     main();
 
     async function main() {
+        const profilePathPromise = new Promise(resolve => {
+            chrome.storage.local.get("profilePath", ({ profilePath }) => {
+                resolve(profilePath ?? null);
+            });
+        });
+
+        const userIdPromise = new Promise(resolve => {
+            chrome.storage.local.get("userId", ({ userId }) => {
+                resolve(userId ?? null);
+            });
+        });
+
+        const profilePath = await profilePathPromise;
+        const userId = await userIdPromise;
+
         const isAllAlbums = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/albums$/.test(window.location.href);
         const isAllSongs = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/songs$/.test(window.location.href);
         const isArtist = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+$/.test(window.location.href);
+        const isUser = profilePath ? new RegExp(`https:\\/\\/(genius\\.com|genius-staging\\.com)${profilePath}$`).test(window.location.href) : false;
 
         if (isAllSongs || isAllAlbums) {
             const { artistId, userId, artistData } = await getArtistInfo2();
@@ -40,23 +58,30 @@ chrome.storage.local.get([
             if (isGeniusArtistAllSongsAlbumsPage || isGeniusArtistAllSongsAlbumsPageMetadata) checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums);
         } else if (isArtist) {
             const { artistId, userId, artistData } = await getArtistInfo();
+            if (!artistId || !userId || !artistData) return;
 
             if (isGeniusArtistArtistId) showArtistIdButton(artistId);
             if (isGeniusArtistArtistPageInfo) showCoverInfo(artistData);
 
             if (isGeniusArtistArtistPage) checkArtistCover(artistData);
             if (isGeniusArtistFollowButton) FollowButtonArtistPage(artistId);
+
+            if (isGeniusArtistSpreadsheetButton) getSpreadsheet(artistId, "artist");
+        } else if (isUser) {
+            if (isGeniusArtistSpreadsheetButton) getSpreadsheet(userId, "user");
         }
     }
 
     async function getArtistInfo() {
         console.log("Run function getArtistInfo()");
         // Artist ID
-        const artistId = document.querySelector("link[rel='alternate']").href.split("/").pop();
+        const artistId = document.querySelector("link[rel='alternate']")?.href?.split("/")?.pop();
 
         // User ID
         const userMatch = document.documentElement.innerHTML.match(/var CURRENT_USER = JSON.parse\('{\\"id\\":(\d+)/);
         const userId = userMatch?.[1];
+
+        if (!artistId || !userId) return { artistId: null, userId, artistData: null };
 
         // Artist Data
         const response = await fetch(`https://genius.com/api/artists/${artistId}`);
@@ -130,7 +155,6 @@ chrome.storage.local.get([
             if (existing) existing.remove();
 
             const infoElement = createResolutionInfo(artistData);
-            console.log("Created resolution info element:", infoElement);
 
             avatar.append(infoElement);
         }
@@ -294,41 +318,111 @@ chrome.storage.local.get([
     //////////                                 FOLLOW BUTTON                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function FollowButtonArtistPage(artistId) {
+    function injectButtons(buttonConfigs) {
         const existingFollowButton = document.querySelector('follow-button a.square_button');
         const messageButton = document.querySelector('div.square_button[ng-click="$ctrl.show_conversation_modal = true"][ng-if="$ctrl.can_message_user"]');
         const editButton = document.querySelector('div.square_button[ng-if="$ctrl.can_edit_profile"][ng-click="$ctrl.show_edit_artist_profile_modal = true"]');
 
+        if (!editButton) return;
+
         const buttonContainer = document.createElement('div');
-        const createButton = (text, action) => {
+
+        const createButton = ({ text, marginLeft = "0", width = "0", onClick }) => {
             const button = document.createElement('button');
             button.className = 'square_button u-bottom_margin';
             button.textContent = text;
+            button.style.width = width;
             button.style.whiteSpace = 'nowrap';
-            button.style.width = '153.29px';
-            button.style.marginLeft = action === "unfollow" ? "4px" : "0";
-            button.addEventListener('click', async () => {
-                button.textContent = `${action.charAt(0).toUpperCase() + action.slice(1)}ing...`;
-                button.disabled = true;
-                const songIds = await fetchAllSongIds(artistId);
-                console.log(`Found ${songIds.length} songs for artist ID ${artistId}.`);
-                for (const songId of songIds) {
-                    await toggleFollowSong(songId, action);
-                    await new Promise(resolve => setTimeout(resolve, 25));
-                }
-                button.textContent = `${action.charAt(0).toUpperCase() + action.slice(1)}ing`;
-                button.disabled = false;
-            });
+            button.style.marginBottom = "0rem";
+            button.style.marginLeft = marginLeft;
+
+            if (onClick) {
+                button.addEventListener('click', async () => {
+                    await onClick(button);
+                });
+            }
+
             return button;
         };
 
-        buttonContainer.appendChild(createButton('Follow All Songs', 'follow'));
-        buttonContainer.appendChild(createButton('Unfollow All Songs', 'unfollow'));
+        const createInput = ({ placeholder = "", marginLeft = "0" }) => {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = placeholder;
+
+            input.style.margin = "0";
+            input.style.marginTop = "0.5rem";
+            input.style.marginLeft = marginLeft;
+            input.style.color = "#000000";
+            input.style.width = "6.25rem";
+            input.style.borderWidth = ".15rem";
+            input.style.borderStyle = "solid";
+            input.style.cursor = "text";
+            input.style.display = "inline-block";
+            input.style.fontFamily = "Programme, Arial, sans-serif";
+            input.style.fontSize = "1rem";
+            input.style.lineHeight = "1.4rem";
+            input.style.textAlign = "center";
+            input.style.padding = ".25rem .5rem";
+
+            return input;
+        };
+
+        buttonConfigs.forEach(cfg => {
+            if (cfg.type === "input") {
+                const input = createInput(cfg);
+                buttonContainer.appendChild(input);
+                buttonContainer._songIdInput = input;
+            } else {
+                buttonContainer.appendChild(createButton(cfg));
+            }
+        });
+
         editButton.parentNode.insertBefore(buttonContainer, editButton.nextSibling);
 
-        const buttonWidths = existingFollowButton && messageButton ? '100.86px' : '153.29px';
+        const buttonWidths = (existingFollowButton && messageButton) || (!existingFollowButton && !messageButton) ? '6.25rem' : '9.5rem';
         [existingFollowButton, messageButton, editButton].forEach(btn => btn && (btn.style.width = buttonWidths));
         editButton.style.justifyContent = 'center';
+    }
+
+    function FollowButtonArtistPage(artistId) {
+        injectButtons([
+            {
+                text: 'Follow All Songs',
+                width: "9.5rem",
+                onClick: async (button) => {
+                    button.disabled = true;
+                    button.textContent = 'Following...';
+
+                    const songIds = await fetchAllSongIds(artistId);
+                    for (const songId of songIds) {
+                        await toggleFollowSong(songId, 'follow');
+                        await new Promise(r => setTimeout(r, 25));
+                    }
+
+                    button.textContent = 'Following';
+                    button.disabled = false;
+                }
+            },
+            {
+                text: 'Unfollow All Songs',
+                width: "9.5rem",
+                marginLeft: "0.25rem",
+                onClick: async (button) => {
+                    button.disabled = true;
+                    button.textContent = 'Unfollowing...';
+
+                    const songIds = await fetchAllSongIds(artistId);
+                    for (const songId of songIds) {
+                        await toggleFollowSong(songId, 'unfollow');
+                        await new Promise(r => setTimeout(r, 25));
+                    }
+
+                    button.textContent = 'Unfollowing';
+                    button.disabled = false;
+                }
+            }
+        ]);
     }
 
     async function fetchAllSongIds(artistId) {
@@ -344,24 +438,390 @@ chrome.storage.local.get([
         return songIds;
     }
 
-    async function toggleFollowSong(songId, action) {
-        const url = `https://genius.com/api/songs/${songId}/${action}`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Cookie': document.cookie,
-                'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-            },
-            body: JSON.stringify({})
-        });
-        return response.ok;
-    }
 
-    function getCsrfToken() {
-        const match = document.cookie.match(/_csrf_token=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                               SPREADSHEET BUTTON                               //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function getSpreadsheet(id, type) {
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        const escapeCSV = (value) => {
+            if (value == null) return "";
+            const str = String(value);
+            return `"${str.replace(/"/g, '""')}"`;
+        };
+
+        const getReleaseDate = (comp) => {
+            if (!comp?.year) return "";
+            const y = comp.year;
+            const m = comp.month ? String(comp.month).padStart(2, "0") : null;
+            const d = comp.day ? String(comp.day).padStart(2, "0") : null;
+
+            if (y && m && d) return `${y}-${m}-${d}`;
+            if (y && m) return `${y}-${m}`;
+            return `${y}`;
+        };
+
+        const getLyricsStatus = (song) => {
+            const hasFullDetails = song.current_user_metadata;
+
+            if (!hasFullDetails) { // Button 1
+                const isInstrumental = song.instrumental === true;
+
+                if (isInstrumental) return "instrumental";
+                if (song.lyrics_state === "complete") return "transcribed";
+
+                return "not transcribed";
+            } else { //Button 2
+                const validated =
+                    song.lyrics_marked_complete_by ||
+                    song.lyrics_marked_staff_approved_by ||
+                    song.lyrics_verified === true;
+
+                const hasExcluded = song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq");
+                const hasPermission = song.current_user_metadata?.permissions?.includes("award_transcription_iq");
+                const isInstrumental = song.instrumental === true;
+
+                let status = "not transcribed";
+
+                if (validated && hasExcluded) status = "completed";
+                else if (song.lyrics_state === "complete" && isInstrumental) status = "instrumental";
+                else if (song.lyrics_state === "complete" && hasExcluded) status = "transcribed";
+                else if (song.lyrics_state === "complete" && hasPermission) status = "not awarded";
+
+                return status;
+            }
+        };
+
+        const getCoverInfo = (url) => {
+            if (!url.startsWith("https://images.genius.com")) {
+                return "No Genius Image";
+            }
+
+            const match = url.match(/\.([0-9]+x[0-9]+)x[0-9]+\.(\w+)$/i);
+
+            if (!match) {
+                return "No Genius Image";
+            }
+
+            const size = match[1];
+            const ext = match[2].toUpperCase();
+
+            return `${size} ${ext}`;
+        };
+
+        async function fetchPaginated({
+            startPages,
+            fetchPage,
+            onPageData,
+            updateButton,
+            stopCondition
+        }) {
+            const workerCount = startPages.length;
+            const workerFinished = Array(workerCount).fill(false);
+            let counter = 0;
+
+            async function worker(workerIndex, startPage) {
+                let page = startPage;
+
+                while (true) {
+                    const json = await fetchPage(page);
+                    counter++;
+                    updateButton(counter);
+
+                    const items = onPageData(json);
+
+                    if (stopCondition(items)) {
+                        workerFinished[workerIndex] = true;
+
+                        if (workerFinished.every(f => f)) {
+                            return;
+                        }
+
+                        return;
+                    }
+
+                    page += workerCount;
+                }
+            }
+
+            const promises = [];
+            for (let i = 0; i < workerCount; i++) {
+                await sleep(50 * i);
+                promises.push(worker(i, startPages[i]));
+            }
+
+            await Promise.all(promises);
+        }
+
+        async function fetchSongsPage(id, type, page, perPage = 50, maxRetries = 5) {
+            let attempt = 0;
+
+            while (true) {
+                try {
+                    const url =
+                        type === "artist"
+                            ? `https://genius.com/api/artists/${id}/songs?page=${page}&per_page=${perPage}`
+                            : `https://genius.com/api/users/${id}/contributions/transcriptions?next_cursor=${page}&per_page=${perPage}`;
+
+                    const res = await fetch(url);
+
+                    if (res.status === 503) {
+                        attempt++;
+                        if (attempt > maxRetries) throw new Error(`503 after ${maxRetries} retries`);
+                        await sleep(200 * attempt);
+                        continue;
+                    }
+
+                    return await res.json();
+
+                } catch (err) {
+                    attempt++;
+                    if (attempt > maxRetries) throw err;
+                    await sleep(200 * attempt);
+                }
+            }
+        }
+
+        function parseSongsFromPage(json, type) {
+            if (type === "artist") {
+                return json.response?.songs || [];
+            }
+
+            const groups = json.response?.contribution_groups || [];
+            const songs = [];
+
+            for (const g of groups) {
+                if (g.contribution_type !== "song") continue;
+                for (const c of g.contributions) {
+                    if (c._type === "song") songs.push(c);
+                }
+            }
+
+            return songs;
+        }
+
+        async function fetchSongDetails(songId) {
+            const res = await fetch(`https://genius.com/api/songs/${songId}`);
+            if (!res.ok) throw new Error(`Song ${songId}: ${res.status}`);
+            return res.json();
+        }
+
+        async function fetchAllSongsDirect(id, type, button) {
+            const perPage = 50;
+            const workers = [1, 2, 3];
+            let allSongs = [];
+
+            await fetchPaginated({
+                startPages: workers,
+                fetchPage: (page) => fetchSongsPage(id, type, page, perPage),
+                updateButton: (count) => button.textContent = `Page: ${count}`,
+                onPageData: (json) => {
+                    const songs = parseSongsFromPage(json, type);
+
+                    for (const song of songs) {
+                        allSongs.push({
+                            ...song,
+                            id: Number(song.id)
+                        });
+                    }
+
+                    return songs;
+                },
+                stopCondition: (songs) => !songs.length
+            });
+
+            return allSongs.sort((a, b) => a.id - b.id);
+        }
+
+        async function fetchAllSongIds(id, type, button) {
+            const perPage = 50;
+            const workers = [1, 2, 3];
+            let ids = [];
+
+            await fetchPaginated({
+                startPages: workers,
+                fetchPage: (page) => fetchSongsPage(id, type, page, perPage),
+                updateButton: (count) => button.textContent = `Page: ${count}`,
+                onPageData: (json) => {
+                    const songs = parseSongsFromPage(json, type);
+                    for (const song of songs) ids.push(Number(song.id));
+                    return songs;
+                },
+                stopCondition: (songs) => !songs.length
+            });
+
+            return ids.sort((a, b) => a - b);
+        }
+
+        async function fetchSongDetailsByIds(songIds, button) {
+            const workers = 3;
+            let results = [];
+            let counter = 0;
+
+            async function worker(startIndex) {
+                let index = startIndex;
+                while (index < songIds.length) {
+                    const id = songIds[index];
+                    try {
+                        const json = await fetchSongDetails(id);
+                        results.push({ id, data: json });
+                        counter++;
+                        button.textContent = `Song: ${counter}`;
+                    } catch (err) {
+                        console.error("Error fetching song", id, err);
+                    }
+                    index += workers;
+                }
+            }
+
+            const promises = [];
+            for (let i = 0; i < workers; i++) {
+                await sleep(200 * i);
+                promises.push(worker(i));
+            }
+
+            await Promise.all(promises);
+            return results;
+        }
+
+
+        function filterSongIds(ids, text) {
+            if (!text) return ids;
+
+            if (text.includes(",")) {
+                const list = text
+                    .split(",")
+                    .map(x => Number(x.trim()))
+                    .filter(n => !isNaN(n));
+                return ids.filter(id => list.includes(id));
+            }
+
+            if (text.includes("-") && text.indexOf("-") > 0) {
+                const [minStr, maxStr] = text.split("-");
+                const min = Number(minStr);
+                const max = Number(maxStr);
+                return ids.filter(id => id >= min && id <= max);
+            }
+
+            if (text.startsWith("-")) {
+                const max = Number(text.slice(1));
+                return ids.filter(id => id <= max);
+            }
+
+            const min = Number(text);
+            return ids.filter(id => id >= min);
+        }
+
+        function exportCSV(rows, header, filename) {
+            const csv = header.join(",") + "\n" + rows.join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        injectButtons([
+            {
+                text: "Spreadsheet 1",
+                width: "8.5rem",
+                onClick: async (button) => {
+                    const songs = await fetchAllSongsDirect(id, type, button);
+
+                    const header = [
+                        "Song ID",
+                        "Primary Artist",
+                        "Song Title",
+                        "URL",
+                        "Release Date",
+                        "Cover Image Info",
+                        "Lyrics Status",
+                        "Pageviews",
+                    ];
+
+                    const rows = songs.map(song =>
+                        [
+                            song.id,
+                            escapeCSV(song.primary_artist_names),
+                            escapeCSV(song.title),
+                            escapeCSV(song.url),
+                            escapeCSV(getReleaseDate(song.release_date_components)),
+                            escapeCSV(getCoverInfo(song.song_art_image_url)),
+                            escapeCSV(getLyricsStatus(song)),
+                            escapeCSV(song.stats.pageviews),
+                        ].join(",")
+                    );
+
+                    button.textContent = "Downloading CSV";
+                    exportCSV(rows, header, `${type}_${id}_songs_1.csv`);
+                    button.textContent = "Spreadsheet 1";
+                }
+            },
+            {
+                type: "input",
+                placeholder: "Song ID",
+                marginLeft: "0.25rem",
+            },
+            {
+                text: "Spreadsheet 2",
+                width: "8.5rem",
+                marginLeft: "0.25rem",
+                onClick: async (button) => {
+                    const container = button.parentElement;
+                    const input = container._songIdInput;
+                    const filterText = input?.value.trim() || "";
+
+                    const ids = await fetchAllSongIds(id, type, button);
+                    const filteredIds = filterSongIds(ids, filterText);
+
+                    let details = await fetchSongDetailsByIds(filteredIds, button);
+                    details = details.sort((a, b) => a.id - b.id);
+
+                    const header = [
+                        "Song ID",
+                        "Primary Artist",
+                        "Song Title",
+                        "URL",
+                        "Release Date",
+                        "Albums",
+                        "Cover Image Info",
+                        "Tags",
+                        "Language",
+                        "Lyrics Status",
+                        "Pending LEPs",
+                        "Pageviews",
+                    ];
+
+                    const rows = details.map(item => {
+                        const song = item.data.response.song;
+                        return [
+                            song.id,
+                            escapeCSV(song.primary_artist_names),
+                            escapeCSV(song.title),
+                            escapeCSV(song.url),
+                            escapeCSV(getReleaseDate(song.release_date_components)),
+                            escapeCSV(song.albums.map(album => album.name).join(", ")),
+                            escapeCSV(getCoverInfo(song.song_art_image_url)),
+                            escapeCSV([song.primary_tag?.name, ...song.tags.map(tag => tag.name).filter(name => name !== song.primary_tag?.name).sort((a, b) => a.localeCompare(b))].join(", ")),
+                            escapeCSV(song.language),
+                            escapeCSV(getLyricsStatus(song)),
+                            escapeCSV(song.pending_lyrics_edits_count),
+                            escapeCSV(song.stats.pageviews),
+                        ].join(",");
+                    });
+
+                    button.textContent = "Downloading CSV";
+                    exportCSV(rows, header, `${type}_${id}_songs_2.csv`);
+                    button.textContent = "Spreadsheet 2";
+                }
+            }
+
+        ]);
     }
 
 
@@ -370,12 +830,11 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums) {
+        console.log("Run function checkAllSongsAlbumsPage()");
 
         let cachedSongs = null;
         let cachedAlbums = null;
         let items = [];
-
-        console.log(artistId, isAllSongs, isAllAlbums);
 
         async function fetchAll(artistId, type) {
             const results = [];
@@ -426,23 +885,17 @@ chrome.storage.local.get([
         })();
 
 
-
-
-
-
-
         async function checkCoverImage() {
             let updates = [];
 
-            const discographyList = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            const discographyList = document.querySelector('ul[class^="DiscographyItemList__ListSingleContainer"]');
             if (!discographyList) return;
-
 
             const listItems = discographyList.querySelectorAll('a[class^="DiscographyItem__Container"]');
             const itemMap = new Map(items.map(item => [item.url, item]));
 
             listItems.forEach((item) => {
-                const targetDiv = item.querySelector('div[class^="SizedImage__Container"]');
+                const targetDiv = item.querySelector('div[class^="DiscographyItem__CoverArt"]');
                 if (!targetDiv) return;
 
                 if (['#99f2a5', '#fa7878', '#dddddd'].includes(targetDiv.style.backgroundColor)) return;
@@ -452,6 +905,7 @@ chrome.storage.local.get([
 
                 if (itemLink && itemMap.has(itemLink)) {
                     const titleMatch = itemMap.get(itemLink);
+                    console.log("Match found for URL:", itemLink, titleMatch);
                     if (isAllSongs) {
                         artImageUrl = titleMatch.song_art_image_url;
                         artistImageUrl = titleMatch.primary_artist.image_url;
@@ -480,7 +934,7 @@ chrome.storage.local.get([
 
         const cachedSongData = new Map();
         async function checkMetadata() {
-            const container = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            const container = document.querySelector('ul[class^="DiscographyItemList__ListSingleContainer"]');
             if (!container) return;
 
             const itemsDom = container.querySelectorAll('a[class^="DiscographyItem__Container"]');
@@ -532,19 +986,37 @@ chrome.storage.local.get([
         }
 
         function updateSongUI(song, songData) {
-            const discographyList = document.querySelector('div[class^="DiscographyItemList__ListSingleContainer"]');
+            const discographyList = document.querySelector('ul[class^="DiscographyItemList__ListSingleContainer"]');
             if (!discographyList) return;
+
             const link = discographyList.querySelector(`a[class^="DiscographyItem__Container"][href="${song.url}"]`);
             if (!link) return;
 
             const infoContainer = link.querySelector('div[class^="DiscographyItem__Content"]');
             if (!infoContainer) return;
 
-            if (songData.lyrics_marked_complete_by) {
+            const lyricsAreValidated =
+                songData.lyrics_marked_complete_by ||
+                songData.lyrics_marked_staff_approved_by ||
+                songData.lyrics_verified === true;
+
+            if (lyricsAreValidated &&
+                songData.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+
                 infoContainer.style.backgroundColor = '#99f2a5';
-            } else if (songData.lyrics_state === 'complete') {
+
+            } else if (songData.lyrics_state === 'complete' &&
+                songData.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+
                 infoContainer.style.backgroundColor = '#ffff64';
+
+            } else if (songData.lyrics_state === 'complete' &&
+                songData.current_user_metadata?.permissions?.includes("award_transcription_iq")) {
+
+                infoContainer.style.backgroundColor = '#ffa335';
+
             } else {
+
                 infoContainer.style.backgroundColor = '#ff7878';
             }
 
@@ -553,7 +1025,6 @@ chrome.storage.local.get([
                 link.style.borderBottom = '3.5px dashed';
             }
         }
-
 
 
         document.addEventListener('click', async () => {

@@ -6,12 +6,15 @@ chrome.storage.local.get([
     'isGeniusSongSongId',
     'isGeniusSongCheckIndex',
     'isGeniusSongFollowButton',
+    'isGeniusSongShellyButton',
     'isGeniusSongCleanupMetadataButton',
     'isGeniusSongLanguageButton',
     'isGeniusSongCleanupButton',
     'isGeniusSongSectionsButtons',
     'isGeniusSongExpandSectionsButtons',
     'isGeniusSongAnnotationsButtons',
+    'isGeniusSongFilterActivity',
+    'isGeniusSongSaveFilters',
     'isGeniusSongCopyCover',
     'isGeniusSongAppleMusicPlayer',
     'isGeniusSongYouTubePlayer',
@@ -26,12 +29,15 @@ chrome.storage.local.get([
     const isGeniusSongSongId = result.isGeniusSongSongId ?? false;
     const isGeniusSongCheckIndex = result.isGeniusSongCheckIndex ?? false;
     const isGeniusSongFollowButton = result.isGeniusSongFollowButton ?? true;
+    const isGeniusSongShellyButton = result.isGeniusSongShellyButton ?? true;
     const isGeniusSongCleanupMetadataButton = result.isGeniusSongCleanupMetadataButton ?? true;
     const isGeniusSongLanguageButton = result.isGeniusSongLanguageButton ?? true;
     const isGeniusSongCleanupButton = result.isGeniusSongCleanupButton ?? true;
     const isGeniusSongSectionsButtons = result.isGeniusSongSectionsButtons ?? true;
     const isGeniusSongExpandSectionsButtons = result.isGeniusSongExpandSectionsButtons ?? false;
     const isGeniusSongAnnotationsButtons = result.isGeniusSongAnnotationsButtons ?? true;
+    const isGeniusSongFilterActivity = result.isGeniusSongFilterActivity ?? true;
+    const isGeniusSongSaveFilters = result.isGeniusSongSaveFilters ?? false;
     const isGeniusSongCopyCover = result.isGeniusSongCopyCover ?? true;
     const isGeniusSongAppleMusicPlayer = result.isGeniusSongAppleMusicPlayer ?? true;
     const isGeniusSongYouTubePlayer = result.isGeniusSongYouTubePlayer ?? true;
@@ -53,14 +59,16 @@ chrome.storage.local.get([
 
     async function main() {
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
+
         if (!isSong) return
 
+        getDomElements();
 
         editYouTubePlayer();
         editAppleMusicPlayer();
 
 
-        const { songId, userId, songData } = await getSongInfo();
+        const { songId, userId, profilePath, songData } = await getSongInfo();
 
         if (isGeniusSongSongId) showSongIdButton(songId);
         if (isGeniusSongCheckIndex) showIndexButton();
@@ -69,6 +77,7 @@ chrome.storage.local.get([
         if (isGeniusSongSongPage) checkSongCover(songData)
 
         if (isGeniusSongFollowButton) addFollowButton();
+        if (isGeniusSongShellyButton) addShellyButton(songData);
 
         if (isGeniusSongCleanupMetadataButton) cleanupMetadata(userId, songData);
 
@@ -77,12 +86,42 @@ chrome.storage.local.get([
         if (isGeniusSongSectionsButtons) lyricsSectionsButtons(songData);
         if (isGeniusSongAnnotationsButtons) lyricsAnnotationsButtons();
 
+        if (isGeniusSongFilterActivity) filterRecentActivity(profilePath);
+
         if (songData.primary_tag.name !== "Non-Music") {
             if (isGeniusSongSpotifyPlayer) addSpotifyPlayer(songData);
         }
         if (songData.soundcloud_url) {
             if (isGeniusSongSoundCloudPlayer) addSoundCloudPlayer(songData);
         }
+    }
+
+
+    function getDomElements() {
+        const metadatastatsContainer = document.querySelector('div[class^="MetadataStats__Container-"]');
+
+        return {
+            metadatastatsContainer,
+            labelwithiconLabel: metadatastatsContainer?.querySelector('span[class^="LabelWithIcon__Label-"]'),
+            adminSpan: [...document.querySelectorAll('span')].find(el => el.textContent.trim() === "Admin"),
+            sizedimageImage: document.querySelector('img[class^="SizedImage__Image-"]'),
+            songheaderCoverart: document.querySelector('div[class^="SongHeader-desktop__CoverArt-"]'),
+            editmetadatabutonSmallbutton: document.querySelector('button[class*="EditMetadataButton__SmallButton-"]'),
+            sharebuttonsContainer: document.querySelector('div[class^="ShareButtons__Container-"]'),
+            stickytoolbarContainer: document.querySelector('div[class*="StickyToolbar__Container-"]'),
+            stickytoolbarLeft: document.querySelector('div[class^="StickyToolbar__Left-"]'),
+            stickytoolbarRight: document.querySelector('div[class^="StickyToolbar__Right-"]'),
+            stickyNavContainer: document.querySelector('nav[class^="StickyNav-desktop__Container-"]'),
+            texteditorTextarea: document.querySelector('textarea[class*="TextEditor__TextArea"]'),
+            lyricseditexplainerContainer: document.querySelector('div[class^="LyricsEditExplainer__Container-"]'),
+            expandingtextareaTextarea: document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]'),
+            mediaplayerscontainerContainer: document.querySelector('[class^="MediaPlayersContainer__Container-"]'),
+            transcriptionplayerContainer: document.querySelector('div[class^="TranscriptionPlayer__Container-"]'),
+            youtubebuttonPlayvideobutton: document.querySelector('[class*="YoutubeButton__PlayVideoButton-"]'),
+            applemusicplayerPositioningcontainer: document.querySelector('div[class^="AppleMusicPlayer-desktop__PositioningContainer-"]'),
+            applemusicplayerIframewrapper: document.querySelector('div[class*="AppleMusicPlayer-desktop__IframeWrapper-"]'),
+            applemusicplayerIframe: document.querySelector('iframe[class^="AppleMusicPlayer-desktop__Iframe-"]'),
+        };
     }
 
     async function getSongInfo() {
@@ -94,13 +133,19 @@ chrome.storage.local.get([
 
         // User ID
         const userMatch = document.documentElement.innerHTML.match(/let current_user = JSON.parse\('{\\"id\\":(\d+)/);
-        const userId = userMatch?.[1];
+        const userId = userMatch?.[1] ?? null;
+        if (userId) chrome.storage.local.set({ userId });
+
+        // Profile Path
+        const profileMatch = document.documentElement.innerHTML.match(/\\"profile_path\\":\\"([^"]+)\\"/);
+        const profilePath = profileMatch?.[1] ?? null;
+        if (profilePath) chrome.storage.local.set({ profilePath });
 
         // Song Data
         const response = await fetch(`https://genius.com/api/songs/${songId}`);
         const json = await response.json();
 
-        return { songId, userId, songData: json.response.song };
+        return { songId, userId, profilePath, songData: json.response.song };
     }
 
     document.addEventListener('click', function (event) {
@@ -117,12 +162,12 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function showSongIdButton(songId) {
-        const metadataContainer = document.querySelector('div[class^="MetadataStats__Container-"]');
+        const { metadatastatsContainer, labelwithiconLabel } = getDomElements();
 
-        if (metadataContainer && !document.getElementById("song-id-button")) {
+        if (metadatastatsContainer && !document.getElementById("song-id-button")) {
             const songIdElement = document.createElement('span');
             songIdElement.id = "song-id-button";
-            songIdElement.className = document.querySelector('span[class^="LabelWithIcon__Label-"]').className;
+            songIdElement.className = labelwithiconLabel?.className;
 
             const songIdLink = document.createElement('a');
             songIdLink.href = `https://genius.com/api/songs/${songId}`;
@@ -136,18 +181,17 @@ chrome.storage.local.get([
             songIdElement.textContent = "Song ID: ";
             songIdElement.appendChild(songIdLink);
 
-            metadataContainer.appendChild(songIdElement);
+            metadatastatsContainer.appendChild(songIdElement);
         }
     }
 
     function showIndexButton() {
-        const adminButton = document.querySelector('span[class*="AdminMenu__Button"]');
-        const metadataContainer = document.querySelector('div[class^="MetadataStats__Container-"]');
+        const { adminSpan, metadatastatsContainer, labelwithiconLabel } = getDomElements();
 
-        if (adminButton && metadataContainer && !document.getElementById("index-button")) {
+        if (adminSpan && metadatastatsContainer && !document.getElementById("index-button")) {
             const indexElement = document.createElement('span');
             indexElement.id = "index-button";
-            indexElement.className = document.querySelector('span[class^="LabelWithIcon__Label-"]').className;
+            indexElement.className = labelwithiconLabel?.className;
 
             const siteQuery = `site:${window.location.href}`;
             const indexLink = document.createElement('a');
@@ -161,7 +205,7 @@ chrome.storage.local.get([
             indexLink.onmouseout = () => indexLink.style.textDecoration = "none";
 
             indexElement.appendChild(indexLink);
-            metadataContainer.appendChild(indexElement);
+            metadatastatsContainer.appendChild(indexElement);
         }
     }
 
@@ -172,19 +216,18 @@ chrome.storage.local.get([
     function showCoverInfo(songData) {
         console.log("Run function showCoverInfo()");
 
-        const coverArtElement = document.querySelector('img[class^="SizedImage__Image-"]');
-        const metadataContainer = document.querySelector('div[class^="SongHeader-desktop__CoverArt-"]');
+        const { sizedimageImage, songheaderCoverart } = getDomElements();
 
-        if (coverArtElement && metadataContainer) {
-            const existing = metadataContainer.querySelector('p[data-type="resolution-info"]');
+        if (sizedimageImage && songheaderCoverart) {
+            const existing = songheaderCoverart.querySelector('p[data-type="resolution-info"]');
             if (existing) existing.remove();
 
-            const infoElement = createResolutionInfo(songData, coverArtElement);
-            metadataContainer.prepend(infoElement);
+            const infoElement = createResolutionInfo(songData, sizedimageImage);
+            songheaderCoverart.prepend(infoElement);
         }
     }
 
-    function createResolutionInfo(songData, coverArtElement) {
+    function createResolutionInfo(songData, sizedimageImage) {
         const resolutionMatch = songData.header_image_url.match(/(\d+)x(\d+)/);
         const formatMatch = songData.header_image_url.match(/\.(\w+)$/);
 
@@ -202,7 +245,7 @@ chrome.storage.local.get([
         resolutionInfo.innerHTML = `${resolutionText} ${formatText} | ${songData.song_art_primary_color} | ${songData.song_art_secondary_color} | ${textColor}`;
 
         const updateStyles = () => {
-            const imgWidth = coverArtElement.clientWidth || 1000;
+            const imgWidth = sizedimageImage.clientWidth || 1000;
             const dynamicFontPx = imgWidth * 0.05;
             const fontSizeRem = Math.min(pxToRem(dynamicFontPx), 0.75);
             resolutionInfo.style.fontSize = `${fontSizeRem}rem`;
@@ -213,7 +256,7 @@ chrome.storage.local.get([
         updateStyles();
 
         const observer = new ResizeObserver(updateStyles);
-        observer.observe(coverArtElement);
+        observer.observe(sizedimageImage);
 
         return resolutionInfo;
     }
@@ -231,50 +274,50 @@ chrome.storage.local.get([
     function checkSongCover(songData) {
         console.log("Run function checkSongCover()");
 
-        const editButton = document.querySelector('button[class*="EditMetadataButton__SmallButton"]');
-        if (editButton) {
+        const { editmetadatabutonSmallbutton } = getDomElements();
 
-            let color, borderColor;
+        if (!editmetadatabutonSmallbutton) return;
 
-            const customSongArt = songData.custom_song_art_image_url;
-            const songArt = songData.song_art_image_url;
-            const album = songData.album;
+        let color, borderColor;
 
-            if (customSongArt) {
-                if (customSongArt.startsWith("https://images.genius.com") && customSongArt.endsWith("1000x1000x1.png")) {
+        const customSongArt = songData.custom_song_art_image_url;
+        const songArt = songData.song_art_image_url;
+        const album = songData.album;
+
+        if (customSongArt) {
+            if (customSongArt.startsWith("https://images.genius.com") && customSongArt.endsWith("1000x1000x1.png")) {
+                color = '#99f2a5'; // Green
+                borderColor = '#66bfa3';
+            } else if ((customSongArt.startsWith("http://images.genius.com") || customSongArt.startsWith("http://images.rapgenius.com") || customSongArt.startsWith("https://images.rapgenius.com")) && customSongArt.endsWith("1000x1000x1.png")) {
+                color = '#7689e8'; // Blue
+                borderColor = '#4a5e9d';
+            } else if (customSongArt.startsWith("https://filepicker-images-rapgenius.s3.amazonaws.com/filepicker-images-rapgenius/") || customSongArt.endsWith("1000x1000bb.png") || customSongArt.endsWith("10000x10000bb.png") || customSongArt.endsWith("1000x1000.png") || customSongArt.endsWith("1000x1000-000000-80-0-0.png")) {
+                color = '#ffff64'; // Yellow
+                borderColor = '#cccc00';
+            } else {
+                color = '#fa7878'; // Red
+                borderColor = '#a74d4d';
+            }
+        } else {
+            if (!album) {
+                color = '#dddddd'; // Grey
+                borderColor = '#aaaaaa';
+            } else {
+                if (songArt.endsWith("1000x1000x1.png")) {
                     color = '#99f2a5'; // Green
                     borderColor = '#66bfa3';
-                } else if ((customSongArt.startsWith("http://images.genius.com") || customSongArt.startsWith("http://images.rapgenius.com") || customSongArt.startsWith("https://images.rapgenius.com")) && customSongArt.endsWith("1000x1000x1.png")) {
-                    color = '#7689e8'; // Blue
-                    borderColor = '#4a5e9d';
-                } else if (customSongArt.startsWith("https://filepicker-images-rapgenius.s3.amazonaws.com/filepicker-images-rapgenius/") || customSongArt.endsWith("1000x1000bb.png") || customSongArt.endsWith("10000x10000bb.png") || customSongArt.endsWith("1000x1000.png") || customSongArt.endsWith("1000x1000-000000-80-0-0.png")) {
-                    color = '#ffff64'; // Yellow
-                    borderColor = '#cccc00';
-                } else {
-                    color = '#fa7878'; // Red
-                    borderColor = '#a74d4d';
-                }
-            } else {
-                if (!album) {
+                } else if (songArt.includes("default_cover_art.png")) {
                     color = '#dddddd'; // Grey
                     borderColor = '#aaaaaa';
                 } else {
-                    if (songArt.endsWith("1000x1000x1.png")) {
-                        color = '#99f2a5'; // Green
-                        borderColor = '#66bfa3';
-                    } else if (songArt.includes("default_cover_art.png")) {
-                        color = '#dddddd'; // Grey
-                        borderColor = '#aaaaaa';
-                    } else {
-                        color = '#ffa335'; // Orange
-                        borderColor = '#c76a2b';
-                    }
+                    color = '#ffa335'; // Orange
+                    borderColor = '#c76a2b';
                 }
             }
-
-            addColoredCircle(editButton, color, borderColor);
-            if (isGeniusSongSongPageZwsp) checkSongTitleForZeroWidthSpace(songData);
         }
+
+        addColoredCircle(editmetadatabutonSmallbutton, color, borderColor);
+        if (isGeniusSongSongPageZwsp) checkSongTitleForZeroWidthSpace(songData);
     }
 
     function addBlackCross(circle) {
@@ -362,8 +405,8 @@ chrome.storage.local.get([
 
     function checkSongTitleForZeroWidthSpace(songData) {
         if (songData.title.includes('\u200B')) {
-            const editButton = document.querySelector('button[class*="EditMetadataButton__SmallButton"]');
-            const circle = editButton.querySelector('.circle-indicator');
+            const { editmetadatabutonSmallbutton } = getDomElements();
+            const circle = editmetadatabutonSmallbutton.querySelector('.circle-indicator');
             if (circle) {
                 addBlackDot(circle);
             }
@@ -377,14 +420,14 @@ chrome.storage.local.get([
 
     function addFollowButton() {
         console.log("Run function addFollowButton()");
-        const existingButton = document.querySelector('div[class^="ShareButtons__Container"]')?.children[3]?.children[0];
-        const toolbarDiv = document.querySelector('div[class^="StickyContributorToolbar__Left"]');
-        const metadataButton = document.querySelector('button[class*="EditMetadataButton"]');
 
-        if (existingButton && toolbarDiv && metadataButton && !document.getElementById("follow-song-button")) {
+        const { sharebuttonsContainer, stickytoolbarLeft, editmetadatabutonSmallbutton } = getDomElements();
+        const existingButton = sharebuttonsContainer?.children[3];
+
+        if (existingButton && stickytoolbarLeft && editmetadatabutonSmallbutton && !document.getElementById("follow-song-button")) {
             const followButton = document.createElement('button');
             followButton.id = "follow-song-button";
-            followButton.className = metadataButton.className.replace("EditMetadataButton", "FollowButton");
+            followButton.className = editmetadatabutonSmallbutton.className.replace("EditMetadataButton", "FollowButton");
             followButton.type = 'button';
 
             function updateFollowButton() {
@@ -402,11 +445,76 @@ chrome.storage.local.get([
             const observer = new MutationObserver(updateFollowButton);
             observer.observe(existingButton, { attributes: true, childList: true, subtree: true });
 
-            toolbarDiv.appendChild(followButton);
+            stickytoolbarLeft.appendChild(followButton);
             followButton.style.float = 'right';
             followButton.style.maxWidth = 'fit-content';
         }
     }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                 SHELLY BUTTON                                  //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    function addShellyButton(songData) {
+        console.log("Run function addShellyButton()");
+
+        const { adminSpan } = getDomElements();
+        if (!adminSpan) return;
+
+        const dropdownContainer = adminSpan.closest('[class^="Dropdown__Container-"]');
+        if (!dropdownContainer) return;
+
+        const list = dropdownContainer.querySelector('[class^="StickyToolbarDropdown__DropdownItems-"]');
+        if (!list) return;
+
+        if (document.getElementById("shelly-cleanup-btn")) return;
+
+        const lyricsAreValidated = songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
+        if (lyricsAreValidated) return;
+
+        const existingButton = list.querySelector("button");
+        const existingLi = list.querySelector("li");
+        if (!existingButton || !existingLi) return;
+
+        const li = document.createElement("li");
+        li.className = existingLi.className;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.id = "shelly-cleanup-btn";
+        btn.textContent = "Shelly (Cleanup Bot)";
+        btn.className = existingButton.className;
+
+        btn.addEventListener("click", async () => {
+            const message = "⚠️ Are you absolutely sure you want to run 'Shelly The Cleanup Bot'?";
+            if (!confirm(message)) return;
+
+            const payload = {
+                text_format: "html,markdown",
+                react: true,
+                client_timestamps: {
+                    updated_by_human_at: songData.updated_by_human_at,
+                    lyrics_updated_at: songData.lyrics_updated_at
+                },
+                lyrics: {
+                    body: {
+                        html: "Page needs help... Paging ShellPageBot"
+                    }
+                }
+            };
+
+            await updateSongLyrics(songData, payload);
+
+            const toggle = dropdownContainer.querySelector('[class^="Dropdown__Toggle-"]');
+            toggle?.click();
+            main()
+        });
+
+        li.appendChild(btn);
+        list.appendChild(li);
+    }
+
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -477,6 +585,7 @@ chrome.storage.local.get([
 
         const labelCorrections = {
             //"Primary Artists": "Group Members",
+            "Trompeta": "Trumpet",
         };
 
         const updatedCustomPerformances = customPerformances.map(perf => {
@@ -496,50 +605,25 @@ chrome.storage.local.get([
     }
 
     function addCleanupButton(song, actionType, label, metadataUpdate) {
-        const toolbarDiv = document.querySelector('div[class^="StickyContributorToolbar__Left"]');
-        const metadataButton = document.querySelector('button[class*="EditMetadataButton"]');
 
-        if (!toolbarDiv || !metadataButton) return;
+        const { stickytoolbarLeft, editmetadatabutonSmallbutton } = getDomElements();
+
+        if (!stickytoolbarLeft || !editmetadatabutonSmallbutton) return;
 
         const actionButton = document.createElement('button');
-        actionButton.className = metadataButton.className.replace("EditMetadataButton", `${actionType}Button`);
+        actionButton.className = editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${actionType}Button`);
         actionButton.type = 'button';
         actionButton.textContent = label;
 
         actionButton.addEventListener('click', () => {
             updateSongMetadata(song, metadataUpdate);
             actionButton.style.display = 'none';
+            main();
         });
 
-        toolbarDiv.appendChild(actionButton);
+        stickytoolbarLeft.appendChild(actionButton);
     }
 
-    async function updateSongMetadata(song, updates) {
-        if (Object.keys(updates).length === 0) return;
-        try {
-            const updateResponse = await fetch(`https://genius.com/api/songs/${song.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cookie': document.cookie,
-                    'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-                },
-                body: JSON.stringify({ song: updates })
-            });
-
-            if (!updateResponse.ok) {
-                console.error(`Error updating song metadata: ${updateResponse.statusText}`);
-            }
-        } catch (error) {
-            console.error(`Error: ${error}`);
-        }
-    }
-
-    function getCsrfToken() {
-        const match = document.cookie.match(/_csrf_token=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    }
 
 
 
@@ -551,10 +635,13 @@ chrome.storage.local.get([
     function selectDropdown(songData, dropdownType) {
         console.log(`Run function selectDropdown() for ${dropdownType} dropdown`);
 
-        const toolbarDiv = document.querySelector('div[class^="StickyContributorToolbar__Left"]');
-        if (!toolbarDiv) return;
+        const { stickytoolbarLeft } = getDomElements();
+        if (!stickytoolbarLeft) return;
+
+        if (document.getElementById(`${dropdownType}-dropdown-container`)) return;
 
         const dropdownContainer = document.createElement('div');
+        dropdownContainer.id = `${dropdownType}-dropdown-container`;
         dropdownContainer.style.position = 'relative';
 
         const dropdownButton = document.createElement('button');
@@ -592,7 +679,7 @@ chrome.storage.local.get([
         dropdownSpan.append(dropdownText, arrowSpan);
         dropdownButton.appendChild(dropdownSpan);
         dropdownContainer.append(dropdownButton, dropdownMenu);
-        toolbarDiv.appendChild(dropdownContainer);
+        stickytoolbarLeft.appendChild(dropdownContainer);
 
         dropdownButton.addEventListener('click', e => {
             e.stopPropagation();
@@ -621,8 +708,8 @@ chrome.storage.local.get([
         });
 
         const toggleDropdownButton = () => {
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            dropdownContainer.style.display = textarea ? 'block' : 'none';
+            const { expandingtextareaTextarea } = getDomElements();
+            dropdownContainer.style.display = expandingtextareaTextarea ? 'block' : 'none';
         };
 
         const observer = new MutationObserver(() => requestAnimationFrame(toggleDropdownButton));
@@ -654,11 +741,14 @@ chrome.storage.local.get([
             { code: 'KO', value: 'ko', name: 'Korean' },
             { code: 'LA', value: 'la', name: 'Latin' },
             { code: 'LT', value: 'lt', name: 'Lithuanian' },
+            //{ code: 'MK', value: 'mk', name: 'Macedonian' },
             { code: 'MN', value: 'mn', name: 'Mongolian' },
             { code: 'NO', value: 'no', name: 'Norwegian' },
             { code: 'PL', value: 'pl', name: 'Polish' },
             { code: 'RU', value: 'ru', name: 'Russian' },
             { code: 'SC', value: 'sc', name: 'Sardinian' },
+            //{ code: 'SH-E', value: 'sr', name: 'Serbo-Croatian (ekavica)' },
+            //{ code: 'SH-I', value: 'bs', name: 'Serbo-Croatian (ijekavica)' },
             { code: 'SK', value: 'sk', name: 'Slovak' },
             { code: 'ES', value: 'es', name: 'Spanish' },
             { code: 'SV', value: 'sv', name: 'Swedish' },
@@ -811,19 +901,19 @@ chrome.storage.local.get([
         };
 
         const applyTextFormatting = (openTag, closeTag) => {
-            const textarea = document.querySelector('textarea[class*="TextEditor__TextArea"]');
-            if (!textarea) return;
+            const { texteditorTextarea } = getDomElements();
+            if (!texteditorTextarea) return;
 
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
+            const start = texteditorTextarea.selectionStart;
+            const end = texteditorTextarea.selectionEnd;
 
             if (start === end) {
-                textarea.setRangeText(openTag + closeTag, start, end, "end");
+                texteditorTextarea.setRangeText(openTag + closeTag, start, end, "end");
                 const cursor = start + openTag.length;
-                textarea.selectionStart = cursor;
-                textarea.selectionEnd = cursor;
+                texteditorTextarea.selectionStart = cursor;
+                texteditorTextarea.selectionEnd = cursor;
             } else {
-                let selected = textarea.value.substring(start, end);
+                let selected = texteditorTextarea.value.substring(start, end);
                 let trailing = "";
 
                 while (/[ \n\r]$/.test(selected)) {
@@ -831,10 +921,10 @@ chrome.storage.local.get([
                     selected = selected.slice(0, -1);
                 }
 
-                textarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
+                texteditorTextarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
             }
 
-            textarea.focus();
+            texteditorTextarea.focus();
         };
 
         const renderButtons = (container, buttons, classNameMapper, storedLanguage) => {
@@ -895,15 +985,15 @@ chrome.storage.local.get([
 
                 { label: "Horizontal Rule", openTag: "---", closeTag: "", hoverText: "Horizontal Rule" },
                 { label: "Em dash", openTag: "—", closeTag: "", hoverText: "Em dash" },
-                { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
+                //{ label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
             ];
 
-            const referenceButton = document.querySelector("button[class*='EditMetadataButton']");
+            const { editmetadatabutonSmallbutton } = getDomElements();
 
             renderButtons(
                 styleDiv,
                 styleButtons,
-                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`)
+                (name) => editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${name}Button`)
             );
 
             form.prepend(styleDiv);
@@ -913,9 +1003,10 @@ chrome.storage.local.get([
     function lyricsSectionsButtons(songData) {
         console.log("Run function lyricsSectionsButtons()");
 
-        const explainerElement = document.querySelector('div[class^="LyricsEditExplainer__Container-"]');
-        const referenceButton = document.querySelector('button[class*="EditMetadataButton"]');
-        if (!explainerElement || !referenceButton) return;
+        const { lyricseditexplainerContainer, editmetadatabutonSmallbutton } = getDomElements();
+        if (!lyricseditexplainerContainer || !editmetadatabutonSmallbutton) return;
+
+        if (document.getElementById("lyricsSectionsButtonsContainer") && document.getElementById("lyricsStyleButtonsContainer")) return;
 
         const isNonMusic = songData.primary_tag.name === "Non-Music";
 
@@ -969,43 +1060,46 @@ chrome.storage.local.get([
         };
 
         const insertTextAtCursor = (text) => {
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (textarea) {
-                const startPos = textarea.selectionStart;
-                const endPos = textarea.selectionEnd;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (expandingtextareaTextarea) {
+                const startPos = expandingtextareaTextarea.selectionStart;
+                const endPos = expandingtextareaTextarea.selectionEnd;
 
-                let beforeText = textarea.value.substring(0, startPos).trimEnd();
-                const afterText = textarea.value.substring(endPos);
+                let beforeText = expandingtextareaTextarea.value.substring(0, startPos).trimEnd();
+                const afterText = expandingtextareaTextarea.value.substring(endPos);
 
                 while (!beforeText.endsWith('\n\n')) {
                     beforeText += '\n';
                 }
 
-                textarea.value = beforeText + text + '\n' + afterText;
+                expandingtextareaTextarea.value = beforeText + text + '\n' + afterText;
 
                 const newCursorPos = beforeText.length + text.length + 1;
-                textarea.setSelectionRange(newCursorPos, newCursorPos);
-                textarea.focus();
+                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
+                expandingtextareaTextarea.focus();
 
-                textarea.value = textarea.value.replace(/^\s+/, '');
+                expandingtextareaTextarea.value = expandingtextareaTextarea.value.replace(/^\s+/, '');
+                expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
             }
         };
 
         function insertSeoHeader(songData, headerType, storedLanguage) {
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (!textarea) return;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (!expandingtextareaTextarea) return;
 
             const insertText = (text, position = "begin") => {
-                textarea.focus();
-                const currentText = textarea.value.trim();
+                expandingtextareaTextarea.focus();
+                const currentText = expandingtextareaTextarea.value.trim();
 
                 if (position === "begin" && !currentText.startsWith(text)) {
-                    textarea.value = text + "\n\n" + currentText;
-                    textarea.setSelectionRange(text.length + 2, text.length + 2);
+                    expandingtextareaTextarea.value = text + "\n\n" + currentText;
+                    expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    expandingtextareaTextarea.setSelectionRange(text.length + 2, text.length + 2);
                 }
 
                 if (position === "end" && !currentText.endsWith(text)) {
-                    textarea.value = currentText + "\n\n" + text;
+                    expandingtextareaTextarea.value = currentText + "\n\n" + text;
+                    expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             };
 
@@ -1039,6 +1133,28 @@ chrome.storage.local.get([
                 }
             }
 
+            // Round brackets
+            const hasOpening = songTitle.includes("(");
+            const hasClosing = songTitle.includes(")");
+
+            if (hasOpening && !hasClosing) {
+                songTitle = songTitle.replace(/\(/g, "&#40;");
+            } else if (!hasOpening && hasClosing) {
+                songTitle = songTitle.replace(/\)/g, "&#41;");
+            }
+
+            // Angle brackets
+            const hasLt = songTitle.includes("<") || songTitle.includes("˂");
+            const hasGt = songTitle.includes(">") || songTitle.includes("˃");
+
+            if (hasLt && !hasGt) {
+                songTitle = songTitle.replace(/[<˂]/g, "&lt;");
+            } else if (!hasLt && hasGt) {
+                songTitle = songTitle.replace(/[>˃]/g, "&gt;");
+            }
+
+
+
             // Clean artist names (Disambiguation)
             const primaryArtists = songData.primary_artists.map(a => cleanName(a.name));
             const featuredArtists = songData.featured_artists.map(a => {
@@ -1060,6 +1176,7 @@ chrome.storage.local.get([
             const textFormats = {
                 Header: {
                     'bg': `[Текст на песента "${songTitle}"${featuringText}]`,
+                    'bs': `[Tekst pjesme „${songTitle}”${featuringText}]`,
                     'ca': `[Lletra de "${songTitle}"${featuringText}]`,
                     'cs': `[Text skladby „${songTitle}“${featuringText}]`,
                     'da': `[Tekst til „${songTitle}“${featuringText}]`,
@@ -1074,6 +1191,7 @@ chrome.storage.local.get([
                     'it': `[Testo di "${songTitle}"${featuringText}]`,
                     'la': `[Lyricis "${songTitle}"${featuringText}]`,
                     'lt': `[Dainos žodžiai „${songTitle}”${featuringText}]`,
+                    'mk': `[Текст за песната „${songTitle}”${featuringText}]`,
                     'mn': `[«${songTitle}» Үгнүүд${featuringText}]`,
                     'nl': `[Songtekst van "${songTitle}"${featuringText}]`,
                     'no': `[Tekst til «${songTitle}»${featuringText}]`,
@@ -1082,6 +1200,7 @@ chrome.storage.local.get([
                     'sc': `[Testu de "${songTitle}"${featuringText}]`,
                     'sk': `[Text skladby „${songTitle}“${featuringText}]`,
                     'sq': `[Teksti i "${songTitle}"${featuringText}]`,
+                    'sr': `[Tekst pesme „${songTitle}”${featuringText}]`,
                     'tr': `["${songTitle}"${featuringText} için şarkı sözleri]`,
                     'uk': `[Текст пісні «${songTitle}»${featuringText}]`,
                     'uz': `[«${songTitle}» qoʻshigʻi matni${featuringText}]`,
@@ -1118,52 +1237,63 @@ chrome.storage.local.get([
         function insertPartHeader(fullText) {
             insertTextAtCursor(`<b>[${fullText}]</b>`);
 
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (textarea) {
-                const oldCursorPos = textarea.selectionStart;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (expandingtextareaTextarea) {
+                const oldCursorPos = expandingtextareaTextarea.selectionStart;
 
                 let i = 1;
-                const oldValue = textarea.value;
+                const oldValue = expandingtextareaTextarea.value;
 
                 const newValue = oldValue.replace(
                     new RegExp(`<b>\\[${fullText}(?: [IVXLCDM]+)?`, "g"),
                     () => `<b>[${fullText} ${convertToRoman(i++)}`
                 );
 
-                textarea.value = newValue;
+                expandingtextareaTextarea.value = newValue;
 
                 const diff = newValue.length - oldValue.length;
                 const newCursorPos = oldCursorPos + diff;
-                textarea.focus();
-                textarea.setSelectionRange(newCursorPos, newCursorPos);
+                expandingtextareaTextarea.focus();
+                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
             }
         }
 
         function insertVerseHeader(fullText) {
             insertTextAtCursor(`[${fullText}]`);
 
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (textarea) {
-                const oldCursorPos = textarea.selectionStart;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (expandingtextareaTextarea) {
+                const oldCursorPos = expandingtextareaTextarea.selectionStart;
 
-                const oldValue = textarea.value;
+                const oldValue = expandingtextareaTextarea.value;
 
                 const otherTags = ["Part", "Teil", "Część", "Часть", "Pjesa", "Kısım", "Qism"];
                 const sectionRegex = new RegExp(
                     `(<b>\\[(?:${otherTags.join('|')})(?: [IVXLCDM]+)?[^<]*<\\/b>)`,
                     "g"
                 );
-                const ownRegex = new RegExp(`\\[${fullText}(?: \\d+)?\\]`, "g");
+                const ownRegex = new RegExp(`\\[${fullText}(?: \\d+)?(?:: ([^\\]]+))?\\]`, "g");
 
                 const renumberTags = (text) => {
                     const matches = text.match(ownRegex);
+
                     if (matches && matches.length > 1) {
                         let i = 1;
-                        return text.replace(ownRegex, () => `[${fullText} ${i++}]`);
+                        return text.replace(ownRegex, (_, sub) => {
+                            return sub
+                                ? `[${fullText} ${i++}: ${sub}]`
+                                : `[${fullText} ${i++}]`;
+                        });
                     }
+
                     if (matches && matches.length === 1) {
-                        return text.replace(ownRegex, `[${fullText}]`);
+                        return text.replace(ownRegex, (_, sub) => {
+                            return sub
+                                ? `[${fullText}: ${sub}]`
+                                : `[${fullText}]`;
+                        });
                     }
+
                     return text;
                 };
 
@@ -1179,13 +1309,13 @@ chrome.storage.local.get([
                 }
 
                 updatedText += renumberTags(oldValue.substring(lastIndex));
-                textarea.value = updatedText;
+                expandingtextareaTextarea.value = updatedText;
 
                 const diff = updatedText.length - oldValue.length;
                 const newCursorPos = oldCursorPos + diff;
 
-                textarea.focus();
-                textarea.setSelectionRange(newCursorPos, newCursorPos);
+                expandingtextareaTextarea.focus();
+                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
             }
         }
 
@@ -1204,19 +1334,19 @@ chrome.storage.local.get([
         };
 
         const applyTextFormatting = (openTag, closeTag) => {
-            const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-            if (!textarea) return;
+            const { expandingtextareaTextarea } = getDomElements();
+            if (!expandingtextareaTextarea) return;
 
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
+            const start = expandingtextareaTextarea.selectionStart;
+            const end = expandingtextareaTextarea.selectionEnd;
 
             if (start === end) {
-                textarea.setRangeText(openTag + closeTag, start, end, "end");
+                expandingtextareaTextarea.setRangeText(openTag + closeTag, start, end, "end");
                 const cursor = start + openTag.length;
-                textarea.selectionStart = cursor;
-                textarea.selectionEnd = cursor;
+                expandingtextareaTextarea.selectionStart = cursor;
+                expandingtextareaTextarea.selectionEnd = cursor;
             } else {
-                let selected = textarea.value.substring(start, end);
+                let selected = expandingtextareaTextarea.value.substring(start, end);
                 let trailing = "";
 
                 while (/[ \n\r]$/.test(selected)) {
@@ -1224,28 +1354,125 @@ chrome.storage.local.get([
                     selected = selected.slice(0, -1);
                 }
 
-                textarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
+                expandingtextareaTextarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
             }
 
-            textarea.focus();
+            expandingtextareaTextarea.focus();
         };
 
         const renderButtons = (container, buttons, classNameMapper, storedLanguage) => {
-            buttons.forEach(({ label, openTag, closeTag, hoverText, fullText }) => {
+            buttons.forEach(item => {
+                const { label, openTag, closeTag, hoverText, fullText, isDropdown, items } = item;
                 const className = classNameMapper(hoverText || fullText);
-                const btn = createButton(label, hoverText, className);
 
-                btn.addEventListener("click", () => {
-                    if (openTag !== undefined) {
-                        applyTextFormatting(openTag, closeTag);
-                    } else {
-                        insertSectionHeader(fullText, hoverText, storedLanguage);
-                    }
-                });
+                const btn = isDropdown
+                    ? createDropdownButton(label, hoverText, className, items, storedLanguage)
+                    : createButton(label, hoverText, className);
+
+                if (!isDropdown) {
+                    btn.addEventListener("click", () => {
+                        if (openTag !== undefined) {
+                            applyTextFormatting(openTag, closeTag);
+                        } else {
+                            insertSectionHeader(fullText, hoverText, storedLanguage);
+                        }
+                    });
+                }
 
                 container.appendChild(btn);
             });
         };
+
+        function createDropdownButton(label, hoverText, className, items, storedLanguage) {
+            const wrapper = document.createElement("div");
+            wrapper.style.position = "relative";
+
+            const btn = document.createElement("button");
+            btn.title = hoverText;
+            btn.type = "button";
+            btn.className = className;
+
+            btn.style.display = "grid";
+            btn.style.gridTemplateColumns = "1fr auto";
+            btn.style.alignItems = "center";
+            btn.style.width = "100%";
+
+            const svgDown = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 7" width="8" height="6.21">
+                    <path d="M4.488 7 0 0h8.977L4.488 7Z"></path>
+                </svg>`;
+            const svgUp = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 8" width="8" height="6.21">
+                    <path d="M4.488.5 0 7.5h8.977L4.488.5Z"></path>
+                </svg>`;
+
+            const textSpan = document.createElement("span");
+            textSpan.textContent = label;
+            textSpan.style.justifySelf = "center";
+
+            const iconSpan = document.createElement("span");
+            iconSpan.innerHTML = svgDown;
+            iconSpan.style.justifySelf = "end";
+
+            btn.appendChild(textSpan);
+            btn.appendChild(iconSpan);
+
+            const menu = document.createElement("div");
+            menu.style.position = "absolute";
+            menu.style.top = "107.5%";
+            menu.style.background = "white";
+            menu.style.border = "1px solid #000000";
+            menu.style.padding = "0.25rem";
+            menu.style.display = "none";
+            menu.style.zIndex = "9999";
+            menu.style.borderRadius = "0.5rem";
+            menu.style.width = "100%";
+            menu.style.gridTemplateColumns = "repeat(auto-fit, minmax(1rem, 1fr))";
+            menu.style.gap = "0.125rem";
+
+            items.forEach(entry => {
+                const isObject = typeof entry === "object";
+
+                const label = isObject ? entry.label : entry;
+                const openTag = isObject ? entry.openTag : entry;
+                const closeTag = isObject ? entry.closeTag ?? "" : "";
+
+                const item = document.createElement("button");
+                item.textContent = label;
+
+                item.style.paddingTop = "0.25rem";
+                item.style.paddingBottom = "0.25rem";
+                item.style.cursor = "pointer";
+                item.style.borderRadius = "0.125rem";
+                item.style.fontSize = "0.75rem";
+
+                const isSymbolsDropdown = hoverText === "Symbols";
+                const wideSymbolsDefault = ["ZWSP", "NBSP", "„...“"];
+                const wideSymbolsDE = ["ZWSP", "THSP", "NBSP", "„...“", "–", "—"];
+
+                const wideList = storedLanguage === "de" ? wideSymbolsDE : wideSymbolsDefault;
+
+                if (isSymbolsDropdown && wideList.includes(label)) {
+                    item.style.gridColumn = "span 2";
+                }
+
+                item.addEventListener("click", () => {
+                    applyTextFormatting(openTag, closeTag);
+                });
+
+                menu.appendChild(item);
+            });
+
+            btn.addEventListener("click", () => {
+                const isClosed = menu.style.display === "none";
+                menu.style.display = isClosed ? "grid" : "none";
+                iconSpan.innerHTML = isClosed ? svgUp : svgDown;
+            });
+
+            wrapper.appendChild(btn);
+            wrapper.appendChild(menu);
+            return wrapper;
+        }
 
 
         if (!isNonMusic) {
@@ -1256,7 +1483,7 @@ chrome.storage.local.get([
             if (storedLanguage === "auto") storedLanguage = songData.language;
             if (!storedLanguage) return;
 
-            const LABELS = {
+            const HEADERS = {
                 "bg": { // Bulgarian
                     Default: [
                         { displayText: "Header", fullText: "Header", hoverText: "Header" },
@@ -1273,6 +1500,28 @@ chrome.storage.local.get([
                         { displayText: "Следприпев", fullText: "Следприпев", hoverText: "Post-Chorus" },
                         { displayText: "Рефрен", fullText: "Рефрен", hoverText: "Refrain" },
                         { displayText: "Мост", fullText: "Мост", hoverText: "Bridge" },
+                    ]
+                },
+                "bs": { // Serbian (Serbo-Croatian (ijekavica))
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Uvod", fullText: "Uvod", hoverText: "Intro" },
+                        { displayText: "Završetak", fullText: "Završetak", hoverText: "Outro" },
+                        { displayText: "Skeč", fullText: "Skeč", hoverText: "Skit" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Strofa", fullText: "Strofa", hoverText: "Verse" },
+                        { displayText: "Predrefren", fullText: "Predrefren", hoverText: "Pre-Chorus" },
+                        { displayText: "Refren", fullText: "Refren", hoverText: "Chorus" },
+                        { displayText: "Postrefren", fullText: "Postrefren", hoverText: "Post-Chorus" },
+                        { displayText: "Pripev", fullText: "Pripev", hoverText: "Refrain" },
+                        { displayText: "Most", fullText: "Most", hoverText: "Bridge" },
+                        { displayText: "Interludijum", fullText: "Interludijum", hoverText: "Interlude" },
+                        { displayText: "Pauza", fullText: "Pauza", hoverText: "Break" },
+                        { displayText: "Uzdizanje", fullText: "Uzdizanje", hoverText: "Build" },
+                        { displayText: "Drop", fullText: "Drop", hoverText: "Drop" }
                     ]
                 },
                 "ca": { // Catalan
@@ -1506,6 +1755,26 @@ chrome.storage.local.get([
                         { displayText: null, fullText: null, hoverText: null },
                     ]
                 },
+                "mk": { // Macedonian
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Увод", fullText: "Увод", hoverText: "Intro" },
+                        { displayText: "Завршеток", fullText: "Завршеток", hoverText: "Outro" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Строфа", fullText: "Строфа", hoverText: "Verse" },
+                        { displayText: "Предрефрен", fullText: "Предрефрен", hoverText: "Pre-Chorus" },
+                        { displayText: "Рефрен", fullText: "Рефрен", hoverText: "Chorus" },
+                        { displayText: "Пострефрен", fullText: "Пострефрен", hoverText: "Post-Chorus" },
+                        { displayText: "Рефрен", fullText: "Рефрен", hoverText: "Refrain" },
+                        { displayText: "Мост", fullText: "Мост", hoverText: "Bridge" },
+                        { displayText: "Пауза", fullText: "Пауза", hoverText: "Breakdown" },
+                        { displayText: "Инстр. пауза", fullText: "Инструментална пауза", hoverText: "Instrumental" },
+                    ]
+                },
                 "nl": { // Dutch
                     Default: [
                         { displayText: "Header", fullText: "Header", hoverText: "Header" },
@@ -1645,6 +1914,28 @@ chrome.storage.local.get([
                         { displayText: "Drop", fullText: "Drop", hoverText: "Drop" },
                     ]
                 },
+                "sr": { // Serbian (Serbo-Croatian (ekavica))
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Uvod", fullText: "Uvod", hoverText: "Intro" },
+                        { displayText: "Završetak", fullText: "Završetak", hoverText: "Outro" },
+                        { displayText: "Skeč", fullText: "Skeč", hoverText: "Skit" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Strofa", fullText: "Strofa", hoverText: "Verse" },
+                        { displayText: "Predrefren", fullText: "Predrefren", hoverText: "Pre-Chorus" },
+                        { displayText: "Refren", fullText: "Refren", hoverText: "Chorus" },
+                        { displayText: "Postrefren", fullText: "Postrefren", hoverText: "Post-Chorus" },
+                        { displayText: "Pripev", fullText: "Pripev", hoverText: "Refrain" },
+                        { displayText: "Most", fullText: "Most", hoverText: "Bridge" },
+                        { displayText: "Interludijum", fullText: "Interludijum", hoverText: "Interlude" },
+                        { displayText: "Pauza", fullText: "Pauza", hoverText: "Break" },
+                        { displayText: "Uzdizanje", fullText: "Uzdizanje", hoverText: "Build" },
+                        { displayText: "Drop", fullText: "Drop", hoverText: "Drop" }
+                    ]
+                },
                 "sv": { // Swedish
                     Default: [
                         { displayText: null, fullText: null, hoverText: null },
@@ -1773,7 +2064,7 @@ chrome.storage.local.get([
                 },
             };
 
-            const langLabels = LABELS[storedLanguage];
+            const langLabels = HEADERS[storedLanguage];
             const tagName = songData.primary_tag?.name;
             const buttonLabels = langLabels?.[tagName] || langLabels?.Default || [];
 
@@ -1784,33 +2075,147 @@ chrome.storage.local.get([
                     fullText: b.fullText,
                     hoverText: b.hoverText
                 })),
-                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`),
+                (name) => editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${name}Button`),
                 storedLanguage
             );
 
-            explainerElement.parentNode.insertBefore(headerDiv, explainerElement);
+            lyricseditexplainerContainer.parentNode.insertBefore(headerDiv, lyricseditexplainerContainer);
 
             // STYLE BUTTONS
             const styleDiv = createGridContainer("lyricsStyleButtonsContainer");
 
-            const styleButtons = [
-                { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
-                { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
-                { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
-                { label: null, openTag: null, closeTag: null, hoverText: null },
-                { label: "NBSP", openTag: "&nbsp;", closeTag: "", hoverText: "Non-Breaking Space" },
-                { label: "THSP", openTag: "&thinsp;", closeTag: "", hoverText: "Thin Space" },
-                { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "", hoverText: "Zero-width space" },
-            ];
+            const STYLES = {
+                default: [
+                    { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
+                    { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
+                    { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
+                    { label: null, openTag: null, closeTag: null, hoverText: null },
+                    {
+                        label: "Diacritics",
+                        isDropdown: true,
+                        hoverText: "Diacritics (uppercase)",
+                        items: [
+                            "Á", "À", "Â", "Ä",
+                            "É", "È", "Ê", "Ë",
+                            "Í", "Ì", "Î", "Ï",
+                            "Ó", "Ò", "Ô", "Ö",
+                            "Ú", "Ù", "Û", "Ü",
+                            "Ć", "Ń", "Ś", "Ź",
+                            "Č", "Ğ", "Š", "Ž",
+                            "Ç", "Ş", "I", "Ñ",
+                            "Đ", "Æ", "Œ", "ẞ",
+                        ]
+                    },
+                    {
+                        label: "Diacritics",
+                        isDropdown: true,
+                        hoverText: "Diacritics (lowercase)",
+                        items: [
+                            "á", "à", "â", "ä",
+                            "é", "è", "ê", "ë",
+                            "í", "ì", "î", "ï",
+                            "ó", "ò", "ô", "ö",
+                            "ú", "ù", "û", "ü",
+                            "ć", "ń", "ś", "ź",
+                            "č", "ğ", "š", "ž",
+                            "ç", "ş", "ı", "ñ",
+                            "đ", "æ", "œ", "ß",
+                        ]
+                    },
+                    {
+                        label: "Symbols",
+                        isDropdown: true,
+                        hoverText: "Symbols",
+                        items: [
+                            { label: "(", openTag: "&#40;", closeTag: "" },
+                            { label: ")", openTag: "&#41;", closeTag: "" },
+                            { label: "<", openTag: "&lt;", closeTag: "" },
+                            { label: ">", openTag: "&gt;", closeTag: "" },
+                            { label: "–", openTag: "–", closeTag: "" },
+                            { label: "—", openTag: "—", closeTag: "" },
+                            { label: "„...“", openTag: "„", closeTag: "“" },
+                            { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "" },
+                            { label: "NBSP", openTag: "&nbsp;", closeTag: "" },
+                        ]
+                    }
+                ],
+
+                de: {
+                    Default: [
+                        { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
+                        { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
+                        { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
+                        { label: null, openTag: null, closeTag: null, hoverText: null },
+
+                        { label: "(<i>Italic</i>)", openTag: "(<i>", closeTag: "</i>)", hoverText: "(<i></i>)" },
+                        { label: "(<b>Bold</b>)", openTag: "(<b>", closeTag: "</b>)", hoverText: "(<b></b>)" },
+                        { label: "(<b><i>Italic + Bold</i></b>)", openTag: "(<b><i>", closeTag: "</i></b>)", hoverText: "(<b><i></i></b>)" },
+                        { label: null, openTag: null, closeTag: null, hoverText: null },
+
+                        {
+                            label: "Diacritics",
+                            isDropdown: true,
+                            hoverText: "Diacritics (uppercase)",
+                            items: [
+                                "Á", "À", "Â", "Ä",
+                                "É", "È", "Ê", "Ë",
+                                "Í", "Ì", "Î", "Ï",
+                                "Ó", "Ò", "Ô", "Ö",
+                                "Ú", "Ù", "Û", "Ü",
+                                "Ć", "Ń", "Ś", "Ź",
+                                "Č", "Ğ", "Š", "Ž",
+                                "Ç", "Ş", "I", "Ñ",
+                                "Đ", "Æ", "Œ", "ẞ",
+                            ]
+                        },
+                        {
+                            label: "Diacritics",
+                            isDropdown: true,
+                            hoverText: "Diacritics (lowercase)",
+                            items: [
+                                "á", "à", "â", "ä",
+                                "é", "è", "ê", "ë",
+                                "í", "ì", "î", "ï",
+                                "ó", "ò", "ô", "ö",
+                                "ú", "ù", "û", "ü",
+                                "ć", "ń", "ś", "ź",
+                                "č", "ğ", "š", "ž",
+                                "ç", "ş", "ı", "ñ",
+                                "đ", "æ", "œ", "ß",
+                            ]
+                        },
+                        {
+                            label: "Symbols",
+                            isDropdown: true,
+                            hoverText: "Symbols",
+                            items: [
+                                { label: "(", openTag: "&#40;", closeTag: "" },
+                                { label: ")", openTag: "&#41;", closeTag: "" },
+                                { label: "<", openTag: "&lt;", closeTag: "" },
+                                { label: ">", openTag: "&gt;", closeTag: "" },
+                                { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "" },
+                                { label: "–", openTag: "–", closeTag: "" },
+                                { label: "THSP", openTag: "&thinsp;", closeTag: "" },
+                                { label: "—", openTag: "—", closeTag: "" },
+                                { label: "NBSP", openTag: "&nbsp;", closeTag: "" },
+                                { label: "„...“", openTag: "„", closeTag: "“" },
+                            ]
+                        }
+                    ]
+                },
+            };
+
+            const langStyleButtons = STYLES[storedLanguage];
+            const styleButtons = langStyleButtons?.Default || STYLES.default;
 
             renderButtons(
                 styleDiv,
                 styleButtons,
-                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`),
+                (name) => editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${name}Button`),
                 storedLanguage
             );
 
-            explainerElement.parentNode.insertBefore(styleDiv, explainerElement);
+            lyricseditexplainerContainer.parentNode.insertBefore(styleDiv, lyricseditexplainerContainer);
 
         } else {
             // NON-MUSIC STYLE BUTTONS
@@ -1887,19 +2292,20 @@ chrome.storage.local.get([
             renderButtons(
                 styleDiv,
                 styleButtons,
-                (name) => referenceButton.className.replace("EditMetadataButton", `${name}Button`)
+                (name) => editmetadatabutonSmallbutton.className.replace("EditMetadataButton", `${name}Button`)
             );
 
-            explainerElement.parentNode.insertBefore(styleDiv, explainerElement);
+            lyricseditexplainerContainer.parentNode.insertBefore(styleDiv, lyricseditexplainerContainer);
         }
     }
 
     function lyricsCleanupLogic(cleanupType) {
-        const textarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea"]');
-        if (textarea) {
-            const originalText = textarea.value;
+        const { expandingtextareaTextarea } = getDomElements();
 
-            let text = textarea.value;
+        if (expandingtextareaTextarea) {
+            const originalText = expandingtextareaTextarea.value;
+
+            let text = expandingtextareaTextarea.value;
 
             const storedLanguage = localStorage.getItem("selectedLanguage");
 
@@ -2130,16 +2536,693 @@ chrome.storage.local.get([
                 return line;
             });
 
-            textarea.value = processedLines.join('\n');
+            expandingtextareaTextarea.value = processedLines.join('\n');
 
             document.addEventListener('keydown', (event) => {
                 if (event.ctrlKey && event.shiftKey && event.key === 'Z') {
-                    textarea.value = originalText;
+                    expandingtextareaTextarea.value = originalText;
                 }
             });
         }
     }
 
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                RECENT ACTIVITY                                 //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    const arrowSvgClosed = createArrowSvg('M4.488 7 0 0h8.977L4.488 7Z');
+    const arrowSvgOpen = createArrowSvg('M4.488.5 0 7.5h8.977L4.488.5Z');
+
+    function createArrowSvg(pathData) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 9 7');
+        svg.setAttribute('width', '8');
+        svg.setAttribute('height', '6.21');
+        svg.style.display = "block";
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        svg.appendChild(path);
+
+        return svg;
+    }
+
+    const ICONS = {
+        svgUpvoted: `
+            <svg data-icon-upvoted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.62 21.36">
+                <path d="M16.52 21.29H6V8.5l.84-.13a3.45 3.45 0 0 0 1.82-1.09 13.16 13.16 0 0 0 .82-1.85c1.06-2.69 2-4.78 3.52-5.31a2.06 2.06 0 0 1 1.74.17c2.5 1.42 1 5 .16 6.95-.11.27-.25.6-.31.77a.78.78 0 0 0 .6.36h4.1a2.29 2.29 0 0 1 2.37 2.37c0 .82-1.59 5.4-2.92 9.09a2.39 2.39 0 0 1-2.22 1.46zm-8.52-2h8.56a.48.48 0 0 0 .31-.17c1.31-3.65 2.73-7.82 2.79-8.44 0-.22-.1-.32-.37-.32h-4.1A2.61 2.61 0 0 1 12.54 8 4.29 4.29 0 0 1 13 6.46c.45-1.06 1.64-3.89.7-4.43-.52 0-1.3 1.4-2.38 4.14a10 10 0 0 1-1.13 2.38A5.28 5.28 0 0 1 8 10.11zM0 8.4h4.86v12.96H0z"></path>
+            </svg>`,
+        svgDownvoted: `
+            <svg data-icon-downvoted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.62 21.36">
+                <path d="M8 21.36a2.12 2.12 0 0 1-1.06-.29c-2.5-1.42-1-5-.16-6.95.11-.27.25-.6.31-.77a.78.78 0 0 0-.6-.36H2.37A2.29 2.29 0 0 1 0 10.64c0-.82 1.59-5.4 2.92-9.09A2.39 2.39 0 0 1 5.1.07h10.56v12.79l-.84.13A3.45 3.45 0 0 0 13 14.08a13.16 13.16 0 0 0-.82 1.85c-1.06 2.69-2 4.79-3.49 5.31a2.06 2.06 0 0 1-.69.12zM5.1 2.07a.48.48 0 0 0-.31.17C3.48 5.89 2.07 10.06 2 10.68c0 .22.1.32.37.32h4.1a2.61 2.61 0 0 1 2.61 2.4 4.29 4.29 0 0 1-.48 1.51c-.46 1.09-1.65 3.89-.7 4.42.52 0 1.3-1.4 2.38-4.14a10 10 0 0 1 1.13-2.38 5.27 5.27 0 0 1 2.25-1.56V2.07zM16.76 0h4.86v12.96h-4.86z"></path>
+            </svg>`,
+        svgPinned: `
+            <svg data-icon-pinned width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.82 22">
+                <path d="M21.82 20.62L17 15.83l3.59-3.59-3.04-3.07-3.36.12-4.1-4.1v-3L7.91 0 0 7.91l2.16 2.16 2.84.18 4.1 4.12-.1 3.36 3.08 3.08 3.59-3.59L20.43 22zM11 16.94l.12-3.36-5.27-5.24L3 8.16l-.25-.25 5.16-5.14.22.23v3l5.27 5.27 3.36-.12 1.09 1.09L12.06 18z"></path>
+            </svg>`,
+        svgUnpinned: `
+            <svg data-icon-unpinned width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.82 22">
+                <path d="M21.82 20.62L17 15.83l3.59-3.59-3.04-3.07-3.36.12-4.1-4.1v-3L7.91 0 0 7.91l2.16 2.16 2.84.18 4.1 4.12-.1 3.36 3.08 3.08 3.59-3.59L20.43 22zM11 16.94l.12-3.36-5.27-5.24L3 8.16l-.25-.25 5.16-5.14.22.23v3l5.27 5.27 3.36-.12 1.09 1.09L12.06 18z"></path>
+            </svg>`,
+        svgLocked: `
+            <svg data-icon-locked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17.08 22">
+                <path d="M15.08 10.86V20H2v-9.14h13.08M8.54 0a6.31 6.31 0 0 0-6.31 6.31v2.55H0V22h17.08V8.86h-2.23V6.31A6.31 6.31 0 0 0 8.54 0zM4.63 8.86V6.31a3.91 3.91 0 0 1 7.81 0v2.55z"></path>
+            </svg>`,
+        svgUnlocked: `
+            <svg data-icon-unlocked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16.56 22">
+                <path d="M14.56 11.26V20H2v-8.74h12.56M8.28 0a6.12 6.12 0 0 0-6.12 6.12v3.14H0V22h16.56V9.26H4.49V6.12a3.79 3.79 0 0 1 7.58 0h2.33A6.12 6.12 0 0 0 8.28 0z"></path>
+            </svg>`,
+        svgAccepted: `
+            <svg data-icon-accepted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 16.2">
+                <path d="M8.83 16.2L0 7.97l2.06-2.21 6.62 6.17L19.79 0 22 2.06 8.83 16.2"></path>
+            </svg>`,
+        svgRejected: `
+            <svg data-icon-deleted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
+                <path d="M22 1.39L20.61 0 11 9.62 1.39 0 0 1.39 9.62 11 0 20.61 1.39 22 11 12.38 20.61 22 22 20.61 12.38 11 22 1.39"></path>
+            </svg>`,
+        svgRecognized: `
+            <svg data-icon-recognized width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17.4 22">
+                <path d="M15.47 1.92v18.16H1.92V1.92h13.55M17.4 0H0v22h17.4V0z"></path>
+                <path d="M5.11 6.45h7.82v1.44H5.11zm0 8.1h7.82v1.44H5.11zm0-4.05h7.82v1.44H5.11z"></path>
+            </svg>`,
+        svgMerged: `
+            <svg data-icon-merged width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18.59 22">
+                <path d="M16.76 5.87v14.3H6.22V5.87h10.54M18.59 4H4.39v18h14.2V4z"></path>
+                <path d="M7.73 8.45h7.44V9.9H7.73zm0 7.7h7.44v1.45H7.73zm0-3.85h7.44v1.45H7.73z"></path>
+                <path d="M3.45 19.89H0V0h16.13v3.12H14.2V1.93H1.93v16.03h1.52v1.93"></path>
+            </svg>`,
+        svgCreated: `
+            <svg data-icon-created width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">
+                <path d="M15 10.47h1.7v4.3h-4.4v-3.75c0-2.78.63-5.3 4.39-5.52v2.22c-1.26 0-1.69.88-1.69 2.75zm-7 0h1.7v4.3H5.3v-3.75c0-2.78.63-5.3 4.39-5.52v2.22C8.43 7.72 8 8.6 8 10.47z"></path>
+                <path d="M20.09 1.91v18.18H1.91V1.91h18.18M22 0H0v22h22V0z"></path>
+            </svg>`,
+        svgEdited: `
+            <svg data-icon-edited width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 19">
+                <path d="M17.51 5.827c.654-.654.654-1.636 0-2.29L14.563.59c-.655-.655-1.637-.655-2.291 0L0 12.864V18.1h5.236L17.51 5.827Zm-4.092-4.09 2.946 2.945-2.455 2.454-2.945-2.945 2.454-2.455ZM1.636 16.463v-2.946l8.182-8.182 2.946 2.946-8.182 8.182H1.636Z"></path>
+            </svg>`,
+        svgSuggested: `
+            <svg data-icon-added_a_suggestion_to width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21.2 22">
+                <path d="M19.29 1.91v11.46H7.69l-.57.7L5 16.64v-3.27H1.91V1.91h17.38M21.2 0H0v15.28h3.12V22l5.48-6.72h12.6V0z"></path>
+                <path d="M4.14 4.29h12.93V6.2H4.14zm0 4.09h12.93v1.91H4.14z"></path>
+            </svg>`,
+        svgFollowed: `
+            <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 15.45">
+                <path d="M11 2c4 0 7.26 3.85 8.6 5.72-1.34 1.87-4.6 5.73-8.6 5.73S3.74 9.61 2.4 7.73C3.74 5.86 7 2 11 2m0-2C4.45 0 0 7.73 0 7.73s4.45 7.73 11 7.73 11-7.73 11-7.73S17.55 0 11 0z"></path>
+                <path d="M11 5a2.73 2.73 0 1 1-2.73 2.73A2.73 2.73 0 0 1 11 5m0-2a4.73 4.73 0 1 0 4.73 4.73A4.73 4.73 0 0 0 11 3z"></path>
+            </svg>`,
+        svgHid: `
+            <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 15.45">
+                <path d="M11 2c4 0 7.26 3.85 8.6 5.72-1.34 1.87-4.6 5.73-8.6 5.73S3.74 9.61 2.4 7.73C3.74 5.86 7 2 11 2m0-2C4.45 0 0 7.73 0 7.73s4.45 7.73 11 7.73 11-7.73 11-7.73S17.55 0 11 0z"></path>
+                <path d="M11 5a2.73 2.73 0 1 1-2.73 2.73A2.73 2.73 0 0 1 11 5m0-2a4.73 4.73 0 1 0 4.73 4.73A4.73 4.73 0 0 0 11 3z"></path>
+                <path d="M0 14.45 L1.8 15.45 L22 1 L20.2 0 Z"></path>
+            </svg>`,
+        svgPyonged: `
+            <svg data-icon-pyonged width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11.37 22">
+                <path d="M0 7l6.16-7 3.3 7H6.89S5.5 12.1 5.5 12.17h5.87L6.09 22l.66-7H.88l2.89-8z"></path>
+            </svg>`,
+        svgPageviews: `
+            <svg data-icon-pageviews width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 18">
+                <path d="M3.33494 0C3.33494 0 4.09484 1.88505 3.82154 4.2567C3.54779 6.62835 0.236392 9.669 0.250042 12.6792C0.263692 15.6894 5.14004 18 5.14004 18C5.14004 18 4.03634 16.0332 5.97389 12.7953C5.97389 12.7953 8.21519 14.3668 7.98599 15.7594C7.74464 17.2239 6.60914 18 6.60914 18C6.60914 18 13.4295 17.1792 13.4899 11.676C13.551 6.1722 9.49469 2.73315 9.49469 2.73315C9.49469 2.73315 9.94184 4.95165 8.72384 6.97485C8.72384 6.97485 5.67599 0.7605 3.33494 0ZM5.38739 4.30215C6.08369 5.3508 6.77669 6.5532 7.32239 7.66335L8.58509 10.2348L10.0626 7.78005C10.285 7.4103 10.4641 7.0371 10.6069 6.66915C11.3284 7.9623 11.9508 9.6618 11.9287 11.6584C11.9079 13.524 10.786 14.681 9.55904 15.3902C9.44159 13.4235 7.33139 11.8395 6.87059 11.5164L5.49629 10.5534L4.63394 11.9932C3.95714 13.1242 3.58724 14.1443 3.40754 15.03C2.53679 14.3027 1.81514 13.4493 1.81199 12.672C1.80614 11.4366 2.69579 9.9708 3.55619 8.5536C4.40819 7.1514 5.21219 5.8263 5.37299 4.4358C5.37824 4.39095 5.38274 4.34625 5.38739 4.30215Z"></path>
+            </svg>`,
+
+
+
+
+        svgMarked: `
+            <svg data-icon-marked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="64 0 20 20">
+                <circle cx="74" cy="10" r="9"></circle>
+            </svg>`,
+        svgVerified: `
+            <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 11">
+                <path d="M0 0h11v11H0z"></path>
+                <path fill="#FFF" d="M4.764 5.9l-2-2L1.35 5.314l3.414 3.414 4.914-4.914L8.264 2.4"></path>
+            </svg>`,
+        svgGenius: `
+            <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <g transform="scale(0.95) translate(0.63,0.63)">
+                    <path d="M12.897 1.235c-.36.001-.722.013-1.08.017-.218-.028-.371.225-.352.416-.035 1.012.023 2.025-.016 3.036-.037.841-.555 1.596-1.224 2.08-.5.345-1.118.435-1.671.663.121.78.434 1.556 1.057 2.07 1.189 1.053 3.224.86 4.17-.426.945-1.071.453-2.573.603-3.854.286-.48.937-.132 1.317-.49-.34-1.249-.81-2.529-1.725-3.472a11.125 11.125 0 00-1.08-.04zm-10.42.006C.53 2.992-.386 5.797.154 8.361c.384 2.052 1.682 3.893 3.45 4.997.134-.23.23-.476.09-.73-.95-2.814-.138-6.119 1.986-8.19.014-.986.043-1.976-.003-2.961l-.188-.214c-1.003-.051-2.008 0-3.01-.022zm17.88.055l-.205.356c.265.938.6 1.862.72 2.834.58 3.546-.402 7.313-2.614 10.14-1.816 2.353-4.441 4.074-7.334 4.773-2.66.66-5.514.45-8.064-.543-.068.079-.207.237-.275.318 2.664 2.629 6.543 3.969 10.259 3.498 3.075-.327 5.995-1.865 8.023-4.195 1.935-2.187 3.083-5.07 3.125-7.992.122-3.384-1.207-6.819-3.636-9.19z"></path>
+                </g>
+            </svg>`,
+    }
+
+    function filterRecentActivity(profilePath) {
+        console.log("Run function filterRecentActivity()");
+
+        const { svgUpvoted, svgDownvoted, svgPinned, svgUnpinned, svgLocked, svgUnlocked, svgAccepted, svgRejected, svgRecognized, svgMerged, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgMarked, svgVerified, svgGenius } = ICONS;
+
+        const FILTERS = [
+            { key: "metadata", label: "METADATA", color: "#000000", svg: svgGenius },
+            { key: "annotations", label: "ANNOTATIONS", color: "#000000", svg: svgGenius },
+            { key: "votes", label: "VOTES", color: "#000000", svg: svgGenius },
+            { key: "lyrics", label: "LYRICS", color: "#000000", svg: svgGenius },
+            { key: "q_and_a", label: "Q&A", color: "#000000", svg: svgGenius },
+            { key: "other", label: "OTHER", color: "#000000", svg: svgGenius },
+        ];
+
+        const SUBFILTERS = {
+            votes: [
+                { key: "votes__upvoted", label: "Upvotes", regex: /.*? upvoted/i, color: "#0ecb27", svg: svgUpvoted },
+                { key: "votes__downvoted", label: "Downvotes", regex: /.*? downvoted/i, color: "#ff1414", svg: svgDownvoted },
+            ],
+
+            other: [
+                { key: "other__locked", label: "Locked / Unlocked", regex: /.*? (locked|unlocked)/i, color: "#9a9a9a", svg: svgLocked },
+                { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: svgHid },
+                { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: svgFollowed },
+                { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: svgPyonged },
+                { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#9a9a9a", svg: svgPageviews },
+            ],
+
+            q_and_a: [
+                { key: "q_and_a__edited", label: "Q&A Edits", regex: /.*? edited .*?(question|answer) on/i, color: "#9a9a9a", svg: svgEdited },
+                { key: "q_and_a__asked_answered", label: "Asked / Answered", regex: /.*?(asked a question|answered a question) on/i, color: "#9a9a9a", svg: svgCreated },
+                { key: "q_and_a__pinned_unpinned", label: "Pinned / Unpinned", regex: /.*? (pinned|unpinned) .*? question on/i, color: "#0ecb27", svg: svgPinned },
+                { key: "q_and_a__archived_cleared", label: "Archived / Cleared", regex: /.*?(archived .*? question|cleared .*? answer) on/i, color: "#ff1414", svg: svgRejected }
+            ],
+
+            annotations: [
+                { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked an annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: svgCreated },
+                { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: svgCreated },
+                { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion)/i, color: "#9a9a9a", svg: svgSuggested },
+            ],
+
+            lyrics: [
+                { key: "lyrics__edited_lyrics", label: "Lyric edits", regex: /.*? edited the lyrics of/i, color: "#9a9a9a", svg: svgEdited },
+                { key: "lyrics__lep", label: "Lyric edit proposals", regex: /.*? (rejected .*?|created a|accepted .*?|automatically archived .*?) lyrics edit proposal on/i, color: "#9a9a9a", svg: svgEdited },
+                { key: "lyrics__marked", label: "Marked real", regex: /.*?(marked as a real song|thanks! we've been looking for the lyrics to)/i, color: "#38ef51", svg: svgRecognized },
+                { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#38ef51", svg: svgVerified },
+                { key: "lyrics__complete", label: "(Un)completed lyrics", regex: /.*? (marked|un-?marked) the lyrics complete on/i, color: "#0ecb27", svg: svgAccepted }
+            ],
+
+            metadata: [
+                { key: "metadata__edited_metadata", label: "Metadata edits", regex: /.*? edited the metadata of/i, color: "#9a9a9a", svg: svgEdited },
+                { key: "metadata__created", label: "Song creation", regex: /.*? created$/i, color: "#9a9a9a", svg: svgCreated }
+            ]
+        };
+
+        const ALL_SUBFILTERS = Object.values(SUBFILTERS).flat();
+
+        const STORAGE_KEY = "geniusRecentActivityFilters";
+
+        let savedStates = {
+            filters: {},
+            userText: ""
+        };
+
+        let currentUIState = {
+            checkboxes: null,
+            userInput: null
+        };
+
+        let filterInitialized = false;
+        let iframeObserverInitialized = false;
+
+
+        function saveStateToStorage() {
+            if (!isGeniusSongSaveFilters) return;
+
+            chrome.storage.local.set({
+                [STORAGE_KEY]: {
+                    filters: savedStates.filters,
+                    userText: savedStates.userText
+                }
+            });
+        }
+
+        function loadStateFromStorage(callback) {
+            if (!isGeniusSongSaveFilters) {
+                callback();
+                return;
+            }
+
+            chrome.storage.local.get(STORAGE_KEY, data => {
+                if (data && data[STORAGE_KEY]) {
+                    const stored = data[STORAGE_KEY];
+                    savedStates.filters = stored.filters || {};
+                    savedStates.userText = stored.userText || "";
+                }
+                callback();
+            });
+        }
+
+
+        function filterItems(items, filters, userText) {
+            let username = userText?.trim().toLowerCase();
+
+            if (username && profilePath) {
+                const normalizedProfilePath = profilePath.replace(/^\//, "").trim().toLowerCase();
+                if (username === normalizedProfilePath) {
+                    username = "you";
+                }
+            }
+
+            const usernameRegex = username ? new RegExp(`\\b${username}\\b`, "i") : null;
+
+            items.forEach(item => {
+                let visible = true;
+
+                const span = item.querySelector('.inbox_line_item-content span');
+                if (!span) return;
+
+                const clone = span.cloneNode(true);
+                clone.querySelectorAll(
+                    "em, .inbox_line_item-content-note, [ng-bind-html]"
+                ).forEach(el => el.remove());
+
+                const text = clone.innerText
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, " ");
+
+                const match = ALL_SUBFILTERS.find(sf => sf.regex.test(text));
+
+                if (match) {
+                    const enabled = filters[match.key] ?? true;
+                    if (!enabled) visible = false;
+                }
+
+                if (visible && filters.user && usernameRegex) {
+                    if (!usernameRegex.test(text)) visible = false;
+                }
+
+                const inboxItem = item.closest("inbox-line-item");
+                if (inboxItem) {
+                    inboxItem.style.display = visible ? "" : "none";
+                }
+            });
+        }
+
+        function getActivityItems() {
+            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
+            if (!iframe) return null;
+
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!doc) return null;
+
+            return doc.querySelectorAll('div[class^="feed_dropdown-item"]');
+        }
+
+        function applyActivityFilter(checkboxes, userInput) {
+            const states = {};
+            checkboxes.forEach(cb => {
+                states[cb.dataset.filter] = cb.checked;
+            });
+
+            savedStates.filters = { ...savedStates.filters, ...states };
+            savedStates.userText = userInput.value;
+            saveStateToStorage();
+
+            const items = getActivityItems();
+            if (!items) return;
+
+            filterItems(items, savedStates.filters, savedStates.userText);
+        }
+
+        function applyActivityFilterFromState() {
+            if (!currentUIState.checkboxes || !currentUIState.userInput) return;
+            applyActivityFilter(
+                currentUIState.checkboxes,
+                currentUIState.userInput
+            );
+        }
+
+        function applyActivityFilterFromSavedState() {
+            const items = getActivityItems();
+            if (!items) return;
+
+            filterItems(items, savedStates.filters, savedStates.userText);
+        }
+
+
+        function flexRow(el) {
+            el.style.display = "flex";
+            el.style.alignItems = "center";
+            el.style.gap = "6px";
+            el.style.cursor = "pointer";
+        }
+
+        function createIconSpan(key, svg) {
+            const span = document.createElement("span");
+            span.dataset.icon = key;
+            span.style.display = "inline-flex";
+            span.innerHTML = svg;
+            return span;
+        }
+
+        function updateIconColors(dropdown, FILTERS) {
+            FILTERS.forEach(f => {
+                const cb = dropdown.querySelector(`input[data-filter="${f.key}"]`);
+                const icon = dropdown.querySelector(`[data-icon="${f.key}"] svg`);
+                if (cb && icon) icon.setAttribute("fill", cb.checked ? f.color : "#ddd");
+            });
+
+            ALL_SUBFILTERS.forEach(sf => {
+                const cb = dropdown.querySelector(`input[data-filter="${sf.key}"]`);
+                const icon = dropdown.querySelector(`[data-icon="${sf.key}"] svg`);
+                if (cb && icon) icon.setAttribute("fill", cb.checked ? sf.color : "#ddd");
+            });
+
+            const userCb = dropdown.querySelector('input[data-filter="user"]');
+            const userIcon = dropdown.querySelector('[data-icon="user"] svg');
+            if (userIcon && userCb) userIcon.setAttribute("fill", userCb.checked ? "#000" : "#ddd");
+        }
+
+
+        function createFilterGrid(FILTERS, svgGenius) {
+            const grid = document.createElement("div");
+            grid.style.display = "grid";
+            grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+            grid.style.gap = "6px 12px";
+            grid.style.marginBottom = "10px";
+
+            FILTERS.forEach(f => {
+                const wrapper = document.createElement("div");
+                wrapper.className = "filter-category";
+
+                const masterLabel = document.createElement("label");
+                flexRow(masterLabel);
+                masterLabel.style.fontWeight = "600";
+
+                const masterCb = document.createElement("input");
+                masterCb.type = "checkbox";
+                masterCb.dataset.filter = f.key;
+                masterCb.classList.add("master-filter");
+                masterCb.style.display = "none";
+
+                const masterIcon = createIconSpan(f.key, f.svg);
+
+                masterLabel.appendChild(masterCb);
+                masterLabel.appendChild(masterIcon);
+                masterLabel.append(f.label);
+
+                wrapper.appendChild(masterLabel);
+
+                const sub = document.createElement("div");
+                sub.className = "subfilters";
+
+
+                SUBFILTERS[f.key].forEach(sf => {
+                    const subLabel = document.createElement("label");
+                    flexRow(subLabel);
+                    subLabel.style.fontSize = "0.9em"
+                        ;
+                    const subCb = document.createElement("input");
+                    subCb.type = "checkbox";
+                    subCb.dataset.filter = sf.key;
+                    subCb.classList.add("subfilter");
+                    subCb.style.display = "none";
+
+                    const subIcon = createIconSpan(sf.key, sf.svg);
+
+                    subLabel.appendChild(subCb);
+                    subLabel.appendChild(subIcon);
+                    subLabel.append(sf.label);
+
+                    sub.appendChild(subLabel);
+                });
+
+                wrapper.appendChild(sub);
+                grid.appendChild(wrapper);
+            });
+
+
+            const userWrapper = document.createElement("div");
+            userWrapper.className = "filter-category";
+            userWrapper.style.gridColumn = "1 / span 3";
+
+            const userLabel = document.createElement("label");
+            userLabel.style.display = "flex";
+            userLabel.style.alignItems = "center";
+            userLabel.style.gap = "6px";
+            userLabel.style.cursor = "pointer";
+
+            const userCb = document.createElement("input");
+            userCb.type = "checkbox";
+            userCb.dataset.filter = "user";
+            userCb.classList.add("master-filter");
+            userCb.style.display = "none";
+
+            const userIcon = createIconSpan("user", svgGenius);
+
+            const userText = document.createElement("span");
+            userText.textContent = "USER";
+            userText.style.fontWeight = "600";
+
+            const userInput = document.createElement("input");
+            userInput.id = "activity-filter-text";
+            userInput.placeholder = "User name";
+            userInput.style.flex = "1";
+            userInput.style.padding = "6px";
+            userInput.style.border = "1px solid #ccc";
+            userInput.style.borderRadius = "4px";
+
+            userLabel.appendChild(userCb);
+            userLabel.appendChild(userIcon);
+            userLabel.appendChild(userText);
+            userLabel.appendChild(userInput);
+
+            userWrapper.appendChild(userLabel);
+            grid.appendChild(userWrapper);
+            return grid;
+        }
+
+        function addActivityFilterButton() {
+            const title = document.querySelector('[class^="RecentActivity__Title"]');
+            if (!title) return;
+
+            if (document.getElementById("filter-activity-button")) return;
+
+            const referenceButton = document.querySelector('button[class^="SmallButton__Container"]');
+            if (!referenceButton) return;
+
+            const parent = title.parentNode;
+
+            let wrapper = parent.querySelector('.activity-filter-wrapper');
+            if (!wrapper) {
+                wrapper = document.createElement('div');
+                wrapper.className = "activity-filter-wrapper";
+                wrapper.style.display = 'flex';
+                wrapper.style.alignItems = 'center';
+                wrapper.style.justifyContent = 'center';
+                wrapper.style.position = 'relative';
+                parent.insertBefore(wrapper, title);
+                wrapper.appendChild(title);
+            }
+
+            const controlContainer = document.createElement("div");
+            controlContainer.style.position = "absolute";
+            controlContainer.style.right = "0";
+            controlContainer.style.top = "25%";
+            controlContainer.style.transform = "translateY(-50%)";
+            controlContainer.style.display = "flex";
+            controlContainer.style.alignItems = "center";
+            wrapper.appendChild(controlContainer);
+
+            const counterSpan = document.createElement("span");
+            counterSpan.id = "activity-item-count";
+            counterSpan.style.marginRight = "0.75rem";
+            counterSpan.textContent = "Pages: ...";
+            controlContainer.appendChild(counterSpan);
+
+            const filterButton = document.createElement('button');
+            filterButton.id = "filter-activity-button";
+            filterButton.type = "button";
+            filterButton.className = referenceButton.className;
+
+            const arrowSpan = document.createElement("span");
+            arrowSpan.style.display = "inline-flex";
+            arrowSpan.style.alignItems = "center";
+            arrowSpan.style.justifyContent = "center";
+            arrowSpan.style.marginLeft = "0.375rem";
+            arrowSpan.appendChild(arrowSvgClosed.cloneNode(true));
+
+            filterButton.append("Filter ", arrowSpan);
+            controlContainer.appendChild(filterButton);
+
+            const toggleAllButton = document.createElement("button");
+            toggleAllButton.id = "activity-filter-toggle-all";
+            toggleAllButton.className = referenceButton.className;
+            toggleAllButton.textContent = "All / None";
+            toggleAllButton.style.position = "absolute";
+            toggleAllButton.style.left = "0";
+            toggleAllButton.style.top = "25%";
+            toggleAllButton.style.transform = "translateY(-50%)";
+            toggleAllButton.style.display = "none";
+            wrapper.appendChild(toggleAllButton);
+
+            filterButton.addEventListener("click", () => {
+                let dropdown = document.getElementById("activity-filter-dropdown");
+
+                if (dropdown) {
+                    const isClosed = dropdown.style.display === "none";
+                    dropdown.style.display = isClosed ? "block" : "none";
+
+                    arrowSpan.replaceChildren(
+                        isClosed ? arrowSvgOpen.cloneNode(true) : arrowSvgClosed.cloneNode(true)
+                    );
+
+                    toggleAllButton.style.display = isClosed ? "block" : "none";
+                    return;
+                }
+
+                dropdown = document.createElement("div");
+                dropdown.id = "activity-filter-dropdown";
+                dropdown.style.padding = "10px";
+                dropdown.style.marginBottom = "10px";
+                dropdown.style.background = "#fafafa";
+
+                const grid = createFilterGrid(FILTERS, svgGenius);
+                dropdown.appendChild(grid);
+
+                wrapper.insertAdjacentElement("afterend", dropdown);
+
+                arrowSpan.replaceChildren(arrowSvgOpen.cloneNode(true));
+                toggleAllButton.style.display = "block";
+
+                const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+                const normalCheckboxes = [...checkboxes].filter(cb => cb.dataset.filter !== "user");
+                const userInput = dropdown.querySelector('#activity-filter-text');
+
+                loadStateFromStorage(() => {
+                    FILTERS.forEach(f => {
+                        const cb = dropdown.querySelector(`input[data-filter="${f.key}"]`);
+                        if (cb) cb.checked = savedStates.filters[f.key] ?? true;
+                    });
+
+                    ALL_SUBFILTERS.forEach(sf => {
+                        const cb = dropdown.querySelector(`input[data-filter="${sf.key}"]`);
+                        if (cb) cb.checked = savedStates.filters[sf.key] ?? true;
+                    });
+
+                    const userCb = dropdown.querySelector('input[data-filter="user"]');
+                    if (userCb) userCb.checked = savedStates.filters.user ?? false;
+
+                    if (userInput) userInput.value = savedStates.userText ?? "";
+
+                    updateIconColors(dropdown, FILTERS);
+                    applyActivityFilterFromState();
+                });
+
+
+                updateIconColors(dropdown, FILTERS);
+
+                currentUIState.checkboxes = checkboxes;
+                currentUIState.userInput = userInput;
+
+
+                grid.addEventListener("change", e => {
+                    const target = e.target;
+
+                    // Master toggles all subfilters
+                    if (target.classList.contains("master-filter")) {
+                        const key = target.dataset.filter;
+                        const subfilters = grid.querySelectorAll(`input[data-filter^="${key}__"]`);
+                        subfilters.forEach(cb => cb.checked = target.checked);
+                    }
+
+                    // Subfilters update master state
+                    if (target.classList.contains("subfilter")) {
+                        const [key] = target.dataset.filter.split("__");
+                        const subfilters = grid.querySelectorAll(`input[data-filter^="${key}__"]`);
+                        const master = grid.querySelector(`input[data-filter="${key}"]`);
+
+                        master.checked = [...subfilters].every(cb => cb.checked);
+                    }
+
+                    updateIconColors(dropdown, FILTERS);
+
+                    applyActivityFilterFromState();
+                });
+
+                grid.addEventListener("input", e => {
+                    if (e.target.id === "activity-filter-text") {
+                        savedStates.userText = e.target.value;
+                        applyActivityFilterFromState();
+                    }
+                });
+
+                toggleAllButton.addEventListener("click", () => {
+                    const newState = !normalCheckboxes.every(cb => cb.checked);
+                    normalCheckboxes.forEach(cb => cb.checked = newState);
+                    updateIconColors(dropdown, FILTERS);
+                    applyActivityFilterFromState();
+                });
+            });
+        }
+
+        function updateActivityItemCount() {
+            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
+            if (!iframe) return;
+
+            const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!innerDoc) return;
+
+            const items = innerDoc.querySelectorAll('div[class^="feed_dropdown-item"]');
+
+            const counter = document.getElementById("activity-item-count");
+            if (counter) counter.textContent = `Pages: ${Math.ceil((items.length - 1) / 30)}`;
+        }
+
+        function startIframeObserverFor(iframe) {
+            function observeIframeActivityStream() {
+                const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (!innerDoc) return;
+
+                const container = innerDoc.querySelector('.act-activity_stream_bagon');
+                if (!container) return;
+
+                loadStateFromStorage(() => {
+                    applyActivityFilterFromSavedState();
+                });
+
+                const observer = new MutationObserver(() => {
+                    updateActivityItemCount();
+                    applyActivityFilterFromSavedState();
+                });
+
+
+                observer.observe(container, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+
+            iframe.addEventListener("load", observeIframeActivityStream);
+
+            if (iframe.contentDocument?.readyState === "complete") {
+                observeIframeActivityStream();
+            }
+        }
+
+        const modalObserver = new MutationObserver(() => {
+            const modal = document.querySelector('[class^="Modal-desktop__Contents"]');
+            const title = document.querySelector('[class^="RecentActivity__Title"]');
+
+            if (modal && title && !filterInitialized) {
+                addActivityFilterButton();
+                filterInitialized = true;
+            }
+
+            if (!modal && filterInitialized) {
+                filterInitialized = false;
+                iframeObserverInitialized = false;
+            }
+
+            if (modal && !iframeObserverInitialized) {
+                const iframe = modal.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
+                if (iframe) {
+                    iframeObserverInitialized = true;
+                    startIframeObserverFor(iframe);
+                }
+            }
+        });
+
+        modalObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2148,9 +3231,10 @@ chrome.storage.local.get([
 
     function editYouTubePlayer() {
         if (!isGeniusSongYouTubePlayer) {
-            const playVideoButton = document.querySelector('[class*="YoutubeButton__PlayVideoButton"]');
-            if (playVideoButton) {
-                playVideoButton.style.display = 'none';
+            const { youtubebuttonPlayvideobutton } = getDomElements();
+
+            if (youtubebuttonPlayvideobutton) {
+                youtubebuttonPlayvideobutton.style.display = 'none';
             }
         }
     }
@@ -2161,12 +3245,13 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function editAppleMusicPlayer() {
-        console.log("Run editAppleMusicPlayer()");
+        console.log("Run function editAppleMusicPlayer()");
 
         function checkAppleMusicPlayer() {
-            const iframe = document.querySelector(`iframe[class^="AppleMusicPlayer-desktop__Iframe"]`);
-            if (iframe) {
-                const playerDocument = iframe.contentDocument;
+            const { applemusicplayerIframe } = getDomElements();
+
+            if (applemusicplayerIframe) {
+                const playerDocument = applemusicplayerIframe.contentDocument;
                 const player = playerDocument?.querySelector('apple-music-player');
                 if (player) {
                     const titleDiv = player.querySelector('.apple_music_player-player-info-title');
@@ -2251,9 +3336,9 @@ chrome.storage.local.get([
 
             checkAppleMusicPlayer();
         } else {
-            const appleContainer = document.querySelector('div[class*="AppleMusicPlayer-desktop__IframeWrapper-"]');
-            if (appleContainer) {
-                appleContainer.remove();
+            const { applemusicplayerIframewrapper } = getDomElements();
+            if (applemusicplayerIframewrapper) {
+                applemusicplayerIframewrapper.remove();
             }
         }
     }
@@ -2370,12 +3455,13 @@ chrome.storage.local.get([
         }`;
             document.body.appendChild(style);
 
-            const appleContainer = document.querySelector('div[class^="AppleMusicPlayer-desktop__PositioningContainer"]');
-            if (appleContainer) appleContainer.style.padding = "0";
+            const { applemusicplayerPositioningcontainer } = getDomElements();
+            if (applemusicplayerPositioningcontainer) applemusicplayerPositioningcontainer.style.padding = "0";
 
             let spotifyIframe = document.createElement("iframe");
             spotifyIframe.style.width = "100%";
             spotifyIframe.style.height = "80px";
+            spotifyIframe.style.marginRight = "0rem";
             spotifyIframe.style.gridColumn = "left-start / right-end";
             spotifyIframe.style.pointerEvents = "auto";
             spotifyIframe.className = savedClasses.spotifyIframe;
@@ -2386,35 +3472,33 @@ chrome.storage.local.get([
             spotifyIframeWrapper.appendChild(spotifyIframe);
             spotifyContainer.appendChild(spotifyIframeWrapper);
 
-            const mediaPlayersContainer = document.querySelector('[class^="MediaPlayersContainer"]');
-            if (mediaPlayersContainer) {
-                mediaPlayersContainer.append(spotifyContainer);
+            const { mediaplayerscontainerContainer } = getDomElements();
+            if (mediaplayerscontainerContainer) {
+                mediaplayerscontainerContainer.append(spotifyContainer);
             }
             if (isGeniusSongLyricEditor) {
                 function adjustSpotifyPlayerGridColumn() {
-                    const expandingTextarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]');
-                    const stickyToolbar = document.querySelector('div[class*="StickyContributorToolbar__Container-"]');
-                    const stickyNavbar = document.querySelector('nav[class^="StickyNav-desktop__Container-"]');
+                    const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea } = getDomElements();
 
-                    if (expandingTextarea) {
+                    if (expandingtextareaTextarea) {
                         spotifyIframe.style.gridColumn = "right-start / page-end";
                         spotifyIframe.style.marginRight = "1rem";
-                        if (appleContainer) {
+                        if (applemusicplayerPositioningcontainer) {
                             spotifyIframe.style.paddingLeft = "2.25rem";
                         } else {
                             spotifyIframe.style.paddingLeft = "1.25rem"; spotifyIframe.style.paddingRight = "1rem";
                         }
-                        expandingTextarea.style.marginRight = "0rem";
-                        expandingTextarea.style.position = "relative";
-                        expandingTextarea.style.zIndex = "5";
-                        stickyToolbar.style.zIndex = "7";
-                        stickyNavbar.style.zIndex = "8";
+                        expandingtextareaTextarea.style.marginRight = "0rem";
+                        expandingtextareaTextarea.style.position = "relative";
+                        expandingtextareaTextarea.style.zIndex = "5";
+                        stickytoolbarContainer.style.zIndex = "7";
+                        stickyNavContainer.style.zIndex = "8";
                     } else {
                         spotifyIframe.style.gridColumn = "left-start / right-end";
                         spotifyIframe.style.marginRight = "0rem";
                         spotifyIframe.style.paddingLeft = "0rem";
-                        stickyToolbar.style.zIndex = "3";
-                        stickyNavbar.style.zIndex = "6";
+                        stickytoolbarContainer.style.zIndex = "3";
+                        stickyNavContainer.style.zIndex = "6";
                     }
                 }
 
@@ -2509,11 +3593,12 @@ chrome.storage.local.get([
 
             const soundCloudUrl = songData.soundcloud_url;
             if (!soundCloudUrl) return;
-            const toolbar = document.querySelector('div[class^="StickyContributorToolbar__Right-"]');
+
+            const { stickytoolbarRight } = getDomElements();
             const soundCloudButtonClass = savedClasses.soundCloudButton;
 
-            if (toolbar) {
-                let existingButton = toolbar.querySelector('button[class*="SoundcloudButton"]');
+            if (stickytoolbarRight) {
+                let existingButton = stickytoolbarRight.querySelector('button[class*="SoundcloudButton"]');
                 if (existingButton) return;
 
                 const soundCloudButton = document.createElement('button');
@@ -2530,7 +3615,7 @@ chrome.storage.local.get([
                     isSoundCloudPlaying = !isSoundCloudPlaying;
                 });
 
-                toolbar.insertBefore(soundCloudButton, toolbar.firstChild);
+                stickytoolbarRight.insertBefore(soundCloudButton, stickytoolbarRight.firstChild);
             }
         }
 
@@ -2558,15 +3643,15 @@ chrome.storage.local.get([
             soundCloudContainer.appendChild(soundCloudIframeWrapper);
             soundCloudContainer.classList.add('soundcloud-player');
 
-            const mediaPlayersContainer = document.querySelector('[class^="MediaPlayersContainer"]');
-            if (mediaPlayersContainer) {
-                mediaPlayersContainer.insertBefore(soundCloudContainer, mediaPlayersContainer.firstChild);
+            const { mediaplayerscontainerContainer } = getDomElements();
+            if (mediaplayerscontainerContainer) {
+                mediaplayerscontainerContainer.insertBefore(soundCloudContainer, mediaplayerscontainerContainer.firstChild);
             }
 
             function adjustSoundCloudPlayerGridColumn() {
-                const expandingTextarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]');
+                const { expandingtextareaTextarea } = getDomElements();
 
-                if (expandingTextarea) {
+                if (expandingtextareaTextarea) {
                     soundCloudIframe.style.gridColumn = "span 6 / page-end";
                 } else {
                     soundCloudIframe.style.gridColumn = "span 4 / page-end";
@@ -2581,9 +3666,9 @@ chrome.storage.local.get([
 
         function stopSoundCloudPlayer() {
             if (soundCloudContainer) {
-                const mediaPlayersContainer = document.querySelector('[class^="MediaPlayersContainer"]');
-                if (mediaPlayersContainer && soundCloudContainer.parentNode) {
-                    mediaPlayersContainer.removeChild(soundCloudContainer);
+                const { mediaplayerscontainerContainer } = getDomElements();
+                if (mediaplayerscontainerContainer && soundCloudContainer.parentNode) {
+                    mediaplayerscontainerContainer.removeChild(soundCloudContainer);
                 }
                 soundCloudContainer = null;
             }
@@ -2608,21 +3693,20 @@ chrome.storage.local.get([
     };
 
     function updateClasses() {
-        const youtubeButton = document.querySelector('button[class*="YoutubeButton__PlayVideoButton-"]');
-        if (youtubeButton) {
-            savedClasses.soundCloudButton = youtubeButton.className.replace("YoutubeButton", "SoundcloudButton");
+        const { youtubebuttonPlayvideobutton } = getDomElements();
+
+        if (youtubebuttonPlayvideobutton) {
+            savedClasses.soundCloudButton = youtubebuttonPlayvideobutton.className.replace("YoutubeButton", "SoundcloudButton");
             localStorage.setItem("soundCloudButton", savedClasses.soundCloudButton);
         }
-        const appleContainer = document.querySelector('div[class^="AppleMusicPlayer-desktop__PositioningContainer"]');
-        const appleIframeWrapper = document.querySelector('div[class*="AppleMusicPlayer-desktop__IframeWrapper"]');
-        const appleIframe = document.querySelector('iframe[class^="AppleMusicPlayer-desktop__Iframe"]');
-        if (appleContainer && appleIframeWrapper && appleIframe) {
-            savedClasses.soundCloudContainer = appleContainer.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.soundCloudIframeWrapper = appleIframeWrapper.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.soundCloudIframe = appleIframe.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.spotifyContainer = appleContainer.className.replace("AppleMusicPlayer", "SpotifyPlayer");
-            savedClasses.spotifyIframeWrapper = appleIframeWrapper.className.replace("AppleMusicPlayer", "SpotifyPlayer");
-            savedClasses.spotifyIframe = appleIframe.className.replace("AppleMusicPlayer", "SpotifyPlayer");
+        const { applemusicplayerPositioningcontainer, applemusicplayerIframewrapper, applemusicplayerIframe } = getDomElements();
+        if (applemusicplayerPositioningcontainer && applemusicplayerIframewrapper && applemusicplayerIframe) {
+            savedClasses.soundCloudContainer = applemusicplayerPositioningcontainer.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
+            savedClasses.soundCloudIframeWrapper = applemusicplayerIframewrapper.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
+            savedClasses.soundCloudIframe = applemusicplayerIframe.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
+            savedClasses.spotifyContainer = applemusicplayerPositioningcontainer.className.replace("AppleMusicPlayer", "SpotifyPlayer");
+            savedClasses.spotifyIframeWrapper = applemusicplayerIframewrapper.className.replace("AppleMusicPlayer", "SpotifyPlayer");
+            savedClasses.spotifyIframe = applemusicplayerIframe.className.replace("AppleMusicPlayer", "SpotifyPlayer");
             localStorage.setItem("soundCloudContainer", savedClasses.soundCloudContainer);
             localStorage.setItem("soundCloudIframeWrapper", savedClasses.soundCloudIframeWrapper);
             localStorage.setItem("soundCloudIframe", savedClasses.soundCloudIframe);
@@ -2650,26 +3734,23 @@ chrome.storage.local.get([
 
     if (isGeniusSongLyricEditor) {
         function adjustAppleMusicPlayerGridColumn() {
-            const appleIframe = document.querySelector('iframe[class^="AppleMusicPlayer-desktop__Iframe"]');
-            const expandingTextarea = document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]');
-            const stickyToolbar = document.querySelector('div[class*="StickyContributorToolbar__Container-"]');
-            const stickyNavbar = document.querySelector('nav[class^="StickyNav-desktop__Container-"]');
+            const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea, applemusicplayerIframe } = getDomElements();
 
-            if (appleIframe) {
-                if (expandingTextarea) {
-                    appleIframe.style.gridColumn = "right-start / page-end";
-                    appleIframe.style.marginRight = "0rem";
-                    appleIframe.style.paddingLeft = "2.25rem";
-                    expandingTextarea.style.position = "relative";
-                    expandingTextarea.style.zIndex = "5";
-                    stickyToolbar.style.zIndex = "7";
-                    stickyNavbar.style.zIndex = "8";
+            if (applemusicplayerIframe) {
+                if (expandingtextareaTextarea) {
+                    applemusicplayerIframe.style.gridColumn = "right-start / page-end";
+                    applemusicplayerIframe.style.marginRight = "0rem";
+                    applemusicplayerIframe.style.paddingLeft = "2.25rem";
+                    expandingtextareaTextarea.style.position = "relative";
+                    expandingtextareaTextarea.style.zIndex = "5";
+                    stickytoolbarContainer.style.zIndex = "7";
+                    stickyNavContainer.style.zIndex = "8";
                 } else {
-                    appleIframe.style.gridColumn = "left-start / right-end";
-                    appleIframe.style.marginRight = "-1rem";
-                    appleIframe.style.paddingLeft = "0rem";
-                    stickyToolbar.style.zIndex = "3";
-                    stickyNavbar.style.zIndex = "6";
+                    applemusicplayerIframe.style.gridColumn = "left-start / right-end";
+                    applemusicplayerIframe.style.marginRight = "-1rem";
+                    applemusicplayerIframe.style.paddingLeft = "0rem";
+                    stickytoolbarContainer.style.zIndex = "3";
+                    stickyNavContainer.style.zIndex = "6";
                 }
             }
         }
@@ -2683,11 +3764,11 @@ chrome.storage.local.get([
 
     if (isGeniusSongLyricEditor) {
         function adjustYouTubeMargin() {
-            const transcriptionPlayer = document.querySelector('div[class^="TranscriptionPlayer__Container-"]');
 
-            if (transcriptionPlayer) {
-                transcriptionPlayer.style.margin = "0rem";
-                transcriptionPlayer.style.marginRight = "1rem";
+            const { transcriptionplayerContainer } = getDomElements();
+            if (transcriptionplayerContainer) {
+                transcriptionplayerContainer.style.margin = "0rem";
+                transcriptionplayerContainer.style.marginRight = "1rem";
             }
         }
 
@@ -2701,11 +3782,10 @@ chrome.storage.local.get([
 
             if (button) {
                 const checkPlayerInterval = setInterval(() => {
-                    const mediaPlayersContainer = document.querySelector('[class^="MediaPlayersContainer"]');
-                    const transcriptionPlayer = document.querySelector('div[class^="TranscriptionPlayer__Container-"]');
+                    const { mediaplayerscontainerContainer, transcriptionplayerContainer } = getDomElements();
 
-                    if (mediaPlayersContainer && transcriptionPlayer) {
-                        mediaPlayersContainer.insertBefore(transcriptionPlayer, mediaPlayersContainer.firstChild);
+                    if (mediaplayerscontainerContainer && transcriptionplayerContainer) {
+                        mediaplayerscontainerContainer.insertBefore(transcriptionplayerContainer, mediaplayerscontainerContainer.firstChild);
                         clearInterval(checkPlayerInterval);
                     }
                 }, 1);
@@ -2714,11 +3794,11 @@ chrome.storage.local.get([
     }
 
     if (isGeniusSongRenameButtons) {
-        const youtubeButton = document.querySelector('button[class*="YoutubeButton__PlayVideoButton-"]');
-        if (youtubeButton) {
-            const svgElement = youtubeButton.querySelector('svg');
+        const { youtubebuttonPlayvideobutton } = getDomElements();
+        if (youtubebuttonPlayvideobutton) {
+            const svgElement = youtubebuttonPlayvideobutton.querySelector('svg');
             svgElement.remove();
-            youtubeButton.textContent = 'YouTube';
+            youtubebuttonPlayvideobutton.textContent = 'YouTube';
         }
     }
 

@@ -65,7 +65,7 @@ chrome.storage.local.get([
             //const response = await fetch(`https://genius.com/api/albums/${albumId}`);
             //const json = await response.json();
 
-    
+
 
             if (userId == 4670957) {
                 const columnContainer = document.querySelector(".column_layout-column_span.column_layout-column_span--one_quarter");
@@ -401,26 +401,7 @@ chrome.storage.local.get([
             }
         });
     }
-
-    async function toggleFollowSong(songId, action) {
-        const url = `https://genius.com/api/songs/${songId}/${action}`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Cookie': document.cookie,
-                'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-            },
-            body: JSON.stringify({})
-        });
-        return response.ok;
-    }
-
-    function getCsrfToken() {
-        const match = document.cookie.match(/_csrf_token=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    }
+   
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -733,101 +714,6 @@ chrome.storage.local.get([
                     closeButton.click();
                 }
             });
-
-            async function sendCoverArts(imageUrl, albumId) {
-                const payload = {
-                    album_id: albumId,
-                    cover_art: {
-                        image_url: imageUrl
-                    }
-                };
-
-                try {
-                    const response = await fetch("https://genius.com/api/cover_arts/", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Cookie": document.cookie,
-                            "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)"
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Fehler: ${response.status}`);
-                    }
-
-                    const json = await response.json();
-                    coverId = json.response.cover_art.id;
-                    return coverId;
-                } catch (error) {
-                    console.error("Fehler bei der POST-Anfrage:", error);
-                }
-            }
-
-            async function deleteCoverArts(coverId) {
-                try {
-                    const response = await fetch(`https://genius.com/api/cover_arts/${coverId}`, {
-                        method: "DELETE",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Cookie": document.cookie,
-                            "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)"
-                        },
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Fehler: ${response.status}`);
-                    }
-
-                } catch (error) {
-                    console.error("Fehler bei der DELETE-Anfrage:", error);
-                }
-            }
-
-            async function moveCoverArts(position, coverId, coverArts) {
-                let payload = {};
-
-                if (position === 1) {
-                    const coverBelowId = coverArts[position - 1].id;
-
-                    payload = {
-                        below_id: coverBelowId
-                    };
-                } else if (position > 1) {
-                    const coverBelowId = coverArts[position - 1].id;
-                    const coverAboveId = coverArts[position - 2].id;
-
-                    payload = {
-                        above_id: coverAboveId,
-                        below_id: coverBelowId
-                    };
-                }
-
-                try {
-                    const response = await fetch(`https://genius.com/api/cover_arts/${coverId}/move_between`, {
-                        method: "PUT",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Cookie": document.cookie,
-                            "X-CSRF-Token": getCsrfToken(),
-                            "User-Agent": "ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)"
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Fehler: ${response.status}`);
-                    }
-
-                    const json = await response.json();
-                    return json;
-                } catch (error) {
-                    console.error("Fehler bei der PUT-Anfrage:", error);
-                }
-            }
         }
     }
 
@@ -1184,19 +1070,24 @@ chrome.storage.local.get([
                 };
 
                 const languageType = {
+                    'bosanski': 'bs',
+                    'crnogorski': 'cnr',
                     'Deutsch': 'de',
                     'Österreichisches Deutsch': 'de-at',
                     'English': 'en',
                     'Español': 'es',
                     'Français': 'fr',
                     'Schweizerdeutsch': 'gsw',
+                    'hrvatski': 'hr',
                     'Italiano': 'it',
                     'Kölsch': 'ksh',
+                    'Македонски': 'mk',
                     'Nederlands': 'nl',
                     'Norsk': 'no',
                     'Polski': 'pl',
                     'Português': 'pt',
                     'Русский (Russian)': 'ru',
+                    'srpski': 'sr',
                     'Svenska': 'sv',
                     'Türkçe': 'tr',
                     'o‘zbekcha': 'uz',
@@ -1605,64 +1496,6 @@ chrome.storage.local.get([
                         payload.song.custom_performances = updatedPerformances;
                     }
 
-                    /*
-                    if (additionalCreditsPayload.length != 0) {
-                        const { overwrite, remove } = {
-                            overwrite: checkboxStates[`overwriteAdditionalRole${roleIndex - 1}`],
-                            remove: checkboxStates[`removeAdditionalRole${roleIndex - 1}`]
-                        };
- 
-                        if (overwrite) {
-                            let updatedPerformances = existingCustomPerformances.map(existingRole => {
-                                const newRole = additionalCreditsPayload.find(newRole => newRole.label === existingRole.label);
-                                return newRole ? { label: newRole.label, artists: newRole.artists.map(({ id, name }) => ({ id, name })) } : existingRole;
-                            });
- 
-                            additionalCreditsPayload
-                                .filter(newRole => !existingCustomPerformances.some(existingRole => existingRole.label === newRole.label))
-                                .forEach(newRole => updatedPerformances.push({ label: newRole.label, artists: newRole.artists.map(({ id, name }) => ({ id, name })) }));
- 
-                            payload.song.custom_performances = updatedPerformances;
- 
-                        } else if (remove) {
-                            payload.song.custom_performances = existingCustomPerformances
-                                .map(existingRole => {
-                                    const roleToModify = additionalCreditsPayload.find(newRole => newRole.label === existingRole.label);
-                                    if (!roleToModify) return existingRole;
- 
-                                    const filteredArtists = existingRole.artists.filter(artist =>
-                                        !roleToModify.artists.some(toRemove => toRemove.id === artist.id)
-                                    );
- 
-                                    return (filteredArtists.length === 0 || roleToModify.artists.some(artist => artist.id === 87999))
-                                        ? null
-                                        : { label: existingRole.label, artists: filteredArtists };
-                                })
-                                .filter(Boolean);
-                        } else {
-                            let updatedPerformances = existingCustomPerformances.map(existingRole => {
-                                const newRole = additionalCreditsPayload.find(newRole => newRole.label === existingRole.label);
- 
-                                return newRole ? {
-                                    label: existingRole.label,
-                                    artists: [...existingRole.artists, ...newRole.artists].filter((artist, index, self) =>
-                                        self.findIndex(a => a.id === artist.id) === index
-                                    )
-                                } : existingRole;
-                            });
- 
-                            additionalCreditsPayload
-                                .filter(newRole => !existingCustomPerformances.some(existingRole => existingRole.label === newRole.label))
-                                .forEach(newRole => updatedPerformances.push({
-                                    label: newRole.label,
-                                    artists: newRole.artists.map(({ id, name }) => ({ id, name }))
-                                }));
- 
-                            payload.song.custom_performances = updatedPerformances;
-                        }
-                    }
-                    */
-
                     if (songRelationshipsPayload[songIndex] || checkboxStates.overwriteRelationship || checkboxStates.removeRelationship) {
                         if (checkboxStates.overwriteRelationship && songRelationshipsPayload[songIndex]) {
                             const existingRelationships = existingSongsData.find(song => song.id === songIds[songIndex])?.existingSongRelationships || [];
@@ -1721,26 +1554,6 @@ chrome.storage.local.get([
 
                     sendUpdateRequest(songId, payload);
                     await new Promise(resolve => setTimeout(resolve, 400));
-                }
-
-                async function sendUpdateRequest(songId, payload) {
-                    const url = `https://genius.com/api/songs/${songId}`;
-                    const response = await fetch(url, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Cookie': document.cookie,
-                            'X-CSRF-Token': getCsrfToken(),
-                            'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        console.error(`Fehler beim Speichern der Tags für Song-ID ${songId}:`, response.statusText);
-                    } else {
-                        console.log(`Tags erfolgreich für Song-ID ${songId} gespeichert.`);
-                    }
                 }
 
                 setTimeout(() => {
@@ -2104,19 +1917,24 @@ chrome.storage.local.get([
                 languageSelect.id = 'languageSelect';
 
                 const languages = [
+                    'bosanski',
+                    'crnogorski',
                     'Deutsch',
                     'Österreichisches Deutsch',
                     'English',
                     'Español',
                     'Français',
                     'Schweizerdeutsch',
+                    'hrvatski',
                     'Italiano',
                     'Kölsch',
+                    'Македонски',
                     'Nederlands',
                     'Norsk',
                     'Polski',
                     'Português',
                     'Русский (Russian)',
+                    'srpski',
                     'Svenska',
                     'Türkçe',
                     'o‘zbekcha',
@@ -2943,26 +2761,6 @@ chrome.storage.local.get([
                 return closeButtonContainer;
             }
 
-            async function fetchSuggestions(type, query) {
-                const url = `https://genius.com/api/${type}/autocomplete?q=${encodeURIComponent(query)}&text_format=html,markdown`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cookie': document.cookie,
-                        'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-                    }
-                });
-
-                if (!response.ok) {
-                    console.error('Error:', response.statusText);
-                    return [];
-                }
-                const data = await response.json();
-                return data.response[type];
-            }
-
             function displaySuggestions(suggestions, container, inputField, name, type, form) {
                 const existingSuggestions = container.querySelector('.autocomplete');
                 if (existingSuggestions) {
@@ -3262,7 +3060,7 @@ chrome.storage.local.get([
             if (chartRow.querySelector('.lyric-status-box')) return;
 
             // Lyrics are marked complete, staff approved, or verified
-            const lyricsAreValidated =  songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
+            const lyricsAreValidated = songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
 
             let color = '#ff7878';
             if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
@@ -3434,7 +3232,8 @@ chrome.storage.local.get([
 
     function checkLabelRenames(song) {
         const labelRenames = {
-            //"Primary Artists": "Group Members",
+            "Trompeta": "Trumpet",
+            "Gürio": "Güiro"
         };
 
         const customPerformances = song.custom_performances || [];
@@ -3515,7 +3314,7 @@ chrome.storage.local.get([
     function addCleanupButton(songs, actionType, label, metadataUpdate) {
         if (songs.length === 0) return;
 
-                const albumAdminMenu = document.querySelector('album-admin-menu');
+        const albumAdminMenu = document.querySelector('album-admin-menu');
         if (!albumAdminMenu) return;
 
         const actionButton = document.createElement('button');
@@ -3655,7 +3454,7 @@ chrome.storage.local.get([
                             updateData.custom_song_art_image_url = null;
                         }
 
-                        await updateSongMetadata(song, updateData);
+                        await updateSongMetadata2(song, updateData);
                     }, index * delay);
                 });
 
@@ -3715,7 +3514,7 @@ chrome.storage.local.get([
                         updateData.writer_artists = song._updated_writer_artists;
                     }
 
-                    await updateSongMetadata(song, updateData);
+                    await updateSongMetadata2(song, updateData);
                 }, index * delay);
             });
 
@@ -3736,88 +3535,4 @@ chrome.storage.local.get([
         albumAdminMenu.parentNode.insertBefore(actionButton, albumAdminMenu);
     }
 
-    /*
-    async function updateSongMetadata(song, updates) {
-        if (Object.keys(updates).length === 0) return;
-        try {
-            const updateResponse = await fetch(`https://genius.com/api/songs/${song.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cookie': document.cookie,
-                    'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-                },
-                body: JSON.stringify({ song: updates })
-            });
-
-            if (!updateResponse.ok) {
-                console.error(`Error updating song metadata: ${updateResponse.statusText}`);
-            }
-        } catch (error) {
-            console.error(`Error: ${error}`);
-        }
-    }*/
-
-    async function updateSongMetadata(song, updates) {
-        if (Object.keys(updates).length === 0) return;
-
-        const needsTitleUpdate = typeof updates.title === 'string';
-        const isPublished = song.published === true;
-
-        try {
-            if (needsTitleUpdate && isPublished) {
-                const unpublishResponse = await fetch(`https://genius.com/api/songs/${song.id}/unpublish`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cookie': document.cookie,
-                        'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-                    }
-                });
-
-                if (!unpublishResponse.ok) {
-                    console.error(`Error unpublishing song ${song.id}: ${unpublishResponse.statusText}`);
-                    return;
-                }
-            }
-
-            const updateResponse = await fetch(`https://genius.com/api/songs/${song.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cookie': document.cookie,
-                    'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-                },
-                body: JSON.stringify({ song: updates })
-            });
-
-            if (!updateResponse.ok) {
-                console.error(`Error updating song metadata: ${updateResponse.statusText}`);
-                return;
-            }
-
-            if (needsTitleUpdate && isPublished) {
-                const publishResponse = await fetch(`https://genius.com/api/songs/${song.id}/publish`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cookie': document.cookie,
-                        'X-CSRF-Token': getCsrfToken(),
-                        'User-Agent': 'ArtworkExtractorForGenius/0.4.8 (Artwork Extractor for Genius)'
-                    }
-                });
-
-                if (!publishResponse.ok) {
-                    console.error(`Error publishing song ${song.id}: ${publishResponse.statusText}`);
-                }
-            }
-        } catch (error) {
-            console.error(`Error processing song ${song.id}:`, error);
-        }
-    }
-
 });
-

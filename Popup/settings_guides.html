@@ -297,9 +297,9 @@
             <li><a href="#" data-id="yandexmusic">Yandex Music</a></li>
             <li><a href="#" data-id="youtubemusic">YouTube Music</a></li>
         </ul>
-        <span class="disabled">Social Media</span>
+        <span class="disabled">Distributor</span>
         <ul>
-            <li><a href="#" data-id="instagram">Instagram</a></li>
+            <li><a href="#" data-id="distrokid">DistroKid</a></li>
         </ul>
     </div>
     <div class="content">
@@ -374,6 +374,12 @@
                         </label>
                         <span class="settings-span"> Cleanup Metadata Button</span>
                         <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongShellyButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span"> Shelly Cleanup Button</span>
+                        <br />
                     </div>
                     <h2>Lyric Editor Buttons</h2>
                     <div class="frame">
@@ -407,6 +413,22 @@
                             <span class="slider"></span>
                         </label>
                         <span class="settings-span">Annotation Buttons</span>
+                        <br />
+                    </div>
+                    <h2>Recent Activity</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongFilterActivity" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Filter Recent Activity</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusSongSaveFilters" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Filters</span>
                         <br />
                     </div>
                     <h2>Players</em></h2>
@@ -670,6 +692,12 @@
                         </label>
                         <span class="settings-span">Follow Button</span>
                         <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isGeniusArtistSpreadsheetButton" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Spreadsheet Button</span>
+                        <br />
                     </div>
                 </div>
                 <div class="divider"></div>
@@ -793,8 +821,14 @@
                         <span class="settings-span">Save Image</span>
                         <br />
                     </div>
-                    <h2>Show Copy Credits buttons</h2>
+                    <h2>Show Copy buttons</h2>
                     <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isAppleMusicCopyLyrics" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Lyrics</span>
                         <br />
                         <label class="switch settings-label">
                             <input type="checkbox" id="isAppleMusicCopyCredits" />
@@ -931,6 +965,65 @@
                             <span class="slider"></span>
                         </label>
                         <span class="settings-span">Ad blocking</span>
+                        <br />
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="right-column">
+                    <h2>Work in progress</h1>
+                </div>
+            </div>
+        </div>
+        <div id="distrokid">
+            <h1>DistroKid</h1>
+            <div class="columns-container">
+                <div class="left-column">
+                    <h2>Show Copy Cover buttons</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDistroKidCopyCover" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Cover Artwork</span>
+                        <br />
+                    </div>
+                    <h2>Image Options</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDistroKidConvertPNG" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">JPG to PNG</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDistroKidHostImgBB" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Host Image (ImgBB)</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDistroKidHostFilestack" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Host Image (Filestack)</span>
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDistroKidSaveImage" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Save Image</span>
+                        <br />
+                    </div>
+                    <h2>Show Notifications</h2>
+                    <div class="frame">
+                        <br />
+                        <label class="switch settings-label">
+                            <input type="checkbox" id="isDistroKidPopup" />
+                            <span class="slider"></span>
+                        </label>
+                        <span class="settings-span">Popup</span>
                         <br />
                     </div>
                 </div>
@@ -1303,49 +1396,6 @@
                         <br />
                         <label class="switch settings-label">
                             <input type="checkbox" id="isYouTubeMusicPopup" />
-                            <span class="slider"></span>
-                        </label>
-                        <span class="settings-span">Popup</span>
-                        <br />
-                    </div>
-                </div>
-                <div class="divider"></div>
-                <div class="right-column">
-                    <h2>Work in progress</h1>
-                </div>
-            </div>
-        </div>
-        <div id="instagram">
-            <h1>Instagram</h1>
-            <div class="columns-container">
-                <div class="left-column">
-                    <h2>Image Options</h2>
-                    <div class="frame">
-                        <br />
-                        <label class="switch settings-label">
-                            <input type="checkbox" id="isInstagramConvertPNG" />
-                            <span class="slider"></span>
-                        </label>
-                        <span class="settings-span">JPG to PNG</span>
-                        <br />
-                        <label class="switch settings-label">
-                            <input type="checkbox" id="isInstagramHostImage" />
-                            <span class="slider"></span>
-                        </label>
-                        <span class="settings-span">Host Image</span>
-                        <br />
-                        <label class="switch settings-label">
-                            <input type="checkbox" id="isInstagramSaveImage" />
-                            <span class="slider"></span>
-                        </label>
-                        <span class="settings-span">Save Image</span>
-                        <br />
-                    </div>
-                    <h2>Show Notifications</h2>
-                    <div class="frame">
-                        <br />
-                        <label class="switch settings-label">
-                            <input type="checkbox" id="isInstagramPopup" />
                             <span class="slider"></span>
                         </label>
                         <span class="settings-span">Popup</span>

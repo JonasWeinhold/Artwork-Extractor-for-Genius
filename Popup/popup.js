@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
     'Services/bandcamp.js': "*://*.bandcamp.com/*",
     'Services/soundcloud.js': "*://*.soundcloud.com/*",
     'Services/45.js': ["*://*.45cat.com/*", "*://*.45worlds.com/*", "*://*.45spaces.com/*"],
-    'Services/instagram.js': "*://*.instagram.com/*",
+    'Services/distrokid.js': "*://*.distrokid.com/*",
   };
 
   const displayNames = {
@@ -55,13 +55,13 @@ document.addEventListener('DOMContentLoaded', function () {
     'Services/genius_song.js': 'Genius Song',
     'Services/genius_album.js': 'Genius Album',
     'Services/genius_artist.js': 'Genius Artist',
-    'Services/instagram.js': 'Instagram',
     'Services/soundcloud.js': 'SoundCloud',
     'Services/spotify.js': 'Spotify',
     'Services/tidal.js': 'Tidal',
     'Services/youtubemusic.js': 'YouTube Music',
     'Services/yandexmusic.js': 'Yandex Music',
     'Services/45.js': '45 Music',
+    'Services/distrokid.js': 'DistroKid'
   };
 
   const icons = {
@@ -71,13 +71,13 @@ document.addEventListener('DOMContentLoaded', function () {
     'Services/genius_song.js': 'genius-icon.png',
     'Services/genius_album.js': 'genius-icon.png',
     'Services/genius_artist.js': 'genius-icon.png',
-    'Services/instagram.js': 'instagram-icon.png',
     'Services/soundcloud.js': 'soundcloud-icon.png',
     'Services/spotify.js': 'spotify-icon.png',
     'Services/tidal.js': 'tidal-icon.png',
     'Services/youtubemusic.js': 'youtubemusic-icon.png',
     'Services/yandexmusic.js': 'yandexmusic-icon.png',
-    'Services/45.js': '45-icon.png'
+    'Services/45.js': '45-icon.png',
+    'Services/distrokid.js': 'distrokid-icon.png'
   };
 
   const urls = {
@@ -87,16 +87,16 @@ document.addEventListener('DOMContentLoaded', function () {
     'Services/genius_song.js': 'settings_guides.html#genius-song',
     'Services/genius_album.js': 'settings_guides.html#genius-album',
     'Services/genius_artist.js': 'settings_guides.html#genius-artist',
-    'Services/instagram.js': 'settings_guides.html#instagram',
     'Services/soundcloud.js': 'settings_guides.html#soundcloud',
     'Services/spotify.js': 'settings_guides.html#spotify',
     'Services/tidal.js': 'settings_guides.html#tidal',
     'Services/youtubemusic.js': 'settings_guides.html#youtubemusic',
     'Services/yandexmusic.js': 'settings_guides.html#yandexmusic',
-    'Services/45.js': 'settings_guides.html#45'
+    'Services/45.js': 'settings_guides.html#45',
+    'Services/distrokid.js': 'settings_guides.html#distrokid'
   };
 
-  // Lade gespeicherte Zustände und initialisiere die Checkboxen
+
   chrome.storage.local.get(Object.keys(files), function (result) {
     for (const [file, match] of Object.entries(files)) {
       const div = document.createElement('div');
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
       chrome.scripting.executeScript({
         target: { tabId: tabId },
         files: [file]
-      }, () => console.log(`${file} aktiviert auf ${match}`));
+      });
     });
   }
 
@@ -165,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         }
       });
-      console.log(`${file} deaktiviert auf ${match}`);
     });
   }
 });

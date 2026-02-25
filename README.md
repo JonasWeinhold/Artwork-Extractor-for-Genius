@@ -9,11 +9,12 @@
   <a href="#gear-configuration">Configuration</a> &#xa0; | &#xa0;
   <a href="#open_book-usage">Usage</a> &#xa0; | &#xa0;
   <a href="#bug-troubleshooting">Troubleshooting</a> &#xa0; | &#xa0;
-  <a href="#card_file_box-project-roadmap">Roadmap</a>
+  <a href="#card_file_box-project-roadmap">Project Roadmap</a>
 </div>
 &#xa0;
 
 <div align="center">
+  <a href="CHANGELOG.md"><img alt="Last version released" src="https://img.shields.io/github/v/release/JonasWeinhold/Artwork-Extractor-for-Genius?logo=semver&color=blue" /></a>
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/commits/main"><img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/JonasWeinhold/Artwork-Extractor-for-Genius?color=blueviolet&logo=clarifai" /></a>
 </div>
 <div align="center">
@@ -75,6 +76,8 @@ Adds "Copy Cover" / "Save Cover" buttons and scripts to the following domains:
 - [Mozilla / Firefox Extension](https://addons.mozilla.org/en-US/firefox/addon/artwork-extractor-for-genius/)
 
 ### Manual Installation (Development)
+If you want to install it manually (for local build or development), follow these instructions:
+
 1.  **Download:** Clone this repository or download the ZIP.
 2.  **Unzip:** Extract the `Artwork-Extractor-for-Genius/` folder.
 3.  **Load in Browser:**
@@ -86,7 +89,7 @@ Adds "Copy Cover" / "Save Cover" buttons and scripts to the following domains:
 Access the dashboard by clicking the extension icon and selecting **"Settings & Guides"**.
 
 ### Hosting & API Keys
-To unlock full functionality, you may need to provide API keys. These are stored locally (`chrome.storage.local`) or in `Services/secrets.js` (for dev):
+To unlock full functionality, you may need to provide API keys. These are stored in browser extension storage (or `Services/secrets.js` for dev):
 
 1.  **ImgBB:**
     *   Required if you enable "Host Image" functionality via ImgBB.
@@ -130,39 +133,10 @@ If uploading to Genius (Filestack) fails, the extension likely needs a fresh ses
 *   **Refresh:** Reload the tab. Scripts sometimes fail to attach on the first load of Single Page Applications (SPAs).
 *   **Interact:** Sometimes buttons appear only after clicking the page once.
 
-### Spotify/Tidal Fetch Fails
-*   Populate API credentials in [Services/secrets.js](Services/secrets.js) or the settings page.
-*   Confirm your credentials allow the `client_credentials` flow.
-
-## :card_file_box: Project Structure
-
-There is no build pipeline; edits are made directly in plain HTML/CSS/JS.
-
-```
-├── .github/             # Issue templates
-├── Popup/               # UI for the browser action and settings page
-│   ├── popup.html       # The small toggle menu
-│   ├── popup.js         # Per-site enable/disable toggles
-│   ├── settings.html    # The main configuration dashboard
-│   └── settings_guides.js # Settings logic (stored in chrome.storage.local)
-├── Services/            # Core logic scripts per website
-│   ├── apple.js         # Apple Music integration
-│   ├── spotify.js       # Spotify integration
-│   ├── genius_*.js      # Genius specific tools (Album/Artist/Song)
-│   ├── streaming_utils.js # Shared image processing (PNG conversion, upload)
-│   └── secrets.js       # API Key placeholders + local storage wiring
-└── manifest.json        # Extension configuration (MV3) + content script registration
-```
-
-### Development Workflow
-1.  Load unpacked extension.
-2.  Make changes to the code.
-3.  Go to `chrome://extensions` and click **Reload** on the extension card.
-4.  Reload the target website tab to test changes.
-
 ## :card_file_box: Project Roadmap
 
-Find releases/versions in the [/releases](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/releases)
+Find detailed versioning in the [CHANGELOG.md](CHANGELOG.md) file.
+Find releases/versions in the [/releases](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/releases) section.
 
 ### 🔮 Future Improvements
 All planned features are listed in the [Issues tab](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/issues).
@@ -171,7 +145,7 @@ All planned features are listed in the [Issues tab](https://github.com/JonasWein
 
 Don't hesitate to suggest new ideas by **opening an issue**!
 
-You can also join our Discord server [here](https://discord.com/channels/768245765629018133/1366120229368758402)
+You can also join our Discord server [here](https://discord.com/invite/genius)
 
 ---
 
