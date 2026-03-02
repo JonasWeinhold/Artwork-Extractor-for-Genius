@@ -61,9 +61,10 @@ chrome.storage.local.get([
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
 
         if (!isSong) return
-
         getDomElements();
 
+        runUpdateClassesObserver();
+        playerSettings();
         editYouTubePlayer();
         editAppleMusicPlayer();
 
@@ -2314,7 +2315,7 @@ chrome.storage.local.get([
                 '´': "'", 	// Acute Accent
                 '＇': "'", 	// Fullwidth Apostrophe
                 'ʹ': "'", 	// Modifier Letter Prime
-                'ʻ': "'", 	// Modifier Letter Turned Comma
+                //'ʻ': "'", 	// Modifier Letter Turned Comma
                 'ʼ': "'", 	// Modifier Letter Apostrophe
                 'ʽ': "'", 	// Modifier Letter Reversed Comma
                 'ʾ': "'", 	// Modifier Letter Right Half Ring
@@ -2324,7 +2325,6 @@ chrome.storage.local.get([
                 '′': "'", 	// Prime
                 '‵': "'", 	 // Reversed Prime
                 '‘': "'", 	// Left Single Quotation Mark
-                '’': "'",	// Right Single Quotation Mark
                 '‚': "'", 	// Single Low-9 Quotation Mark
                 '‛': "'",	// Single High-Reversed-9 Quotation Mark
                 '”': '"', 	// Right Double Quotation Mark
@@ -2355,13 +2355,17 @@ chrome.storage.local.get([
                         return i % 2 === 0 ? '„' : '“'; 	// German quotation marks
                     } else if (storedLanguage === 'zh' || storedLanguage === 'zh-Hant') {
                         return i % 2 === 0 ? '《' : '》'; 	// Chinese quotation marks
-                    } else if (storedLanguage === 'ru' || storedLanguage === 'uk') {
+                    } else if (storedLanguage === 'ru' || storedLanguage === 'uk' || storedLanguage === 'uz') {
                         return i % 2 === 0 ? '«' : '»'; 	// Russian/Ukrainian quotation marks
                     } else {
                         return '"'; // Default quotation mark
                     }
                 })
             };
+
+            replacementsLanguage['ʻ'] = storedLanguage !== 'uz' ? "'" : "ʻ";   // Modifier Letter Turned Comma
+            replacementsLanguage['’'] = storedLanguage !== 'uz' ? "'" : "’";   // Right Single Quotation Mark
+
 
             const lines = text.split('\n');
             let index = 0;
@@ -3225,6 +3229,8 @@ chrome.storage.local.get([
     }
 
 
+
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                 YOUTUBE PLAYER                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3716,89 +3722,93 @@ chrome.storage.local.get([
         }
     }
 
-    const observer = new MutationObserver((mutationsList) => {
-        for (let mutation of mutationsList) {
-            if (mutation.addedNodes.length > 0) {
-                updateClasses();
+    function runUpdateClassesObserver() {
+        const observer = new MutationObserver((mutationsList) => {
+            for (let mutation of mutationsList) {
+                if (mutation.addedNodes.length > 0) {
+                    updateClasses();
+                }
             }
-        }
-    });
+        });
 
-    observer.observe(document.body, { childList: true, subtree: true });
-
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                PLAYER SETTINGS                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    if (isGeniusSongLyricEditor) {
-        function adjustAppleMusicPlayerGridColumn() {
-            const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea, applemusicplayerIframe } = getDomElements();
+    function playerSettings() {
 
-            if (applemusicplayerIframe) {
-                if (expandingtextareaTextarea) {
-                    applemusicplayerIframe.style.gridColumn = "right-start / page-end";
-                    applemusicplayerIframe.style.marginRight = "0rem";
-                    applemusicplayerIframe.style.paddingLeft = "2.25rem";
-                    expandingtextareaTextarea.style.position = "relative";
-                    expandingtextareaTextarea.style.zIndex = "5";
-                    stickytoolbarContainer.style.zIndex = "7";
-                    stickyNavContainer.style.zIndex = "8";
-                } else {
-                    applemusicplayerIframe.style.gridColumn = "left-start / right-end";
-                    applemusicplayerIframe.style.marginRight = "-1rem";
-                    applemusicplayerIframe.style.paddingLeft = "0rem";
-                    stickytoolbarContainer.style.zIndex = "3";
-                    stickyNavContainer.style.zIndex = "6";
+        if (isGeniusSongLyricEditor) {
+            function adjustAppleMusicPlayerGridColumn() {
+                const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea, applemusicplayerIframe } = getDomElements();
+
+                if (applemusicplayerIframe) {
+                    if (expandingtextareaTextarea) {
+                        applemusicplayerIframe.style.gridColumn = "right-start / page-end";
+                        applemusicplayerIframe.style.marginRight = "0rem";
+                        applemusicplayerIframe.style.paddingLeft = "2.25rem";
+                        expandingtextareaTextarea.style.position = "relative";
+                        expandingtextareaTextarea.style.zIndex = "5";
+                        stickytoolbarContainer.style.zIndex = "7";
+                        stickyNavContainer.style.zIndex = "8";
+                    } else {
+                        applemusicplayerIframe.style.gridColumn = "left-start / right-end";
+                        applemusicplayerIframe.style.marginRight = "-1rem";
+                        applemusicplayerIframe.style.paddingLeft = "0rem";
+                        stickytoolbarContainer.style.zIndex = "3";
+                        stickyNavContainer.style.zIndex = "6";
+                    }
                 }
             }
+
+            adjustAppleMusicPlayerGridColumn();
+
+            const observer = new MutationObserver(adjustAppleMusicPlayerGridColumn);
+            observer.observe(document.body, { childList: true, subtree: true });
         }
 
-        adjustAppleMusicPlayerGridColumn();
 
-        const observer = new MutationObserver(adjustAppleMusicPlayerGridColumn);
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
+        if (isGeniusSongLyricEditor) {
+            function adjustYouTubeMargin() {
 
-
-    if (isGeniusSongLyricEditor) {
-        function adjustYouTubeMargin() {
-
-            const { transcriptionplayerContainer } = getDomElements();
-            if (transcriptionplayerContainer) {
-                transcriptionplayerContainer.style.margin = "0rem";
-                transcriptionplayerContainer.style.marginRight = "1rem";
+                const { transcriptionplayerContainer } = getDomElements();
+                if (transcriptionplayerContainer) {
+                    transcriptionplayerContainer.style.margin = "0rem";
+                    transcriptionplayerContainer.style.marginRight = "1rem";
+                }
             }
+
+            adjustYouTubeMargin();
+
+            const observer = new MutationObserver(adjustYouTubeMargin);
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            document.addEventListener('click', (event) => {
+                const button = event.target.closest('button[class*="YoutubeButton__PlayVideoButton-"], button[class*="SoundcloudButton__PlayVideoButton-"]');
+
+                if (button) {
+                    const checkPlayerInterval = setInterval(() => {
+                        const { mediaplayerscontainerContainer, transcriptionplayerContainer } = getDomElements();
+
+                        if (mediaplayerscontainerContainer && transcriptionplayerContainer) {
+                            mediaplayerscontainerContainer.insertBefore(transcriptionplayerContainer, mediaplayerscontainerContainer.firstChild);
+                            clearInterval(checkPlayerInterval);
+                        }
+                    }, 1);
+                }
+            });
         }
 
-        adjustYouTubeMargin();
-
-        const observer = new MutationObserver(adjustYouTubeMargin);
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        document.addEventListener('click', (event) => {
-            const button = event.target.closest('button[class*="YoutubeButton__PlayVideoButton-"], button[class*="SoundcloudButton__PlayVideoButton-"]');
-
-            if (button) {
-                const checkPlayerInterval = setInterval(() => {
-                    const { mediaplayerscontainerContainer, transcriptionplayerContainer } = getDomElements();
-
-                    if (mediaplayerscontainerContainer && transcriptionplayerContainer) {
-                        mediaplayerscontainerContainer.insertBefore(transcriptionplayerContainer, mediaplayerscontainerContainer.firstChild);
-                        clearInterval(checkPlayerInterval);
-                    }
-                }, 1);
+        if (isGeniusSongRenameButtons) {
+            const { youtubebuttonPlayvideobutton } = getDomElements();
+            if (youtubebuttonPlayvideobutton) {
+                const svgElement = youtubebuttonPlayvideobutton.querySelector('svg');
+                svgElement.remove();
+                youtubebuttonPlayvideobutton.textContent = 'YouTube';
             }
-        });
-    }
-
-    if (isGeniusSongRenameButtons) {
-        const { youtubebuttonPlayvideobutton } = getDomElements();
-        if (youtubebuttonPlayvideobutton) {
-            const svgElement = youtubebuttonPlayvideobutton.querySelector('svg');
-            svgElement.remove();
-            youtubebuttonPlayvideobutton.textContent = 'YouTube';
         }
     }
 
