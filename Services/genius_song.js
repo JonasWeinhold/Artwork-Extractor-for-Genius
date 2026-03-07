@@ -15,6 +15,7 @@ chrome.storage.local.get([
     'isGeniusSongAnnotationsButtons',
     'isGeniusSongFilterActivity',
     'isGeniusSongSaveFilters',
+    'isGeniusSongFilterFirehose',
     'isGeniusSongCopyCover',
     'isGeniusSongAppleMusicPlayer',
     'isGeniusSongYouTubePlayer',
@@ -38,6 +39,7 @@ chrome.storage.local.get([
     const isGeniusSongAnnotationsButtons = result.isGeniusSongAnnotationsButtons ?? true;
     const isGeniusSongFilterActivity = result.isGeniusSongFilterActivity ?? true;
     const isGeniusSongSaveFilters = result.isGeniusSongSaveFilters ?? false;
+    const isGeniusSongFilterFirehose = result.isGeniusSongFilterFirehose ?? true;
     const isGeniusSongCopyCover = result.isGeniusSongCopyCover ?? true;
     const isGeniusSongAppleMusicPlayer = result.isGeniusSongAppleMusicPlayer ?? true;
     const isGeniusSongYouTubePlayer = result.isGeniusSongYouTubePlayer ?? true;
@@ -58,7 +60,12 @@ chrome.storage.local.get([
     main();
 
     async function main() {
+        const isFirehose = window.location.href === 'https://genius.com/firehose';
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
+
+        if (isFirehose) {
+            if (isGeniusSongFilterFirehose) filterFirehose();
+        }
 
         if (!isSong) return
         getDomElements();
@@ -3228,6 +3235,56 @@ chrome.storage.local.get([
         });
     }
 
+
+    function filterFirehose() {
+        console.log("Run function filterFirehose()");
+        const form = document.getElementById("firehose_filters");
+        if (!form) return;
+
+        const fieldset = document.createElement("fieldset");
+        fieldset.className = "filter";
+
+        const legend = document.createElement("legend");
+        legend.textContent = "Filter";
+        fieldset.appendChild(legend);
+
+        const input = document.createElement("input");
+        input.id = "artist_chooser";
+        input.placeholder = "Filter firehose";
+        input.autocomplete = "off";
+        input.className = "ac_input";
+        fieldset.appendChild(input);
+
+        const selected = document.createElement("div");
+        selected.id = "selected_filters";
+        fieldset.appendChild(selected);
+
+        form.insertBefore(fieldset, form.firstChild);
+
+        activateFirehoseFilter(input);
+    }
+
+    function activateFirehoseFilter(input) {
+        const container = document.getElementById("firehose");
+        if (!container) return;
+
+        function applyFilter() {
+            const query = input.value.trim().toLowerCase();
+
+            const items = container.querySelectorAll(".activity_stream_event_unit");
+            items.forEach(item => {
+                const textEl = item.querySelector(".actor_and_action");
+                const text = textEl ? textEl.textContent.toLowerCase() : "";
+
+                item.style.display = text.includes(query) ? "block" : "none";
+            });
+        }
+
+        input.addEventListener("input", applyFilter);
+
+        const observer = new MutationObserver(() => applyFilter());
+        observer.observe(container, { childList: true, subtree: true });
+    }
 
 
 

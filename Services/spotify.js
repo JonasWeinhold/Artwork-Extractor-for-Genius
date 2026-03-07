@@ -103,6 +103,60 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
     }
   }
 
+  async function addCopyHeaderButton() {
+    const titleEl = document.querySelector('[data-testid="adaptiveEntityTitle"]');
+    if (!titleEl) return;
+
+    titleEl.style.cursor = "pointer";
+    titleEl.style.transition = "color 0.2s ease, text-decoration 0.2s ease";
+
+    titleEl.addEventListener("mouseenter", () => {
+      titleEl.style.textDecoration = "underline";
+    });
+
+    titleEl.addEventListener("mouseleave", () => {
+      titleEl.style.textDecoration = "none";
+    });
+
+    titleEl.addEventListener("click", async () => {
+      const backgroundEl = document.querySelector('.main-view-container [data-testid="background-image"]');
+      if (!backgroundEl) return;
+
+      const style = window.getComputedStyle(backgroundEl).backgroundImage;
+      const match = style.match(/url\("(.*?)"\)/);
+      if (!match) return;
+
+      const coverUrl = match[1].replace(/^https?:\/\/[^/]+\/image\//, "https://i.scdn.co/image/");
+      console.log(coverUrl);
+
+      if (coverUrl) {
+        const imageUrl = modifySpotifyImageUrl(coverUrl);
+        console.log(imageUrl);
+        if (imageUrl) {
+          const urlName = `spotify`;
+          const fileName = getFileNameFromUrl(imageUrl);
+          const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+          const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+          const design = {
+            position: "fixed",
+            backgroundColor: "#1DB954",
+            color: "white",
+            borderRadius: "500px",
+            padding: "10px 20px",
+            fontSize: "12px",
+            fontWeight: "bold",
+            zIndex: "9999",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+            top: `${mouseY + 50}px`,
+            left: `${mouseX + 75}px`
+          };
+          await processJpgImage(imageUrl, urlName, fileName, isSpotifyHostFilestack, isSpotifyHostImgBB, isSpotifySaveImage, isSpotifyConvertPNG, isSpotifyPopup, design);
+        }
+      }
+    });
+  }
+
+
   // Spotify Access Token for API Calls
   async function getSpotifyAccessToken() {
     const clientId = window.secrets.SPOTIFY_CLIENT_ID;
@@ -177,6 +231,7 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
     }
 
     const data = await response.json();
+    console.log(data);
 
     if (type === "track") return data.album?.images?.[0]?.url;
     if (type === "playlist") return data[0]?.url;
@@ -187,20 +242,24 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
   function modifySpotifyImageUrl(originalUrl) {
     const prefixes = {
       album: "https://i.scdn.co/image/ab67616d0000",
+      artist: "https://i.scdn.co/image/ab6761610000",
+      header: "https://i.scdn.co/image/ab6761860000",
+      gallery: "https://i.scdn.co/image/ab6761670000",
       playlist: "https://i.scdn.co/image/ab67706f0000",
       podcast: "https://i.scdn.co/image/ab6765630000",
       audiobook: "https://i.scdn.co/image/ab6766630000",
-      artist: "https://i.scdn.co/image/ab6761610000",
       pickasso: "https://pickasso.spotifycdn.com/image/ab67c0de0000",
       newjams: "https://newjams-images.scdn.co/image/ab6764780000"
     };
 
     const modifications = {
       album: "82c1",
+      artist: "e5eb",
+      header: "1016",
+      gallery: "82e8",
       playlist: "0004",
       podcast: "c3d5",
       audiobook: "fd4a",
-      artist: "e5eb",
       pickasso: "bada",
       newjams: "bc90"
     };
@@ -390,6 +449,7 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
 
     if (artistUrlPattern.test(window.location.href)) {
       if (isSpotifyCopyArtist) addCopyCoverButton();
+      if (isSpotifyCopyArtist) addCopyHeaderButton();
     } else if (!window.location.href.startsWith("https://open.spotify.com/search/")) {
       if (isSpotifyCopyCover) addCopyCoverButton();
       if (isSpotifyCopyTracklist) addCopyTracklistButton();
