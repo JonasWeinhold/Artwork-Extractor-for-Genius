@@ -70,10 +70,9 @@ chrome.storage.local.get([
         if (!isSong) return
         getDomElements();
 
-        runUpdateClassesObserver();
-        playerSettings();
         editYouTubePlayer();
         editAppleMusicPlayer();
+        playerSettings();
 
 
         const { songId, userId, profilePath, songData } = await getSongInfo();
@@ -96,8 +95,10 @@ chrome.storage.local.get([
 
         if (isGeniusSongFilterActivity) filterRecentActivity(profilePath);
 
+        if (songData.apple_music_id) storeAppleMusicStructure();
+
         if (songData.primary_tag.name !== "Non-Music") {
-            if (isGeniusSongSpotifyPlayer) addSpotifyPlayer(songData);
+            //    if (isGeniusSongSpotifyPlayer) addSpotifyPlayer(songData);
         }
         if (songData.soundcloud_url) {
             if (isGeniusSongSoundCloudPlayer) addSoundCloudPlayer(songData);
@@ -127,8 +128,11 @@ chrome.storage.local.get([
             transcriptionplayerContainer: document.querySelector('div[class^="TranscriptionPlayer__Container-"]'),
             youtubebuttonPlayvideobutton: document.querySelector('[class*="YoutubeButton__PlayVideoButton-"]'),
             applemusicplayerPositioningcontainer: document.querySelector('div[class^="AppleMusicPlayer-desktop__PositioningContainer-"]'),
-            applemusicplayerIframewrapper: document.querySelector('div[class*="AppleMusicPlayer-desktop__IframeWrapper-"]'),
+            applemusicplayerIframecontainer: document.querySelector('div[class*="AppleMusicPlayer-desktop__IframeContainer-"]'),
             applemusicplayerIframe: document.querySelector('iframe[class^="AppleMusicPlayer-desktop__Iframe-"]'),
+            soundcloudplayerPositioningcontainer: document.querySelector('div[class^="SoundCloudPlayer-desktop__PositioningContainer-"]'),
+            soundcloudplayerIframecontainer: document.querySelector('div[class*="SoundCloudPlayer-desktop__IframeContainer-"]'),
+            soundcloudplayerIframe: document.querySelector('iframe[class^="SoundCloudPlayer-desktop__Iframe-"]'),
         };
     }
 
@@ -463,6 +467,7 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                 SHELLY BUTTON                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
+
     function addShellyButton(songData) {
         console.log("Run function addShellyButton()");
 
@@ -3288,19 +3293,87 @@ chrome.storage.local.get([
 
 
 
+
+
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////                                 YOUTUBE PLAYER                                 //////////
+    //////////                       STORE APPLE MUSIC PLAYER STRUCTURE                       //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function editYouTubePlayer() {
-        if (!isGeniusSongYouTubePlayer) {
-            const { youtubebuttonPlayvideobutton } = getDomElements();
+    function storeAppleMusicStructure() {
 
-            if (youtubebuttonPlayvideobutton) {
-                youtubebuttonPlayvideobutton.style.display = 'none';
-            }
+        function waitForIframeContainer() {
+            return new Promise(resolve => {
+                const selector = '[class^="AppleMusicPlayer-desktop__IframeContainer-"]';
+
+                if (document.querySelector(selector)) {
+                    resolve();
+                    return;
+                }
+
+                const observer = new MutationObserver(() => {
+                    if (document.querySelector(selector)) {
+                        observer.disconnect();
+                        resolve();
+                    }
+                });
+
+                observer.observe(document.documentElement, {
+                    childList: true,
+                    subtree: true
+                });
+            });
         }
+
+        function cloneUntilIframeContainer(node) {
+            const isIframeContainer =
+                node.classList &&
+                [...node.classList].some(c => c.startsWith("AppleMusicPlayer-desktop__IframeContainer-"));
+
+            if (node.tagName === "IFRAME") {
+                const iframeClone = document.createElement("iframe");
+                iframeClone.className = node.className;
+                return iframeClone;
+            }
+
+            const clone = node.cloneNode(false);
+
+            if (isIframeContainer) {
+                node.childNodes.forEach(child => {
+                    if (child.nodeType === Node.ELEMENT_NODE) {
+                        const childClone = cloneUntilIframeContainer(child);
+                        if (childClone) clone.appendChild(childClone);
+                    } else {
+                        clone.appendChild(child.cloneNode(true));
+                    }
+                });
+
+                return clone;
+            }
+
+            node.childNodes.forEach(child => {
+                if (child.nodeType === Node.ELEMENT_NODE) {
+                    const childClone = cloneUntilIframeContainer(child);
+                    if (childClone) clone.appendChild(childClone);
+                } else {
+                    clone.appendChild(child.cloneNode(true));
+                }
+            });
+
+            return clone;
+        }
+
+        waitForIframeContainer().then(() => {
+            const selector = '[class^="AppleMusicPlayer-desktop__PositioningContainer-"]';
+            const original = document.querySelector(selector);
+            if (!original) return;
+
+            const clone = cloneUntilIframeContainer(original);
+
+            localStorage.setItem("AppleMusicStructure", clone.outerHTML);
+        });
     }
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3360,11 +3433,19 @@ chrome.storage.local.get([
                 if (coverArtImage && songInfoContainer && playButtonContainer && appleMusicPlayerLogo) {
                     const copyCoverButton = document.createElement('button');
                     copyCoverButton.textContent = 'Copy Cover';
-                    copyCoverButton.style.cssText = `
-                    background:#fff;color:#222;border:1px solid #222;
-                    padding:2px 4px;font-size:12px;cursor:pointer;
-                    line-height:2em;margin-right:8px;border-radius:1.25rem;
-                `;
+
+                    Object.assign(copyCoverButton.style, {
+                        background: '#fff',
+                        color: '#222',
+                        border: '1px solid #222',
+                        padding: '2px 4px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        lineHeight: '2em',
+                        marginRight: '8px',
+                        borderRadius: '1.25rem',
+                        whiteSpace: 'nowrap'
+                    });
                     appleMusicPlayerLogo.parentNode.insertBefore(copyCoverButton, appleMusicPlayerLogo);
                     appleMusicPlayerLogo.remove();
 
@@ -3399,16 +3480,152 @@ chrome.storage.local.get([
 
             checkAppleMusicPlayer();
         } else {
-            const { applemusicplayerIframewrapper } = getDomElements();
-            if (applemusicplayerIframewrapper) {
-                applemusicplayerIframewrapper.remove();
+            const { applemusicplayerIframecontainer } = getDomElements();
+            if (applemusicplayerIframecontainer) {
+                applemusicplayerIframecontainer.remove();
             }
         }
     }
 
 
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////                          SPOTIFY & SOUNDCLOUD PLAYER                           //////////
+    //////////                                 YOUTUBE PLAYER                                 //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function editYouTubePlayer() {
+        const { youtubebuttonPlayvideobutton } = getDomElements();
+        if (!youtubebuttonPlayvideobutton) return;
+
+        if (!isGeniusSongYouTubePlayer) {
+            youtubebuttonPlayvideobutton.style.display = "none";
+        }
+
+        if (isGeniusSongRenameButtons) {
+            const svg = youtubebuttonPlayvideobutton.querySelector("svg");
+            if (svg) svg.remove();
+
+            youtubebuttonPlayvideobutton.textContent = "YouTube";
+        }
+
+        function adjustYouTubeMargin() {
+            const { transcriptionplayerContainer } = getDomElements();
+            if (transcriptionplayerContainer) {
+                transcriptionplayerContainer.style.margin = "0rem 1rem 0rem 0rem";
+            }
+        }
+
+        const observer = new MutationObserver(adjustYouTubeMargin);
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                               SOUNDCLOUD PLAYER                                //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function addSoundCloudPlayer(songData) {
+        let isSoundCloudPlaying = false;
+        let soundCloudContainer = null;
+
+        function addSoundCloudButton(songData) {
+            const soundCloudUrl = songData.soundcloud_url;
+            if (!soundCloudUrl) return;
+
+            const { stickytoolbarRight } = getDomElements();
+            if (!stickytoolbarRight) return;
+
+            if (stickytoolbarRight.querySelector('#soundcloud-button')) return;
+
+            const metadataButton = document.querySelector('[class*="EditMetadataButton__SmallButton-"]');
+            const derivedClass = metadataButton.className.replace("EditMetadataButton__SmallButton", "SoundCloudButton__PlayVideoButton");
+            const soundCloudButton = document.createElement("button");
+            soundCloudButton.id = "soundcloud-button";
+            soundCloudButton.type = "button";
+            soundCloudButton.className = derivedClass;
+            soundCloudButton.textContent = "SoundCloud";
+
+
+            soundCloudButton.addEventListener('click', () => {
+                if (isSoundCloudPlaying) {
+                    stopSoundCloudPlayer();
+                } else {
+                    loadSoundCloudPlayer(soundCloudUrl);
+                }
+                isSoundCloudPlaying = !isSoundCloudPlaying;
+            });
+
+            stickytoolbarRight.insertBefore(soundCloudButton, stickytoolbarRight.firstChild);
+        }
+
+
+        function loadSoundCloudPlayer(soundCloudUrl) {
+            const html = localStorage.getItem("AppleMusicStructure");
+            if (!html) return;
+
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = html.trim();
+            soundCloudContainer = wrapper.firstElementChild;
+
+            soundCloudContainer.className = soundCloudContainer.className.replace(/AppleMusic/g, "SoundCloud");
+            soundCloudContainer.querySelectorAll("*").forEach(el => {
+                el.classList.forEach(cls => {
+                    if (cls.includes("AppleMusic")) {
+                        el.classList.replace(cls, cls.replace(/AppleMusic/g, "SoundCloud"));
+                    }
+                });
+            });
+
+            const iframeContainer = soundCloudContainer.querySelector('[class^="SoundCloudPlayer-desktop__IframeContainer-"]');
+            if (!iframeContainer) return;
+
+            const iframe = iframeContainer.querySelector("iframe");
+            if (!iframe) return;
+
+            iframe.id = "ge-soundcloud-player";
+
+            Object.assign(iframeContainer.style, {
+                marginLeft: "0rem",
+                marginRight: "1rem",
+            });
+
+            Object.assign(iframe.style, {
+                height: "116px",
+                visibility: "visible",
+                display: "block",
+                justifySelf: "end",
+                pointerEvents: "auto",
+            });
+
+            iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(soundCloudUrl)}&color=%23ff5500&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false`;
+            iframe.setAttribute("allow", "autoplay");
+
+            const { mediaplayerscontainerContainer } = getDomElements();
+            if (mediaplayerscontainerContainer) {
+                mediaplayerscontainerContainer.insertBefore(soundCloudContainer, mediaplayerscontainerContainer.firstChild);
+            }
+        }
+
+
+        function stopSoundCloudPlayer() {
+            if (!soundCloudContainer) return;
+
+            const { mediaplayerscontainerContainer } = getDomElements();
+            if (mediaplayerscontainerContainer && soundCloudContainer.parentNode) {
+                mediaplayerscontainerContainer.removeChild(soundCloudContainer);
+            }
+
+            soundCloudContainer = null;
+        }
+
+        addSoundCloudButton(songData);
+    }
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                 SPOTIFY PLAYER                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     async function addSpotifyPlayer(songData) {
@@ -3501,11 +3718,11 @@ chrome.storage.local.get([
 
             let spotifyContainer = document.createElement("div");
             spotifyContainer.className = savedClasses.spotifyContainer;
-            let spotifyIframeWrapper = document.createElement("div");
-            spotifyIframeWrapper.className = savedClasses.spotifyIframeWrapper;
+            let spotifyIframeContainer = document.createElement("div");
+            spotifyIframeContainer.className = savedClasses.spotifyIframeContainer;
 
             const styleContainer = savedClasses.spotifyContainer.split(' ').pop();
-            const styleIframeWrapper = savedClasses.spotifyIframeWrapper.split(' ').pop();
+            const styleIframeWrapper = savedClasses.spotifyIframeContainer.split(' ').pop();
             const styleIframe = savedClasses.spotifyIframe.split(' ').pop();
 
             const style = document.createElement('style');
@@ -3532,8 +3749,8 @@ chrome.storage.local.get([
             spotifyIframe.src = `https://open.spotify.com/embed/track/${spotifyId}`;
             spotifyIframe.setAttribute("allow", "encrypted-media");
             spotifyIframe.setAttribute("allowtransparency", "true");
-            spotifyIframeWrapper.appendChild(spotifyIframe);
-            spotifyContainer.appendChild(spotifyIframeWrapper);
+            spotifyIframeContainer.appendChild(spotifyIframe);
+            spotifyContainer.appendChild(spotifyIframeContainer);
 
             const { mediaplayerscontainerContainer } = getDomElements();
             if (mediaplayerscontainerContainer) {
@@ -3643,153 +3860,6 @@ chrome.storage.local.get([
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////                               SOUNDCLOUD PLAYER                                //////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    function addSoundCloudPlayer(songData) {
-
-        let isSoundCloudPlaying = false;
-
-        function addSoundCloudButton(songData) {
-            console.log("Run function addSoundCloudButton()");
-
-            const soundCloudUrl = songData.soundcloud_url;
-            if (!soundCloudUrl) return;
-
-            const { stickytoolbarRight } = getDomElements();
-            const soundCloudButtonClass = savedClasses.soundCloudButton;
-
-            if (stickytoolbarRight) {
-                let existingButton = stickytoolbarRight.querySelector('button[class*="SoundcloudButton"]');
-                if (existingButton) return;
-
-                const soundCloudButton = document.createElement('button');
-                soundCloudButton.className = soundCloudButtonClass;
-                soundCloudButton.textContent = 'SoundCloud';
-                soundCloudButton.style.whiteSpace = 'nowrap';
-
-                soundCloudButton.addEventListener('click', () => {
-                    if (isSoundCloudPlaying) {
-                        stopSoundCloudPlayer();
-                    } else {
-                        loadSoundCloudPlayer(soundCloudUrl);
-                    }
-                    isSoundCloudPlaying = !isSoundCloudPlaying;
-                });
-
-                stickytoolbarRight.insertBefore(soundCloudButton, stickytoolbarRight.firstChild);
-            }
-        }
-
-        function loadSoundCloudPlayer(soundCloudUrl) {
-            soundCloudContainer = document.createElement("div");
-            soundCloudContainer.className = savedClasses.soundCloudContainer;
-            let soundCloudIframeWrapper = document.createElement("div");
-            soundCloudIframeWrapper.className = savedClasses.soundCloudIframeWrapper;
-
-            let soundCloudIframe = document.createElement("iframe");
-            soundCloudIframe.style.width = "100%";
-            soundCloudIframe.style.height = "166px";
-            soundCloudIframe.style.visibility = "visible";
-            soundCloudIframe.style.marginRight = "1rem";
-            soundCloudIframe.style.paddingLeft = "2.25rem";
-            soundCloudIframe.style.display = "block";
-            soundCloudIframe.style.gridColumn = "span 6 / page-end";
-            soundCloudIframe.style.justifySelf = "end";
-            soundCloudIframe.style.pointerEvents = "auto";
-            soundCloudIframe.className = savedClasses.soundCloudIframe;
-            soundCloudIframe.id = "ge-soundcloud-player";
-            soundCloudIframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(soundCloudUrl)}&color=%23ff5500&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false`;
-            soundCloudIframe.setAttribute("allow", "autoplay");
-            soundCloudIframeWrapper.appendChild(soundCloudIframe);
-            soundCloudContainer.appendChild(soundCloudIframeWrapper);
-            soundCloudContainer.classList.add('soundcloud-player');
-
-            const { mediaplayerscontainerContainer } = getDomElements();
-            if (mediaplayerscontainerContainer) {
-                mediaplayerscontainerContainer.insertBefore(soundCloudContainer, mediaplayerscontainerContainer.firstChild);
-            }
-
-            function adjustSoundCloudPlayerGridColumn() {
-                const { expandingtextareaTextarea } = getDomElements();
-
-                if (expandingtextareaTextarea) {
-                    soundCloudIframe.style.gridColumn = "span 6 / page-end";
-                } else {
-                    soundCloudIframe.style.gridColumn = "span 4 / page-end";
-                }
-            }
-
-            adjustSoundCloudPlayerGridColumn();
-
-            const observer = new MutationObserver(adjustSoundCloudPlayerGridColumn);
-            observer.observe(document.body, { childList: true, subtree: true });
-        }
-
-        function stopSoundCloudPlayer() {
-            if (soundCloudContainer) {
-                const { mediaplayerscontainerContainer } = getDomElements();
-                if (mediaplayerscontainerContainer && soundCloudContainer.parentNode) {
-                    mediaplayerscontainerContainer.removeChild(soundCloudContainer);
-                }
-                soundCloudContainer = null;
-            }
-        }
-
-        addSoundCloudButton(songData);
-    }
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////                     HELPER FOR SPOTIFY & SOUNDCLOUD PLAYER                     //////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    let savedClasses = {
-        spotifyContainer: localStorage.getItem("spotifyContainer") || "SpotifyPlayer-desktop__PositioningContainer-sc-51e58cc2-0 gLqYRU",
-        spotifyIframeWrapper: localStorage.getItem("spotifyIframeWrapper") || "PageGrid-desktop-sc-3faf0c7e-0 ifuhQp SpotifyPlayer-desktop__IframeWrapper-sc-51e58cc2-1 gICLPX",
-        spotifyIframe: localStorage.getItem("spotifyIframe") || "SpotifyPlayer-desktop__Iframe-sc-51e58cc2-3 eaeTtZ",
-        soundCloudContainer: localStorage.getItem("soundCloudContainer") || "SoundCloudPlayer-desktop__PositioningContainer-sc-51e58cc2-0 gLqYRU",
-        soundCloudIframeWrapper: localStorage.getItem("soundCloudIframeWrapper") || "PageGrid-desktop-sc-3faf0c7e-0 ifuhQp SoundCloudPlayer-desktop__IframeWrapper-sc-51e58cc2-1 gICLPX",
-        soundCloudIframe: localStorage.getItem("soundCloudIframe") || "SoundCloudPlayer-desktop__Iframe-sc-51e58cc2-3 eaeTtZ",
-        soundCloudButton: localStorage.getItem("soundCloudButton") || "SmallButton__Container-sc-e8eb65fd-0 gGXecB SoundcloudButton__PlayVideoButton-sc-63f2ae25-0 cckSnM"
-    };
-
-    function updateClasses() {
-        const { youtubebuttonPlayvideobutton } = getDomElements();
-
-        if (youtubebuttonPlayvideobutton) {
-            savedClasses.soundCloudButton = youtubebuttonPlayvideobutton.className.replace("YoutubeButton", "SoundcloudButton");
-            localStorage.setItem("soundCloudButton", savedClasses.soundCloudButton);
-        }
-        const { applemusicplayerPositioningcontainer, applemusicplayerIframewrapper, applemusicplayerIframe } = getDomElements();
-        if (applemusicplayerPositioningcontainer && applemusicplayerIframewrapper && applemusicplayerIframe) {
-            savedClasses.soundCloudContainer = applemusicplayerPositioningcontainer.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.soundCloudIframeWrapper = applemusicplayerIframewrapper.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.soundCloudIframe = applemusicplayerIframe.className.replace("AppleMusicPlayer", "SoundCloudPlayer");
-            savedClasses.spotifyContainer = applemusicplayerPositioningcontainer.className.replace("AppleMusicPlayer", "SpotifyPlayer");
-            savedClasses.spotifyIframeWrapper = applemusicplayerIframewrapper.className.replace("AppleMusicPlayer", "SpotifyPlayer");
-            savedClasses.spotifyIframe = applemusicplayerIframe.className.replace("AppleMusicPlayer", "SpotifyPlayer");
-            localStorage.setItem("soundCloudContainer", savedClasses.soundCloudContainer);
-            localStorage.setItem("soundCloudIframeWrapper", savedClasses.soundCloudIframeWrapper);
-            localStorage.setItem("soundCloudIframe", savedClasses.soundCloudIframe);
-            localStorage.setItem("spotifyContainer", savedClasses.spotifyContainer);
-            localStorage.setItem("spotifyIframeWrapper", savedClasses.spotifyIframeWrapper);
-            localStorage.setItem("spotifyIframe", savedClasses.spotifyIframe);
-        }
-    }
-
-    function runUpdateClassesObserver() {
-        const observer = new MutationObserver((mutationsList) => {
-            for (let mutation of mutationsList) {
-                if (mutation.addedNodes.length > 0) {
-                    updateClasses();
-                }
-            }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3799,74 +3869,49 @@ chrome.storage.local.get([
     function playerSettings() {
 
         if (isGeniusSongLyricEditor) {
-            function adjustAppleMusicPlayerGridColumn() {
-                const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea, applemusicplayerIframe } = getDomElements();
+            function adjustPlayerGridColumn() {
+                const { expandingtextareaTextarea, applemusicplayerIframecontainer, soundcloudplayerIframecontainer } = getDomElements();
 
-                if (applemusicplayerIframe) {
+                if (applemusicplayerIframecontainer) {
                     if (expandingtextareaTextarea) {
-                        applemusicplayerIframe.style.gridColumn = "right-start / page-end";
-                        applemusicplayerIframe.style.marginRight = "0rem";
-                        applemusicplayerIframe.style.paddingLeft = "2.25rem";
-                        expandingtextareaTextarea.style.position = "relative";
-                        expandingtextareaTextarea.style.zIndex = "5";
-                        stickytoolbarContainer.style.zIndex = "7";
-                        stickyNavContainer.style.zIndex = "8";
+                        applemusicplayerIframecontainer.style.gridColumn = "right-start / page-end";
+                        applemusicplayerIframecontainer.style.marginRight = "0rem";
                     } else {
-                        applemusicplayerIframe.style.gridColumn = "left-start / right-end";
-                        applemusicplayerIframe.style.marginRight = "-1rem";
-                        applemusicplayerIframe.style.paddingLeft = "0rem";
-                        stickytoolbarContainer.style.zIndex = "3";
-                        stickyNavContainer.style.zIndex = "6";
+                        applemusicplayerIframecontainer.style.gridColumn = "left-start / right-end";
+                        applemusicplayerIframecontainer.style.marginRight = "0rem";
+                    }
+                }
+
+                if (soundcloudplayerIframecontainer) {
+                    if (expandingtextareaTextarea) {
+                        soundcloudplayerIframecontainer.style.gridColumn = "right-start / page-end";
+                    } else {
+                        soundcloudplayerIframecontainer.style.gridColumn = "center-end / page-end";
                     }
                 }
             }
 
-            adjustAppleMusicPlayerGridColumn();
+            adjustPlayerGridColumn();
 
-            const observer = new MutationObserver(adjustAppleMusicPlayerGridColumn);
+            const observer = new MutationObserver(adjustPlayerGridColumn);
             observer.observe(document.body, { childList: true, subtree: true });
         }
 
 
-        if (isGeniusSongLyricEditor) {
-            function adjustYouTubeMargin() {
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('button[class*="YoutubeButton__PlayVideoButton-"], button[class*="SoundcloudButton__PlayVideoButton-"]');
 
-                const { transcriptionplayerContainer } = getDomElements();
-                if (transcriptionplayerContainer) {
-                    transcriptionplayerContainer.style.margin = "0rem";
-                    transcriptionplayerContainer.style.marginRight = "1rem";
-                }
+            if (button) {
+                const checkPlayerInterval = setInterval(() => {
+                    const { mediaplayerscontainerContainer, transcriptionplayerContainer } = getDomElements();
+
+                    if (mediaplayerscontainerContainer && transcriptionplayerContainer) {
+                        mediaplayerscontainerContainer.insertBefore(transcriptionplayerContainer, mediaplayerscontainerContainer.firstChild);
+                        clearInterval(checkPlayerInterval);
+                    }
+                }, 1);
             }
-
-            adjustYouTubeMargin();
-
-            const observer = new MutationObserver(adjustYouTubeMargin);
-            observer.observe(document.body, { childList: true, subtree: true });
-
-            document.addEventListener('click', (event) => {
-                const button = event.target.closest('button[class*="YoutubeButton__PlayVideoButton-"], button[class*="SoundcloudButton__PlayVideoButton-"]');
-
-                if (button) {
-                    const checkPlayerInterval = setInterval(() => {
-                        const { mediaplayerscontainerContainer, transcriptionplayerContainer } = getDomElements();
-
-                        if (mediaplayerscontainerContainer && transcriptionplayerContainer) {
-                            mediaplayerscontainerContainer.insertBefore(transcriptionplayerContainer, mediaplayerscontainerContainer.firstChild);
-                            clearInterval(checkPlayerInterval);
-                        }
-                    }, 1);
-                }
-            });
-        }
-
-        if (isGeniusSongRenameButtons) {
-            const { youtubebuttonPlayvideobutton } = getDomElements();
-            if (youtubebuttonPlayvideobutton) {
-                const svgElement = youtubebuttonPlayvideobutton.querySelector('svg');
-                svgElement.remove();
-                youtubebuttonPlayvideobutton.textContent = 'YouTube';
-            }
-        }
+        });
     }
 
 });

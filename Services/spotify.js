@@ -49,11 +49,15 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
 
         let coverUrl;
 
+        const clientId = window.secrets.SPOTIFY_CLIENT_ID;
+        const clientSecret = window.secrets.SPOTIFY_CLIENT_SECRET;
+
         if (currentUrl.startsWith("https://open.spotify.com/prerelease")) {
           try {
             const container = document.querySelector('.main-view-container');
             if (container) {
-              const img = container.querySelector('img');
+              const img = container.querySelectorAll('img');
+              console.log(img);
               if (img && img.src) {
                 coverUrl = img.src;
               }
@@ -244,6 +248,7 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
       album: "https://i.scdn.co/image/ab67616d0000",
       artist: "https://i.scdn.co/image/ab6761610000",
       header: "https://i.scdn.co/image/ab6761860000",
+      feed: "https://i.scdn.co/image/ab67ba690000",
       gallery: "https://i.scdn.co/image/ab6761670000",
       playlist: "https://i.scdn.co/image/ab67706f0000",
       podcast: "https://i.scdn.co/image/ab6765630000",
@@ -256,6 +261,7 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
       album: "82c1",
       artist: "e5eb",
       header: "1016",
+      feed: "2427",
       gallery: "82e8",
       playlist: "0004",
       podcast: "c3d5",
