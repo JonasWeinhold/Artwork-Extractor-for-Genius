@@ -401,7 +401,7 @@ chrome.storage.local.get([
             }
         });
     }
-   
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1211,7 +1211,20 @@ chrome.storage.local.get([
                     const existingSongData = existingSongsData.find(song => song.id === songId);
                     if (!existingSongData) return;
 
-                    statusDisplay.innerHTML = `Saving Track <strong>${currentIndex}</strong> of <strong>${totalCount}</strong>...`;
+                    //statusDisplay.innerHTML = `Saving Track <strong>${currentIndex}</strong> of <strong>${totalCount}</strong>...`;
+                    statusDisplay.textContent = ""; // Reset
+                    const text1 = document.createTextNode("Saving Track ");
+                    statusDisplay.appendChild(text1);
+                    const strong1 = document.createElement("strong");
+                    strong1.textContent = currentIndex;
+                    statusDisplay.appendChild(strong1);
+                    const text2 = document.createTextNode(" of ");
+                    statusDisplay.appendChild(text2);
+                    const strong2 = document.createElement("strong");
+                    strong2.textContent = totalCount;
+                    statusDisplay.appendChild(strong2);
+                    const text3 = document.createTextNode("...");
+                    statusDisplay.appendChild(text3);
 
 
                     let { existingPrimaryArtists, existingFeaturedArtists, existingPrimaryTag, existingTags, existingReleaseDate, existingYoutubeLink, existingSoundcloudLink, existingWriters, existingProducers, existingRecorded, existingGradient, existingSongCover, existingCustomPerformances, existingSongRelationships } = existingSongData;
@@ -2275,7 +2288,7 @@ chrome.storage.local.get([
                                     const linkLabel = playlistData.playlistLength === 1 ? "link" : "links";
                                     const songLabel = songCount === 1 ? "song" : "songs";
 
-                                    if (playlistLength === songCount) {
+                                    /*if (playlistLength === songCount) {
                                         feedbackLabel.style.color = '#007A33';
                                         feedbackLabel.innerHTML = `
                                                 <strong>Playlist:</strong> ${playlistData.playlistTitle} [${playlistLength} Tracks]
@@ -2288,6 +2301,46 @@ chrome.storage.local.get([
                                             <strong><span style="background-color: #FFEB3B; color: #333; padding: 2px 0px;">Warning:</span></strong>
                                             <span style="color: #333;">The playlist has ${playlistLength} ${linkLabel}, but the album  has ${songCount} ${songLabel}.</span>
                                         `;
+                                    }*/
+                                    if (playlistLength === songCount) {
+                                        feedbackLabel.style.color = '#007A33';
+                                        feedbackLabel.textContent = "";
+
+                                        const strong = document.createElement("strong");
+                                        strong.textContent = "Playlist:";
+
+                                        const text = document.createTextNode(` ${playlistData.playlistTitle} [${playlistLength} Tracks]`);
+
+                                        feedbackLabel.appendChild(strong);
+                                        feedbackLabel.appendChild(text);
+
+                                        youtubeLinks = filteredLinks;
+
+                                    } else {
+                                        feedbackLabel.style.color = '#FF1414';
+                                        feedbackLabel.textContent = "";
+
+                                        const strong1 = document.createElement("strong");
+                                        strong1.textContent = "Playlist:";
+                                        feedbackLabel.appendChild(strong1);
+
+                                        const text1 = document.createTextNode(` ${playlistData.playlistTitle} [${playlistLength} ${trackLabel}]`);
+                                        feedbackLabel.appendChild(text1);
+                                        feedbackLabel.appendChild(document.createElement("br"));
+
+                                        const strong2 = document.createElement("strong");
+                                        const warnSpan = document.createElement("span");
+                                        warnSpan.style.backgroundColor = "#FFEB3B";
+                                        warnSpan.style.color = "#333";
+                                        warnSpan.style.padding = "2px 0px";
+                                        warnSpan.textContent = "Warning:";
+                                        strong2.appendChild(warnSpan);
+                                        feedbackLabel.appendChild(strong2);
+
+                                        const warnText = document.createElement("span");
+                                        warnText.style.color = "#333";
+                                        warnText.textContent = ` The playlist has ${playlistLength} ${linkLabel}, but the album has ${songCount} ${songLabel}.`;
+                                        feedbackLabel.appendChild(warnText);
                                     }
                                 }
                             }
@@ -2333,7 +2386,7 @@ chrome.storage.local.get([
                                 const linkLabel = playlistLength === 1 ? "link" : "links";
                                 const songLabel = songCount === 1 ? "song" : "songs";
 
-                                if (playlistLength === songCount) {
+                                /*if (playlistLength === songCount) {
                                     feedbackLabel.style.color = '#007A33';
                                     feedbackLabel.innerHTML = `
                                         <strong>Playlist:</strong> ${cachedAlbumTitle} [${playlistLength} ${trackLabel}]
@@ -2346,6 +2399,44 @@ chrome.storage.local.get([
                                         <strong><span style="background-color: #FFEB3B; color: #333; padding: 2px 0px;">Warning:</span></strong>
                                         <span style="color: #333;">The playlist has ${playlistLength} ${linkLabel}, but the album only has ${songCount} ${songLabel}.</span>
                                     `;
+                                }*/
+                                if (playlistLength === songCount) {
+                                    feedbackLabel.style.color = '#007A33';
+                                    feedbackLabel.textContent = "";
+
+                                    const strong = document.createElement("strong");
+                                    strong.textContent = "Playlist:";
+                                    feedbackLabel.appendChild(strong);
+
+                                    const text = document.createTextNode(` ${cachedAlbumTitle} [${playlistLength} ${trackLabel}]`);
+                                    feedbackLabel.appendChild(text);
+
+                                    geniusLinks = filteredSongIds;
+                                } else {
+                                    feedbackLabel.style.color = '#FF1414';
+                                    feedbackLabel.textContent = "";
+
+                                    const strong1 = document.createElement("strong");
+                                    strong1.textContent = "Playlist:";
+                                    feedbackLabel.appendChild(strong1);
+
+                                    const text1 = document.createTextNode(` ${cachedAlbumTitle} [${playlistLength} ${trackLabel}]`);
+                                    feedbackLabel.appendChild(text1);
+
+                                    feedbackLabel.appendChild(document.createElement("br"));
+
+                                    const strong2 = document.createElement("strong");
+                                    const warnSpan = document.createElement("span");
+                                    warnSpan.style.backgroundColor = "#FFEB3B";
+                                    warnSpan.style.color = "#333";
+                                    warnSpan.style.padding = "2px 0px";
+                                    warnSpan.textContent = "Warning:";
+                                    strong2.appendChild(warnSpan);
+                                    feedbackLabel.appendChild(strong2);
+
+                                    const warnText = document.createElement("span");
+                                    warnText.style.color = "#333";
+                                    warnText.textContent = ` The playlist has ${playlistLength} ${linkLabel}, but the album only has ${songCount} ${songLabel}.`; feedbackLabel.appendChild(warnText);
                                 }
                             }
                         } catch (error) {
@@ -2483,6 +2574,7 @@ chrome.storage.local.get([
                     }
 
                     const metadataData = (await metadataResponse.json()).items[0].snippet;
+                    console.log(metadataData);
 
                     let videosData;
                     let videoLinks = [];
@@ -2495,6 +2587,7 @@ chrome.storage.local.get([
                         }
 
                         videosData = await videosResponse.json();
+                        console.log(videosData);
                         videoLinks.push(...videosData.items.map(item => `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`));
                         nextPageToken = videosData.nextPageToken;
                     } while (nextPageToken);
