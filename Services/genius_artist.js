@@ -8,7 +8,8 @@ chrome.storage.local.get([
     'isGeniusArtistAllSongsAlbumsPageMetadata',
     'isGeniusArtistAllSongsAlbumsPageZwsp',
     'isGeniusArtistFollowButton',
-    'isGeniusArtistSpreadsheetButton'
+    'isGeniusArtistSpreadsheetButton',
+    'isGeniusArtistRecords',
 ], async function (result) {
     const isGeniusArtistArtistPage = result.isGeniusArtistArtistPage ?? true;
     const isGeniusArtistArtistPageZwsp = result.isGeniusArtistArtistPageZwsp ?? true;
@@ -19,6 +20,7 @@ chrome.storage.local.get([
     const isGeniusArtistAllSongsAlbumsPageZwsp = result.isGeniusArtistAllSongsAlbumsPageZwsp ?? true;
     const isGeniusArtistFollowButton = result.isGeniusArtistFollowButton ?? false;
     const isGeniusArtistSpreadsheetButton = result.isGeniusArtistSpreadsheetButton ?? false;
+    const isGeniusArtistRecords = result.isGeniusArtistRecords ?? true;
 
 
     if (result['Services/genius_artist.js'] === false) {
@@ -68,7 +70,10 @@ chrome.storage.local.get([
 
             if (isGeniusArtistSpreadsheetButton) getSpreadsheet(artistId, "artist");
         } else if (isUser) {
+            if (isGeniusArtistRecords) showRecords();
             if (isGeniusArtistSpreadsheetButton) getSpreadsheet(userId, "user");
+        } else {
+            if (isGeniusArtistRecords) showRecords();
         }
     }
 
@@ -1044,5 +1049,14 @@ chrome.storage.local.get([
             }
         });
     }
+
+
+    function showRecords() {
+        const el = document.querySelector('profile-achievements');
+        if (el) {
+            el.style.display = 'block';
+        }
+    }
+
 
 });
