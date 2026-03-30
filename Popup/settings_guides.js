@@ -222,6 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isGeniusSongAnnotationsButtons = document.getElementById('isGeniusSongAnnotationsButtons').checked;
         const isGeniusSongFilterActivity = document.getElementById('isGeniusSongFilterActivity').checked;
         const isGeniusSongSaveFilters = document.getElementById('isGeniusSongSaveFilters').checked;
+        const isGeniusSongFilterFirehose = document.getElementById('isGeniusSongFilterFirehose').checked;
         const isGeniusSongCopyCover = document.getElementById('isGeniusSongCopyCover').checked;
         const isGeniusSongAppleMusicPlayer = document.getElementById('isGeniusSongAppleMusicPlayer').checked;
         const isGeniusSongYouTubePlayer = document.getElementById('isGeniusSongYouTubePlayer').checked;
@@ -248,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isGeniusArtistAllSongsAlbumsPageZwsp = document.getElementById('isGeniusArtistAllSongsAlbumsPageZwsp').checked;
         const isGeniusArtistFollowButton = document.getElementById('isGeniusArtistFollowButton').checked;
         const isGeniusArtistSpreadsheetButton = document.getElementById('isGeniusArtistSpreadsheetButton').checked;
+        const isGeniusArtistRecords = document.getElementById('isGeniusArtistRecords').checked;
         const is45CopyCover = document.getElementById('is45CopyCover').checked;
         const is45Popup = document.getElementById('is45Popup').checked;
         const is45ConvertPNG = document.getElementById('is45ConvertPNG').checked;
@@ -335,6 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
             isGeniusSongAnnotationsButtons: isGeniusSongAnnotationsButtons,
             isGeniusSongFilterActivity: isGeniusSongFilterActivity,
             isGeniusSongSaveFilters: isGeniusSongSaveFilters,
+            isGeniusSongFilterFirehose: isGeniusSongFilterFirehose,
             isGeniusSongCopyCover: isGeniusSongCopyCover,
             isGeniusSongAppleMusicPlayer: isGeniusSongAppleMusicPlayer,
             isGeniusSongYouTubePlayer: isGeniusSongYouTubePlayer,
@@ -361,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
             isGeniusArtistAllSongsAlbumsPageZwsp: isGeniusArtistAllSongsAlbumsPageZwsp,
             isGeniusArtistFollowButton: isGeniusArtistFollowButton,
             isGeniusArtistSpreadsheetButton: isGeniusArtistSpreadsheetButton,
+            isGeniusArtistRecords: isGeniusArtistRecords,
             is45CopyCover: is45CopyCover,
             is45Popup: is45Popup,
             is45ConvertPNG: is45ConvertPNG,
@@ -436,9 +440,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Lade die gespeicherten Einstellungen
     chrome.storage.local.get([
-        'isGeniusSongSongPage', 'isGeniusSongSongPageZwsp', 'isGeniusSongSongPageInfo', 'isGeniusSongSongId', 'isGeniusSongCheckIndex', 'isGeniusSongFollowButton', 'isGeniusSongShellyButton', 'isGeniusSongCleanupMetadataButton', 'isGeniusSongLanguageButton', 'isGeniusSongCleanupButton', 'isGeniusSongSectionsButtons', 'isGeniusSongExpandSectionsButtons', 'isGeniusSongAnnotationsButtons', 'isGeniusSongFilterActivity', 'isGeniusSongSaveFilters', 'isGeniusSongCopyCover', 'isGeniusSongAppleMusicPlayer', 'isGeniusSongYouTubePlayer', 'isGeniusSongSoundCloudPlayer', 'isGeniusSongSpotifyPlayer', 'isGeniusSongLyricEditor', 'isGeniusSongRenameButtons',
+        'isGeniusSongSongPage', 'isGeniusSongSongPageZwsp', 'isGeniusSongSongPageInfo', 'isGeniusSongSongId', 'isGeniusSongCheckIndex', 'isGeniusSongFollowButton', 'isGeniusSongShellyButton', 'isGeniusSongCleanupMetadataButton', 'isGeniusSongLanguageButton', 'isGeniusSongCleanupButton', 'isGeniusSongSectionsButtons', 'isGeniusSongExpandSectionsButtons', 'isGeniusSongAnnotationsButtons', 'isGeniusSongFilterActivity', 'isGeniusSongSaveFilters', 'isGeniusSongFilterFirehose','isGeniusSongCopyCover', 'isGeniusSongAppleMusicPlayer', 'isGeniusSongYouTubePlayer', 'isGeniusSongSoundCloudPlayer', 'isGeniusSongSpotifyPlayer', 'isGeniusSongLyricEditor', 'isGeniusSongRenameButtons',
         'isGeniusAlbumAlbumPage', 'isGeniusAlbumAlbumPageZwsp', 'isGeniusAlbumAlbumPageLyrics', 'isGeniusAlbumExpandTracklist', 'isGeniusAlbumEditTracklist', 'isGeniusAlbumUploadCover', 'isGeniusAlbumRenameButtons', 'isGeniusAlbumSongCreditsButton', 'isGeniusAlbumFollowButton', 'isGeniusAlbumCleanupButton',
-        'isGeniusArtistArtistPage', 'isGeniusArtistArtistPageZwsp', 'isGeniusArtistArtistPageInfo', 'isGeniusArtistArtistId', 'isGeniusArtistAllSongsAlbumsPage', 'isGeniusArtistAllSongsAlbumsPageMetadata', 'isGeniusArtistAllSongsAlbumsPageZwsp', 'isGeniusArtistFollowButton', 'isGeniusArtistSpreadsheetButton',
+        'isGeniusArtistArtistPage', 'isGeniusArtistArtistPageZwsp', 'isGeniusArtistArtistPageInfo', 'isGeniusArtistArtistId', 'isGeniusArtistAllSongsAlbumsPage', 'isGeniusArtistAllSongsAlbumsPageMetadata', 'isGeniusArtistAllSongsAlbumsPageZwsp', 'isGeniusArtistFollowButton', 'isGeniusArtistSpreadsheetButton', 'isGeniusArtistRecords',
         'is45CopyCover', 'is45Popup', 'is45ConvertPNG', 'is45SaveImage', 'is45HostImgBB', 'is45HostFilestack', 'is45RightClick',
         'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyLyrics', 'isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage',
         'isBandcampCopyCover', 'isBandcampPopup', 'isBandcampSaveImage',
@@ -465,6 +469,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isGeniusSongAnnotationsButtons').checked = result.isGeniusSongAnnotationsButtons !== undefined ? result.isGeniusSongAnnotationsButtons : true;
         document.getElementById('isGeniusSongFilterActivity').checked = result.isGeniusSongFilterActivity !== undefined ? result.isGeniusSongFilterActivity : true;
         document.getElementById('isGeniusSongSaveFilters').checked = result.isGeniusSongSaveFilters !== undefined ? result.isGeniusSongSaveFilters : false;
+        document.getElementById('isGeniusSongFilterFirehose').checked = result.isGeniusSongFilterFirehose !== undefined ? result.isGeniusSongFilterFirehose : true;
         document.getElementById('isGeniusSongCopyCover').checked = result.isGeniusSongCopyCover !== undefined ? result.isGeniusSongCopyCover : true;
         document.getElementById('isGeniusSongAppleMusicPlayer').checked = result.isGeniusSongAppleMusicPlayer !== undefined ? result.isGeniusSongAppleMusicPlayer : true;
         document.getElementById('isGeniusSongYouTubePlayer').checked = result.isGeniusSongYouTubePlayer !== undefined ? result.isGeniusSongYouTubePlayer : true;
@@ -491,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isGeniusArtistAllSongsAlbumsPageZwsp').checked = result.isGeniusArtistAllSongsAlbumsPageZwsp !== undefined ? result.isGeniusArtistAllSongsAlbumsPageZwsp : true;
         document.getElementById('isGeniusArtistFollowButton').checked = result.isGeniusArtistFollowButton !== undefined ? result.isGeniusArtistFollowButton : false;
         document.getElementById('isGeniusArtistSpreadsheetButton').checked = result.isGeniusArtistSpreadsheetButton !== undefined ? result.isGeniusArtistSpreadsheetButton : false;
+        document.getElementById('isGeniusArtistRecords').checked = result.isGeniusArtistRecords !== undefined ? result.isGeniusArtistRecords : true;
         document.getElementById('is45CopyCover').checked = result.is45CopyCover !== undefined ? result.is45CopyCover : true;
         document.getElementById('is45Popup').checked = result.is45Popup !== undefined ? result.is45Popup : true;
         document.getElementById('is45ConvertPNG').checked = result.is45ConvertPNG !== undefined ? result.is45ConvertPNG : true;
@@ -580,6 +586,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isGeniusSongAnnotationsButtons').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongFilterActivity').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongSaveFilters').addEventListener('change', saveSettings);
+    document.getElementById('isGeniusSongFilterFirehose').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongCopyCover').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongAppleMusicPlayer').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongYouTubePlayer').addEventListener('change', saveSettings);
@@ -606,6 +613,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isGeniusArtistAllSongsAlbumsPageZwsp').addEventListener('change', saveSettings);
     document.getElementById('isGeniusArtistFollowButton').addEventListener('change', saveSettings);
     document.getElementById('isGeniusArtistSpreadsheetButton').addEventListener('change', saveSettings);
+    document.getElementById('isGeniusArtistRecords').addEventListener('change', saveSettings);
     document.getElementById('is45CopyCover').addEventListener('change', saveSettings);
     document.getElementById('is45Popup').addEventListener('change', saveSettings);
     document.getElementById('is45ConvertPNG').addEventListener('change', saveSettings);

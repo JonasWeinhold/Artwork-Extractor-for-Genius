@@ -75,6 +75,7 @@ chrome.storage.local.get([
         playerSettings();
 
 
+
         const { songId, userId, profilePath, songData } = await getSongInfo();
 
         if (isGeniusSongSongId) showSongIdButton(songId);
@@ -754,14 +755,14 @@ chrome.storage.local.get([
             { code: 'KO', value: 'ko', name: 'Korean' },
             { code: 'LA', value: 'la', name: 'Latin' },
             { code: 'LT', value: 'lt', name: 'Lithuanian' },
-            //{ code: 'MK', value: 'mk', name: 'Macedonian' },
+            { code: 'MK', value: 'mk', name: 'Macedonian' },
             { code: 'MN', value: 'mn', name: 'Mongolian' },
             { code: 'NO', value: 'no', name: 'Norwegian' },
             { code: 'PL', value: 'pl', name: 'Polish' },
             { code: 'RU', value: 'ru', name: 'Russian' },
             { code: 'SC', value: 'sc', name: 'Sardinian' },
-            //{ code: 'SH-E', value: 'sr', name: 'Serbo-Croatian (ekavica)' },
-            //{ code: 'SH-I', value: 'bs', name: 'Serbo-Croatian (ijekavica)' },
+            { code: 'SH-E', value: 'sr', name: 'Serbo-Croatian (ekavica)' },
+            { code: 'SH-I', value: 'bs', name: 'Serbo-Croatian (ijekavica)' },
             { code: 'SK', value: 'sk', name: 'Slovak' },
             { code: 'ES', value: 'es', name: 'Spanish' },
             { code: 'SV', value: 'sv', name: 'Swedish' },
@@ -3302,9 +3303,9 @@ chrome.storage.local.get([
 
     function storeAppleMusicStructure() {
 
-        function waitForIframeContainer() {
+        function waitForIframe() {
             return new Promise(resolve => {
-                const selector = '[class^="AppleMusicPlayer-desktop__IframeContainer-"]';
+                const selector = '[class^="AppleMusicPlayer-desktop__Iframe-"]';
 
                 if (document.querySelector(selector)) {
                     resolve();
@@ -3325,50 +3326,39 @@ chrome.storage.local.get([
             });
         }
 
-        function cloneUntilIframeContainer(node) {
-            const isIframeContainer =
-                node.classList &&
-                [...node.classList].some(c => c.startsWith("AppleMusicPlayer-desktop__IframeContainer-"));
+        function clonePathToRoot(iframeNode) {
+            const rootSelector = '[class^="AppleMusicPlayer-desktop__PositioningContainer-"]';
 
-            if (node.tagName === "IFRAME") {
-                const iframeClone = document.createElement("iframe");
-                iframeClone.className = node.className;
-                return iframeClone;
-            }
+            let current = iframeNode;
+            let clonedChild = null;
+            let clonedRoot = null;
 
-            const clone = node.cloneNode(false);
+            while (current) {
+                const clone = current.cloneNode(false);
 
-            if (isIframeContainer) {
-                node.childNodes.forEach(child => {
-                    if (child.nodeType === Node.ELEMENT_NODE) {
-                        const childClone = cloneUntilIframeContainer(child);
-                        if (childClone) clone.appendChild(childClone);
-                    } else {
-                        clone.appendChild(child.cloneNode(true));
-                    }
-                });
-
-                return clone;
-            }
-
-            node.childNodes.forEach(child => {
-                if (child.nodeType === Node.ELEMENT_NODE) {
-                    const childClone = cloneUntilIframeContainer(child);
-                    if (childClone) clone.appendChild(childClone);
-                } else {
-                    clone.appendChild(child.cloneNode(true));
+                if (clonedChild) {
+                    clone.appendChild(clonedChild);
                 }
-            });
 
-            return clone;
+                clonedChild = clone;
+
+                if (current.matches(rootSelector)) {
+                    clonedRoot = clone;
+                    break;
+                }
+
+                current = current.parentElement;
+            }
+
+            return clonedRoot;
         }
 
-        waitForIframeContainer().then(() => {
-            const selector = '[class^="AppleMusicPlayer-desktop__PositioningContainer-"]';
-            const original = document.querySelector(selector);
-            if (!original) return;
+        waitForIframe().then(() => {
+            const iframe = document.querySelector('[class^="AppleMusicPlayer-desktop__Iframe-"]');
+            if (!iframe) return;
 
-            const clone = cloneUntilIframeContainer(original);
+            const clone = clonePathToRoot(iframe);
+            if (!clone) return;
 
             localStorage.setItem("AppleMusicStructure", clone.outerHTML);
         });
@@ -3565,6 +3555,7 @@ chrome.storage.local.get([
             if (!html) return;
 
             const wrapper = document.createElement("div");
+            console.log(wrapper);
             wrapper.innerHTML = html.trim();
             soundCloudContainer = wrapper.firstElementChild;
 
@@ -3583,7 +3574,7 @@ chrome.storage.local.get([
             const iframe = iframeContainer.querySelector("iframe");
             if (!iframe) return;
 
-            iframe.id = "ge-soundcloud-player";
+            iframe.id = "soundcloud-player";
 
             Object.assign(iframeContainer.style, {
                 marginLeft: "0rem",
@@ -3712,7 +3703,7 @@ chrome.storage.local.get([
         }
 
         function loadSpotifyPlayer(spotifyId) {
-            if (document.getElementById("ge-spotify-player")) {
+            if (document.getElementById("spotify-player")) {
                 return;
             }
 
@@ -3745,7 +3736,7 @@ chrome.storage.local.get([
             spotifyIframe.style.gridColumn = "left-start / right-end";
             spotifyIframe.style.pointerEvents = "auto";
             spotifyIframe.className = savedClasses.spotifyIframe;
-            spotifyIframe.id = "ge-spotify-player";
+            spotifyIframe.id = "spotify-player";
             spotifyIframe.src = `https://open.spotify.com/embed/track/${spotifyId}`;
             spotifyIframe.setAttribute("allow", "encrypted-media");
             spotifyIframe.setAttribute("allowtransparency", "true");
@@ -3870,22 +3861,26 @@ chrome.storage.local.get([
 
         if (isGeniusSongLyricEditor) {
             function adjustPlayerGridColumn() {
-                const { expandingtextareaTextarea, applemusicplayerIframecontainer, soundcloudplayerIframecontainer } = getDomElements();
+                const { expandingtextareaTextarea, applemusicplayerPositioningcontainer, applemusicplayerIframecontainer, soundcloudplayerIframecontainer } = getDomElements();
 
-                if (applemusicplayerIframecontainer) {
+                if (applemusicplayerPositioningcontainer && applemusicplayerIframecontainer) {
                     if (expandingtextareaTextarea) {
                         applemusicplayerIframecontainer.style.gridColumn = "right-start / page-end";
                         applemusicplayerIframecontainer.style.marginRight = "0rem";
+                        applemusicplayerPositioningcontainer.style.paddingBottom = "0rem";
                     } else {
                         applemusicplayerIframecontainer.style.gridColumn = "left-start / right-end";
-                        applemusicplayerIframecontainer.style.marginRight = "0rem";
+                        applemusicplayerIframecontainer.style.marginRight = "-1rem";
+                        applemusicplayerPositioningcontainer.style.paddingBottom = "0.5rem";
                     }
                 }
 
                 if (soundcloudplayerIframecontainer) {
                     if (expandingtextareaTextarea) {
+                        console.log("1");
                         soundcloudplayerIframecontainer.style.gridColumn = "right-start / page-end";
                     } else {
+                        console.log("2");
                         soundcloudplayerIframecontainer.style.gridColumn = "center-end / page-end";
                     }
                 }
