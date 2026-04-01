@@ -2603,12 +2603,12 @@ chrome.storage.local.get([
                 <path d="M21.82 20.62L17 15.83l3.59-3.59-3.04-3.07-3.36.12-4.1-4.1v-3L7.91 0 0 7.91l2.16 2.16 2.84.18 4.1 4.12-.1 3.36 3.08 3.08 3.59-3.59L20.43 22zM11 16.94l.12-3.36-5.27-5.24L3 8.16l-.25-.25 5.16-5.14.22.23v3l5.27 5.27 3.36-.12 1.09 1.09L12.06 18z"></path>
             </svg>`,
         svgLocked: `
-            <svg data-icon-locked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17.08 22">
-                <path d="M15.08 10.86V20H2v-9.14h13.08M8.54 0a6.31 6.31 0 0 0-6.31 6.31v2.55H0V22h17.08V8.86h-2.23V6.31A6.31 6.31 0 0 0 8.54 0zM4.63 8.86V6.31a3.91 3.91 0 0 1 7.81 0v2.55z"></path>
+            <svg data-icon-locked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 15">
+                <path fill-rule="evenodd" d="M1.642 6.864H.369V14.5h10.182V6.864H9.278V4.318a3.818 3.818 0 0 0-7.636 0v2.546zm1.272 0h5.091V4.318a2.546 2.546 0 0 0-5.09 0v2.546z"></path>
             </svg>`,
         svgUnlocked: `
-            <svg data-icon-unlocked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16.56 22">
-                <path d="M14.56 11.26V20H2v-8.74h12.56M8.28 0a6.12 6.12 0 0 0-6.12 6.12v3.14H0V22h16.56V9.26H4.49V6.12a3.79 3.79 0 0 1 7.58 0h2.33A6.12 6.12 0 0 0 8.28 0z"></path>
+            <svg data-icon-unlocked width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18">
+                <path fill-rule="evenodd" d="M4.091 8.182H2.454V18h13.092V8.182H5.727V4.91a3.273 3.273 0 0 1 6.545 0h1.637a4.909 4.909 0 0 0-9.818 0v3.273Z"></path>
             </svg>`,
         svgAccepted: `
             <svg data-icon-accepted width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 16.2">
@@ -2644,21 +2644,24 @@ chrome.storage.local.get([
                 <path d="M4.14 4.29h12.93V6.2H4.14zm0 4.09h12.93v1.91H4.14z"></path>
             </svg>`,
         svgFollowed: `
-            <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 15.45">
-                <path d="M11 2c4 0 7.26 3.85 8.6 5.72-1.34 1.87-4.6 5.73-8.6 5.73S3.74 9.61 2.4 7.73C3.74 5.86 7 2 11 2m0-2C4.45 0 0 7.73 0 7.73s4.45 7.73 11 7.73 11-7.73 11-7.73S17.55 0 11 0z"></path>
-                <path d="M11 5a2.73 2.73 0 1 1-2.73 2.73A2.73 2.73 0 0 1 11 5m0-2a4.73 4.73 0 1 0 4.73 4.73A4.73 4.73 0 0 0 11 3z"></path>
+            <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 18">
+                <path d="M20.418 2.53a13.655 13.655 0 0 1 4.806 6.192.818.818 0 0 1 0 .556A13.655 13.655 0 0 1 13 18 13.655 13.655 0 0 1 .776 9.278a.818.818 0 0 1 0-.556A13.655 13.655 0 0 1 13 0c2.667.1 5.246.98 7.418 2.53ZM2.421 9C4.08 13.148 8.664 16.364 13 16.364S21.918 13.148 23.58 9C21.917 4.852 17.335 1.636 13 1.636S4.082 4.852 2.42 9Zm7.852-4.082a4.91 4.91 0 1 1 5.454 8.164 4.91 4.91 0 0 1-5.454-8.164Zm.909 6.803a3.272 3.272 0 1 0 3.636-5.442 3.272 3.272 0 0 0-3.636 5.442Z"></path>
             </svg>`,
         svgHid: `
-            <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 15.45">
-                <path d="M11 2c4 0 7.26 3.85 8.6 5.72-1.34 1.87-4.6 5.73-8.6 5.73S3.74 9.61 2.4 7.73C3.74 5.86 7 2 11 2m0-2C4.45 0 0 7.73 0 7.73s4.45 7.73 11 7.73 11-7.73 11-7.73S17.55 0 11 0z"></path>
-                <path d="M11 5a2.73 2.73 0 1 1-2.73 2.73A2.73 2.73 0 0 1 11 5m0-2a4.73 4.73 0 1 0 4.73 4.73A4.73 4.73 0 0 0 11 3z"></path>
-                <path d="M0 14.45 L1.8 15.45 L22 1 L20.2 0 Z"></path>
+            <svg data-icon-followed width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 2 11 10">
+                <path d="M10.6562 6.8625C9.8312 4.7313 7.7687 3.2875 5.5 3.2188 3.2313 3.2875 1.1688 4.7313.3437 6.8624v.2062C1.1687 9.2 3.1625 10.6438 5.5 10.7126c2.2687-.0688 4.3313-1.5125 5.1562-3.6438v-.2062ZM5.5 10.0938c-1.8563 0-3.7125-1.375-4.4688-3.0938C1.7188 5.2812 3.6437 3.9062 5.5 3.9062S9.2125 5.2813 9.9688 7C9.2125 8.7188 7.2874 10.0938 5.5 10.0938Z"></path>
+                <path d="M5.5 4.9375c-1.1688 0-2.0625.8937-2.0625 2.0625 0 1.1687.8937 2.0625 2.0625 2.0625S7.5625 8.1687 7.5625 7c0-1.1688-.8937-2.0625-2.0625-2.0625Zm0 3.4375c-.7562 0-1.375-.6188-1.375-1.375S4.7438 5.625 5.5 5.625 6.875 6.2438 6.875 7 6.2562 8.375 5.5 8.375Z"></path>
+                <path d="M1.7713 10.7126 8.795 2.5929l.605.5233-7.0235 8.1197-.605-.5233Z"></path>
             </svg>`,
         svgPyonged: `
             <svg data-icon-pyonged width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11.37 22">
                 <path d="M0 7l6.16-7 3.3 7H6.89S5.5 12.1 5.5 12.17h5.87L6.09 22l.66-7H.88l2.89-8z"></path>
             </svg>`,
         svgPageviews: `
+            <svg data-icon-pageviews width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 8">
+                <path d="M7.714 0v.857h2.823l-3.68 3.68-1.84-1.84a.43.43 0 0 0-.606 0L0 7.108l.606.606 4.108-4.108 1.84 1.84a.43.43 0 0 0 .606 0l3.983-3.983v2.823H12V0z"></path>
+            </svg>`,
+        svgCurrentPageviews: `
             <svg data-icon-pageviews width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 18">
                 <path d="M3.33494 0C3.33494 0 4.09484 1.88505 3.82154 4.2567C3.54779 6.62835 0.236392 9.669 0.250042 12.6792C0.263692 15.6894 5.14004 18 5.14004 18C5.14004 18 4.03634 16.0332 5.97389 12.7953C5.97389 12.7953 8.21519 14.3668 7.98599 15.7594C7.74464 17.2239 6.60914 18 6.60914 18C6.60914 18 13.4295 17.1792 13.4899 11.676C13.551 6.1722 9.49469 2.73315 9.49469 2.73315C9.49469 2.73315 9.94184 4.95165 8.72384 6.97485C8.72384 6.97485 5.67599 0.7605 3.33494 0ZM5.38739 4.30215C6.08369 5.3508 6.77669 6.5532 7.32239 7.66335L8.58509 10.2348L10.0626 7.78005C10.285 7.4103 10.4641 7.0371 10.6069 6.66915C11.3284 7.9623 11.9508 9.6618 11.9287 11.6584C11.9079 13.524 10.786 14.681 9.55904 15.3902C9.44159 13.4235 7.33139 11.8395 6.87059 11.5164L5.49629 10.5534L4.63394 11.9932C3.95714 13.1242 3.58724 14.1443 3.40754 15.03C2.53679 14.3027 1.81514 13.4493 1.81199 12.672C1.80614 11.4366 2.69579 9.9708 3.55619 8.5536C4.40819 7.1514 5.21219 5.8263 5.37299 4.4358C5.37824 4.39095 5.38274 4.34625 5.38739 4.30215Z"></path>
             </svg>`,
@@ -2671,9 +2674,9 @@ chrome.storage.local.get([
                 <circle cx="74" cy="10" r="9"></circle>
             </svg>`,
         svgVerified: `
-            <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 11">
-                <path d="M0 0h11v11H0z"></path>
-                <path fill="#FFF" d="M4.764 5.9l-2-2L1.35 5.314l3.414 3.414 4.914-4.914L8.264 2.4"></path>
+            <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+                <circle stroke="black" stroke-width="0.75" cx="5" cy="5" r="5"></circle>
+                <path  fill="#000" d="M4.43 7 2.25 4.968l.509-.546 1.634 1.524L7.136 3l.546.509L4.43 7Z"></path>
             </svg>`,
         svgGenius: `
             <svg data-icon-user width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -2686,7 +2689,7 @@ chrome.storage.local.get([
     function filterRecentActivity(profilePath) {
         console.log("Run function filterRecentActivity()");
 
-        const { svgUpvoted, svgDownvoted, svgPinned, svgUnpinned, svgLocked, svgUnlocked, svgAccepted, svgRejected, svgRecognized, svgMerged, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgMarked, svgVerified, svgGenius } = ICONS;
+        const { svgUpvoted, svgDownvoted, svgPinned, svgUnpinned, svgLocked, svgUnlocked, svgAccepted, svgRejected, svgRecognized, svgMerged, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgCurrentPageviews, svgMarked, svgVerified, svgGenius } = ICONS;
 
         const FILTERS = [
             { key: "metadata", label: "METADATA", color: "#000000", svg: svgGenius },
@@ -2708,7 +2711,7 @@ chrome.storage.local.get([
                 { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: svgHid },
                 { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: svgFollowed },
                 { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: svgPyonged },
-                { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#9a9a9a", svg: svgPageviews },
+                { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#0ecb27", svg: svgPageviews },
             ],
 
             q_and_a: [
@@ -2728,7 +2731,7 @@ chrome.storage.local.get([
                 { key: "lyrics__edited_lyrics", label: "Lyric edits", regex: /.*? edited the lyrics of/i, color: "#9a9a9a", svg: svgEdited },
                 { key: "lyrics__lep", label: "Lyric edit proposals", regex: /.*? (rejected .*?|created a|accepted .*?|automatically archived .*?) lyrics edit proposal on/i, color: "#9a9a9a", svg: svgEdited },
                 { key: "lyrics__marked", label: "Marked real", regex: /.*?(marked as a real song|thanks! we've been looking for the lyrics to)/i, color: "#38ef51", svg: svgRecognized },
-                { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#38ef51", svg: svgVerified },
+                { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#ffff64", svg: svgVerified },
                 { key: "lyrics__complete", label: "(Un)completed lyrics", regex: /.*? (marked|un-?marked) the lyrics complete on/i, color: "#0ecb27", svg: svgAccepted }
             ],
 
@@ -2753,7 +2756,7 @@ chrome.storage.local.get([
         };
 
         let filterInitialized = false;
-        let iframeObserverInitialized = false;
+        let activityObserver = null;
 
 
         function saveStateToStorage() {
@@ -2799,13 +2802,11 @@ chrome.storage.local.get([
             items.forEach(item => {
                 let visible = true;
 
-                const span = item.querySelector('.inbox_line_item-content span');
+                const span = item.querySelector('div[class^="LineItem__MessageContent-"] span');
                 if (!span) return;
 
                 const clone = span.cloneNode(true);
-                clone.querySelectorAll(
-                    "em, .inbox_line_item-content-note, [ng-bind-html]"
-                ).forEach(el => el.remove());
+                clone.querySelectorAll("em").forEach(el => el.remove());
 
                 const text = clone.innerText
                     .trim()
@@ -2823,21 +2824,16 @@ chrome.storage.local.get([
                     if (!usernameRegex.test(text)) visible = false;
                 }
 
-                const inboxItem = item.closest("inbox-line-item");
-                if (inboxItem) {
-                    inboxItem.style.display = visible ? "" : "none";
-                }
+                item.style.display = visible ? "" : "none";
+
             });
         }
 
         function getActivityItems() {
-            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
-            if (!iframe) return null;
+            const container = document.querySelector('div[class^="LineItemList__Container-"]');
+            if (!container) return null;
 
-            const doc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!doc) return null;
-
-            return doc.querySelectorAll('div[class^="feed_dropdown-item"]');
+            return container.querySelectorAll('div[class^="LineItem__ItemRow-"]');
         }
 
         function applyActivityFilter(checkboxes, userInput) {
@@ -3169,52 +3165,42 @@ chrome.storage.local.get([
         }
 
         function updateActivityItemCount() {
-            const iframe = document.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
-            if (!iframe) return;
+            const container = document.querySelector('div[class^="LineItemList__Container-"]');
+            if (!container) return;
 
-            const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!innerDoc) return;
-
-            const items = innerDoc.querySelectorAll('div[class^="feed_dropdown-item"]');
+            const items = container.querySelectorAll('div[class^="LineItem__ItemRow-"]');
 
             const counter = document.getElementById("activity-item-count");
             if (counter) counter.textContent = `Pages: ${Math.ceil((items.length - 1) / 30)}`;
         }
 
-        function startIframeObserverFor(iframe) {
-            function observeIframeActivityStream() {
-                const innerDoc = iframe.contentDocument || iframe.contentWindow.document;
-                if (!innerDoc) return;
+        function startActivityObserverIn(modal) {
+            const container = modal.querySelector('div[class^="LineItemList__Container-"]');
+            if (!container) return;
 
-                const container = innerDoc.querySelector('.act-activity_stream_bagon');
-                if (!container) return;
-
-                loadStateFromStorage(() => {
-                    applyActivityFilterFromSavedState();
-                });
-
-                const observer = new MutationObserver(() => {
-                    updateActivityItemCount();
-                    applyActivityFilterFromSavedState();
-                });
-
-
-                observer.observe(container, {
-                    childList: true,
-                    subtree: true
-                });
+            if (activityObserver) {
+                activityObserver.disconnect();
+                activityObserver = null;
             }
 
-            iframe.addEventListener("load", observeIframeActivityStream);
+            loadStateFromStorage(() => {
+                applyActivityFilterFromSavedState();
+            });
 
-            if (iframe.contentDocument?.readyState === "complete") {
-                observeIframeActivityStream();
-            }
+            const observer = new MutationObserver(() => {
+                updateActivityItemCount();
+                applyActivityFilterFromSavedState();
+            });
+
+            observer.observe(container, {
+                childList: true,
+                subtree: true
+            });
         }
 
         const modalObserver = new MutationObserver(() => {
             const modal = document.querySelector('[class^="Modal-desktop__Contents"]');
-            const title = document.querySelector('[class^="RecentActivity__Title"]');
+            const title = modal?.querySelector('[class^="RecentActivity__Title"]');
 
             if (modal && title && !filterInitialized) {
                 addActivityFilterButton();
@@ -3223,15 +3209,14 @@ chrome.storage.local.get([
 
             if (!modal && filterInitialized) {
                 filterInitialized = false;
-                iframeObserverInitialized = false;
+                if (activityObserver) {
+                    activityObserver.disconnect();
+                    activityObserver = null;
+                }
             }
 
-            if (modal && !iframeObserverInitialized) {
-                const iframe = modal.querySelector('iframe[class^="PlaceholderSpinnerIframe__Iframe"]');
-                if (iframe) {
-                    iframeObserverInitialized = true;
-                    startIframeObserverFor(iframe);
-                }
+            if (modal) {
+                startActivityObserverIn(modal);
             }
         });
 
@@ -3244,45 +3229,67 @@ chrome.storage.local.get([
 
     function filterFirehose() {
         console.log("Run function filterFirehose()");
-        const form = document.getElementById("firehose_filters");
-        if (!form) return;
 
-        const fieldset = document.createElement("fieldset");
-        fieldset.className = "filter";
+        const container = document.querySelector('aside[class^="FirehoseFilters__Container-"]');
+        if (!container) return;
 
-        const legend = document.createElement("legend");
-        legend.textContent = "Filter";
-        fieldset.appendChild(legend);
+        if (document.getElementById("custom_firehose_textfilter")) return;
+
+        const originalSection = container.querySelector('[class^="FirehoseFilterSection__Section-"]');
+        if (!originalSection) return;
+
+        const fieldset = originalSection.cloneNode(true);
+        fieldset.id = "custom_firehose_textfilter";
+
+        const legend = fieldset.querySelector("legend");
+        if (legend) legend.textContent = "DOM Filter";
+
+        fieldset.querySelectorAll("label").forEach(label => label.remove());
 
         const input = document.createElement("input");
-        input.id = "artist_chooser";
-        input.placeholder = "Filter firehose";
+        input.type = "text";
+        input.id = "custom_firehose_text_input";
+        input.placeholder = "Custom filter...";
         input.autocomplete = "off";
-        input.className = "ac_input";
+        input.spellcheck = false;
+
+        input.style.cssText = `
+            width: 100%;
+            outline: none;
+            background: transparent;
+            font-size: inherit;
+            padding: 0.25rem 0.125rem;
+            color: inherit;
+        `;
+
         fieldset.appendChild(input);
-
-        const selected = document.createElement("div");
-        selected.id = "selected_filters";
-        fieldset.appendChild(selected);
-
-        form.insertBefore(fieldset, form.firstChild);
+        container.insertBefore(fieldset, container.firstChild);
 
         activateFirehoseFilter(input);
     }
 
+
     function activateFirehoseFilter(input) {
-        const container = document.getElementById("firehose");
+        const container = document.querySelector('div[class^="FirehoseStream__Container-"]');
         if (!container) return;
 
         function applyFilter() {
             const query = input.value.trim().toLowerCase();
+            console.log("Applying firehose filter with query:", query);
+            const items = container.querySelectorAll('div[class^="LineItem__ItemRow-"]'); 
 
-            const items = container.querySelectorAll(".activity_stream_event_unit");
             items.forEach(item => {
-                const textEl = item.querySelector(".actor_and_action");
+                const textEl = item.querySelector('div[class^="LineItem__MessageContent-"] span');
                 const text = textEl ? textEl.textContent.toLowerCase() : "";
+                console.log("Checking item with text:", text);
 
-                item.style.display = text.includes(query) ? "block" : "none";
+                const parent = item.parentElement; // ← WICHTIG
+
+            if (!parent) return;
+
+
+
+                parent.style.display = text.includes(query) ? "block" : "none";
             });
         }
 
