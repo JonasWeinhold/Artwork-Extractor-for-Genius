@@ -754,9 +754,11 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
     }
 
     const replacements = {
+        "Lyrics": "Lyricist",
         "Synth Bass": "Bass Synthesizer",
         "String Arranger": "Strings Arranger",
         "Editing Engineer": "Audio Editor",
+        "Vocal Recording Engineer": "Vocal Engineer",
     };
 
 
