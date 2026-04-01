@@ -3276,18 +3276,15 @@ chrome.storage.local.get([
         function applyFilter() {
             const query = input.value.trim().toLowerCase();
             console.log("Applying firehose filter with query:", query);
-            const items = container.querySelectorAll('div[class^="LineItem__ItemRow-"]'); 
+            const items = container.querySelectorAll('div[class^="LineItem__ItemRow-"]');
 
             items.forEach(item => {
                 const textEl = item.querySelector('div[class^="LineItem__MessageContent-"] span');
                 const text = textEl ? textEl.textContent.toLowerCase() : "";
                 console.log("Checking item with text:", text);
 
-                const parent = item.parentElement; // ← WICHTIG
-
-            if (!parent) return;
-
-
+                const parent = item.parentElement;
+                if (!parent) return;
 
                 parent.style.display = text.includes(query) ? "block" : "none";
             });
