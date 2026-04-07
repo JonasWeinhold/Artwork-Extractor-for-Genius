@@ -46,35 +46,28 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
 
         const currentUrl = window.location.href;
         const accessToken = await getSpotifyAccessToken();
+        console.log("Spotify Access Token:", accessToken);
+
 
         let coverUrl;
-
-        const clientId = window.secrets.SPOTIFY_CLIENT_ID;
-        const clientSecret = window.secrets.SPOTIFY_CLIENT_SECRET;
 
         if (currentUrl.startsWith("https://open.spotify.com/prerelease")) {
           try {
             const container = document.querySelector('.main-view-container');
             if (container) {
-              const img = container.querySelectorAll('img');
-              console.log(img);
-              if (img && img.src) {
-                coverUrl = img.src;
-              }
+              const img = container.querySelector('img');
+              if (img.src) { coverUrl = img.src; }
             }
-          } catch (error) {
-            console.error('Error fetching presave cover:', error);
-          }
+          } catch (error) { console.error('Error fetching presave cover:', error); }
         } else {
           const types = ['playlist', 'album', 'artist', 'track', 'show', 'episode', 'audiobook', 'chapter'];
-
           try {
             const type = types.find(type => currentUrl.includes(`/${type}/`));
             if (type) {
-              coverUrl = await getSpotifyArtwork(currentUrl, type, accessToken);
+              coverUrl = await getSpotifyArtworkAPI(currentUrl, type, accessToken);
             }
           } catch (error) {
-            console.error("Spotify API Error:", error);
+            console.error('Error fetching artwork cover:', error);
           }
         }
 
@@ -190,8 +183,9 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
     }
   }
 
+
   // Spotify Artwork Fetcher via API
-  async function getSpotifyArtwork(url, type, token) {
+  async function getSpotifyArtworkAPI(url, type, token) {
     const regex = new RegExp(`spotify\\.com/(?:[a-z-]+/)?${type}/([a-zA-Z0-9]+)`);
     const match = url.match(regex);
     const id = match ? match[1] : null;
@@ -226,20 +220,50 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
         throw new Error(`Unsupported type: ${type}`);
     }
 
-    const response = await fetch(`https://api.spotify.com/v1/${endpoint}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    try {
+      const response = await fetch(`https://api.spotify.com/v1/${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-    if (!response.ok) {
-      throw new Error(`Error fetching ${type} data`);
+      if (!response.ok) {
+        throw new Error(`Error fetching ${type} data`);
+      }
+
+      const data = await response.json();
+      console.log(data);
+
+      if (type === "track") return data.album?.images?.[0]?.url;
+      if (type === "playlist") return data[0]?.url;
+      return data.images?.[0]?.url;
+    } catch (error) {
+      console.log(`Spotify API failed for ${type}, falling back to DOM…`);
+
+      const fallback = getSpotifyArtworkDOM();
+      if (fallback) return fallback;
+
+      throw new Error(`Failed to fetch artwork via API and DOM`);
     }
+  }
 
-    const data = await response.json();
-    console.log(data);
 
-    if (type === "track") return data.album?.images?.[0]?.url;
-    if (type === "playlist") return data[0]?.url;
-    return data.images?.[0]?.url;
+
+  // Spotify Artwork Fetcher via DOM
+  function getSpotifyArtworkDOM() {
+    try {
+      const container = document.querySelector('.main-view-container');
+      if (!container) return null;
+
+      const button = container.querySelector('button');
+      if (!button) return null;
+
+      const img = button.querySelector('img');
+      if (!img) return null;
+
+      return img.src;
+    } catch (error) {
+      console.error("Error fetching Spotify cover:", error);
+      return null;
+    }
   }
 
   // Modify Spotify Image URL for Higher Resolution
