@@ -10,6 +10,7 @@ chrome.storage.local.get([
     'isGeniusArtistFollowButton',
     'isGeniusArtistSpreadsheetButton',
     'isGeniusArtistRecords',
+    'isGeniusArtistNewPage'
 ], async function (result) {
     const isGeniusArtistArtistPage = result.isGeniusArtistArtistPage ?? true;
     const isGeniusArtistArtistPageZwsp = result.isGeniusArtistArtistPageZwsp ?? true;
@@ -21,6 +22,7 @@ chrome.storage.local.get([
     const isGeniusArtistFollowButton = result.isGeniusArtistFollowButton ?? false;
     const isGeniusArtistSpreadsheetButton = result.isGeniusArtistSpreadsheetButton ?? false;
     const isGeniusArtistRecords = result.isGeniusArtistRecords ?? true;
+    const isGeniusArtistNewPage = result.isGeniusArtistNewPage ?? true;
 
 
     if (result['Services/genius_artist.js'] === false) {
@@ -52,12 +54,23 @@ chrome.storage.local.get([
         const isAllAlbums = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/albums$/.test(window.location.href);
         const isAllSongs = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/songs$/.test(window.location.href);
         const isArtist = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+$/.test(window.location.href);
+        const isArtistNew = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\?react=1$/.test(window.location.href);
         const isUser = profilePath ? new RegExp(`https:\\/\\/(genius\\.com|genius-staging\\.com)${profilePath}$`).test(window.location.href) : false;
 
         if (isAllSongs || isAllAlbums) {
-            const { artistId, userId, artistData } = await getArtistInfo2();
+            const { artistId, userId, artistData } = await getArtistInfoNew();
 
             if (isGeniusArtistAllSongsAlbumsPage || isGeniusArtistAllSongsAlbumsPageMetadata) checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums);
+        } else if (isArtistNew) {
+            const { artistId, userId, artistData } = await getArtistInfoNew();
+            if (!artistId || !userId || !artistData) return;
+
+            if (isGeniusArtistArtistId) showArtistIdButtonNew(artistData);
+            if (isGeniusArtistArtistPageInfo) showCoverInfoNew(artistData);
+
+            if (isGeniusArtistFollowButton) FollowButtonArtistPageNew(artistId);
+            if (isGeniusArtistSpreadsheetButton) getSpreadsheetNew(artistId, "artist");
+
         } else if (isArtist) {
             const { artistId, userId, artistData } = await getArtistInfo();
             if (!artistId || !userId || !artistData) return;
@@ -95,8 +108,8 @@ chrome.storage.local.get([
         return { artistId, userId, artistData: json.response.artist };
     }
 
-    async function getArtistInfo2() {
-        console.log("Run function getArtistInfo2()");
+    async function getArtistInfoNew() {
+        console.log("Run function getArtistInfoNew()");
         // Artist ID
         const artistIdMatch = document.documentElement.innerHTML.match(/\\?"artist\\?":(\d+)/);
         const artistId = artistIdMatch ? artistIdMatch[1] : null;
@@ -110,6 +123,21 @@ chrome.storage.local.get([
         const json = await response.json();
 
         return { artistId, userId, artistData: json.response.artist };
+    }
+
+    if (isGeniusArtistNewPage) {
+        document.addEventListener('click', function (event) {
+            const link = event.target.closest('a');
+            if (!link) return;
+
+            const href = link.href;
+            if (!href.startsWith('https://genius.com/artists/')) return;
+            if (href.includes('react=1')) return;
+
+            event.preventDefault();
+            const newUrl = href + (href.includes('?') ? '&' : '?') + 'react=1';
+            location.href = newUrl;
+        });
     }
 
 
@@ -140,9 +168,53 @@ chrome.storage.local.get([
         artistIdElement.appendChild(artistIdLink);
         artistIdContainer.appendChild(artistIdElement);
         identityTextContainer.appendChild(artistIdContainer);
-
     }
 
+    function showArtistIdButtonNew(artistData) {
+        const profileContainer = document.querySelector('h2[class^="ProfileContent-desktop__Heading-"]');
+        if (!profileContainer) return;
+
+        const infoBox = document.createElement('div');
+        infoBox.style.textAlign = "center";
+        infoBox.style.fontSize = '14px';
+        infoBox.style.lineHeight = '1.4';
+
+        const idRow = document.createElement('div');
+        const idLabel = document.createElement('b');
+        idLabel.textContent = "Artist ID: ";
+
+        const idLink = document.createElement('a');
+        idLink.href = `https://genius.com/api/artists/${artistData.id}`;
+        idLink.target = "_blank";
+        idLink.textContent = artistData.id;
+        idLink.style.textDecoration = "none";
+        idLink.style.color = "inherit";
+
+        idLink.onmouseover = () => idLink.style.textDecoration = "underline";
+        idLink.onmouseout = () => idLink.style.textDecoration = "none";
+
+        idRow.appendChild(idLabel);
+        idRow.appendChild(idLink);
+        infoBox.appendChild(idRow);
+
+        const altNamesArray = Array.isArray(artistData.alternate_names) ? artistData.alternate_names : [];
+
+        if (altNamesArray.length > 0) {
+            const akaRow = document.createElement('div');
+
+            const akaLabel = document.createElement('b');
+            akaLabel.textContent = altNamesArray.length >= 2 ? "AKAs: " : "AKA: ";
+
+            const akaValue = document.createElement('span');
+            akaValue.textContent = altNamesArray.join(', ');
+
+            akaRow.appendChild(akaLabel);
+            akaRow.appendChild(akaValue);
+            infoBox.appendChild(akaRow);
+        }
+
+        profileContainer.insertAdjacentElement('beforebegin', infoBox);
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                   COVER INFO                                   //////////
@@ -152,6 +224,8 @@ chrome.storage.local.get([
         console.log("Run function showCoverInfo()");
 
         const avatar = document.querySelector('.user_avatar.profile_header-avatar');
+
+        const header = document.querySelector('header[class^="PageGrid-desktop-"]');
 
         if (avatar) {
             avatar.style.position = "relative";
@@ -173,7 +247,6 @@ chrome.storage.local.get([
         const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
 
         const resolutionInfo = document.createElement('p');
-
         resolutionInfo.style.position = "absolute";
         resolutionInfo.style.top = "-1.5rem";
         resolutionInfo.style.left = "50%";
@@ -191,6 +264,50 @@ chrome.storage.local.get([
 
         return resolutionInfo;
     }
+
+    function showCoverInfoNew(artistData) {
+        const header = document.querySelector('header[class^="PageGrid-desktop-"]');
+        if (!header) return;
+
+        const existing = header.querySelector('div[data-type="resolution-info"]');
+        if (existing) existing.remove();
+
+        const infoElement = createResolutionInfoNew(artistData);
+        header.insertBefore(infoElement, header.firstChild);
+    }
+
+    function createResolutionInfoNew(artistData) {
+        const resolutionInfo = document.createElement('div');
+
+        const avatar = document.querySelector('div[class*="ProfileHeader__ArtistAvatar-"]');
+        if (!avatar) return;
+
+        const classes = [...avatar.classList];
+        const coverInfoClass = classes.slice(classes.findIndex(c => c.startsWith("ProfileHeader__ArtistAvatar-"))).map(c => c.replace("ArtistAvatar", "CoverInfo")).join(" ");
+
+        resolutionInfo.className = coverInfoClass;
+        resolutionInfo.style.textAlign = "center";
+        resolutionInfo.style.marginBottom = "-0.75rem";
+        resolutionInfo.style.color = "#ffffff";
+        resolutionInfo.style.fontSize = "0.75rem";
+        resolutionInfo.style.fontWeight = "bold";
+        resolutionInfo.style.lineHeight = "1.2";
+        resolutionInfo.style.whiteSpace = "pre-line";
+        resolutionInfo.dataset.type = "resolution-info";
+
+        const headerRes = artistData.header_image_url.match(/(\d+)x(\d+)/);
+        const headerFmt = artistData.header_image_url.match(/\.(\w+)$/);
+        const avatarRes = artistData.image_url.match(/(\d+)x(\d+)/);
+        const avatarFmt = artistData.image_url.match(/\.(\w+)$/);
+
+        const headerText = `Header: ${headerRes ? `${headerRes[1]}x${headerRes[2]}` : "No"} ${headerFmt ? headerFmt[1].toUpperCase() : "Cover"}`;
+        const avatarText = `Avatar: ${avatarRes ? `${avatarRes[1]}x${avatarRes[2]}` : "No"} ${avatarFmt ? avatarFmt[1].toUpperCase() : "Cover"}`;
+
+        resolutionInfo.textContent = `${headerText}\n${avatarText}`;
+
+        return resolutionInfo;
+    }
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,6 +507,69 @@ chrome.storage.local.get([
         editButton.style.justifyContent = 'center';
     }
 
+    function insertButtons(wrapper, buttonConfigs) {
+        const navBar = document.querySelector('nav[class^="ProfileContent-desktop__Section-"]');
+        const referenceButton = navBar?.querySelector('button[class^="SmallButton__Container-"]');
+        if (!referenceButton) return;
+
+        const referenceClass = referenceButton.className;
+
+        const createInput = ({ placeholder = ""}) => {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = placeholder;
+
+            input.style.width = "6.25rem";
+            input.style.border = "1px solid";
+            input.style.borderRadius = "1.25rem";
+            input.style.fontFamily = "Programme, 'Programme Pan', Arial, sans-serif";
+            input.style.textAlign = "center";
+
+            return input;
+        };
+
+        buttonConfigs.forEach(cfg => {
+
+            if (cfg.type === "input") {
+                const input = createInput(cfg);
+
+                wrapper._songIdInput = input;
+
+                wrapper.appendChild(input);
+                return;
+            }
+
+            const btn = document.createElement('button');
+            btn.type = "button";
+            btn.className = referenceClass;
+            btn.textContent = cfg.text;
+
+            btn.style.flex = "1";
+            btn.style.justifyContent = "center";
+            btn.style.backgroundColor = "white";
+            btn.style.color = "black";
+            btn.style.borderColor = "black";
+
+            btn.addEventListener("mouseover", () => {
+                btn.style.backgroundColor = "black";
+                btn.style.color = "white";
+                btn.style.borderColor = "white";
+            });
+
+            btn.addEventListener("mouseout", () => {
+                btn.style.backgroundColor = "white";
+                btn.style.color = "black";
+                btn.style.borderColor = "black";
+            });
+
+            if (cfg.onClick) {
+                btn.addEventListener('click', () => cfg.onClick(btn));
+            }
+
+            wrapper.appendChild(btn);
+        });
+    }
+
     function FollowButtonArtistPage(artistId) {
         injectButtons([
             {
@@ -430,6 +610,56 @@ chrome.storage.local.get([
         ]);
     }
 
+    function FollowButtonArtistPageNew(artistId) {
+        const profileContainer = document.querySelector('h2[class^="ProfileContent-desktop__Heading-"]');
+        if (!profileContainer) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.style.display = "flex";
+        wrapper.style.flexDirection = "row";
+        wrapper.style.width = "100%";
+        wrapper.style.gap = "0.5rem";
+
+        insertButtons(wrapper, [
+            {
+                text: 'Follow All Songs',
+                width: "9.5rem",
+                onClick: async (button) => {
+                    button.disabled = true;
+                    button.textContent = 'Following...';
+
+                    const songIds = await fetchAllSongIds(artistId);
+                    for (const songId of songIds) {
+                        await toggleFollowSong(songId, 'follow');
+                        await new Promise(r => setTimeout(r, 25));
+                    }
+
+                    button.textContent = 'Following';
+                    button.disabled = false;
+                }
+            },
+            {
+                text: 'Unfollow All Songs',
+                width: "9.5rem",
+                marginLeft: "0.25rem",
+                onClick: async (button) => {
+                    button.disabled = true;
+                    button.textContent = 'Unfollowing...';
+
+                    const songIds = await fetchAllSongIds(artistId);
+                    for (const songId of songIds) {
+                        await toggleFollowSong(songId, 'unfollow');
+                        await new Promise(r => setTimeout(r, 25));
+                    }
+
+                    button.textContent = 'Unfollowing';
+                    button.disabled = false;
+                }
+            }
+        ]);
+        profileContainer.parentNode.insertBefore(wrapper, profileContainer);
+    }
+
     async function fetchAllSongIds(artistId) {
         let songIds = [], page = 1, perPage = 50;
         while (true) {
@@ -449,7 +679,6 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function getSpreadsheet(id, type) {
-
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
         const escapeCSV = (value) => {
@@ -827,6 +1056,412 @@ chrome.storage.local.get([
             }
 
         ]);
+    }
+
+    function getSpreadsheetNew(id, type) {
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        const escapeCSV = (value) => {
+            if (value == null) return "";
+            const str = String(value);
+            return `"${str.replace(/"/g, '""')}"`;
+        };
+
+        const getReleaseDate = (comp) => {
+            if (!comp?.year) return "";
+            const y = comp.year;
+            const m = comp.month ? String(comp.month).padStart(2, "0") : null;
+            const d = comp.day ? String(comp.day).padStart(2, "0") : null;
+
+            if (y && m && d) return `${y}-${m}-${d}`;
+            if (y && m) return `${y}-${m}`;
+            return `${y}`;
+        };
+
+        const getLyricsStatus = (song) => {
+            const hasFullDetails = song.current_user_metadata;
+
+            if (!hasFullDetails) { // Button 1
+                const isInstrumental = song.instrumental === true;
+
+                if (isInstrumental) return "instrumental";
+                if (song.lyrics_state === "complete") return "transcribed";
+
+                return "not transcribed";
+            } else { //Button 2
+                const validated =
+                    song.lyrics_marked_complete_by ||
+                    song.lyrics_marked_staff_approved_by ||
+                    song.lyrics_verified === true;
+
+                const hasExcluded = song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq");
+                const hasPermission = song.current_user_metadata?.permissions?.includes("award_transcription_iq");
+                const isInstrumental = song.instrumental === true;
+
+                let status = "not transcribed";
+
+                if (validated && hasExcluded) status = "completed";
+                else if (song.lyrics_state === "complete" && isInstrumental) status = "instrumental";
+                else if (song.lyrics_state === "complete" && hasExcluded) status = "transcribed";
+                else if (song.lyrics_state === "complete" && hasPermission) status = "not awarded";
+
+                return status;
+            }
+        };
+
+        const getCoverInfo = (url) => {
+            if (!url.startsWith("https://images.genius.com")) {
+                return "No Genius Image";
+            }
+
+            const match = url.match(/\.([0-9]+x[0-9]+)x[0-9]+\.(\w+)$/i);
+
+            if (!match) {
+                return "No Genius Image";
+            }
+
+            const size = match[1];
+            const ext = match[2].toUpperCase();
+
+            return `${size} ${ext}`;
+        };
+
+        async function fetchPaginated({
+            startPages,
+            fetchPage,
+            onPageData,
+            updateButton,
+            stopCondition
+        }) {
+            const workerCount = startPages.length;
+            const workerFinished = Array(workerCount).fill(false);
+            let counter = 0;
+
+            async function worker(workerIndex, startPage) {
+                let page = startPage;
+
+                while (true) {
+                    const json = await fetchPage(page);
+                    counter++;
+                    updateButton(counter);
+
+                    const items = onPageData(json);
+
+                    if (stopCondition(items)) {
+                        workerFinished[workerIndex] = true;
+
+                        if (workerFinished.every(f => f)) {
+                            return;
+                        }
+
+                        return;
+                    }
+
+                    page += workerCount;
+                }
+            }
+
+            const promises = [];
+            for (let i = 0; i < workerCount; i++) {
+                await sleep(50 * i);
+                promises.push(worker(i, startPages[i]));
+            }
+
+            await Promise.all(promises);
+        }
+
+        async function fetchSongsPage(id, type, page, perPage = 50, maxRetries = 5) {
+            let attempt = 0;
+
+            while (true) {
+                try {
+                    const url =
+                        type === "artist"
+                            ? `https://genius.com/api/artists/${id}/songs?page=${page}&per_page=${perPage}`
+                            : `https://genius.com/api/users/${id}/contributions/transcriptions?next_cursor=${page}&per_page=${perPage}`;
+
+                    const res = await fetch(url);
+
+                    if (res.status === 503) {
+                        attempt++;
+                        if (attempt > maxRetries) throw new Error(`503 after ${maxRetries} retries`);
+                        await sleep(200 * attempt);
+                        continue;
+                    }
+
+                    return await res.json();
+
+                } catch (err) {
+                    attempt++;
+                    if (attempt > maxRetries) throw err;
+                    await sleep(200 * attempt);
+                }
+            }
+        }
+
+        function parseSongsFromPage(json, type) {
+            if (type === "artist") {
+                return json.response?.songs || [];
+            }
+
+            const groups = json.response?.contribution_groups || [];
+            const songs = [];
+
+            for (const g of groups) {
+                if (g.contribution_type !== "song") continue;
+                for (const c of g.contributions) {
+                    if (c._type === "song") songs.push(c);
+                }
+            }
+
+            return songs;
+        }
+
+        async function fetchSongDetails(songId) {
+            const res = await fetch(`https://genius.com/api/songs/${songId}`);
+            if (!res.ok) throw new Error(`Song ${songId}: ${res.status}`);
+            return res.json();
+        }
+
+        async function fetchAllSongsDirect(id, type, button) {
+            const perPage = 50;
+            const workers = [1, 2, 3];
+            let allSongs = [];
+
+            await fetchPaginated({
+                startPages: workers,
+                fetchPage: (page) => fetchSongsPage(id, type, page, perPage),
+                updateButton: (count) => button.textContent = `Page: ${count}`,
+                onPageData: (json) => {
+                    const songs = parseSongsFromPage(json, type);
+
+                    for (const song of songs) {
+                        allSongs.push({
+                            ...song,
+                            id: Number(song.id)
+                        });
+                    }
+
+                    return songs;
+                },
+                stopCondition: (songs) => !songs.length
+            });
+
+            return allSongs.sort((a, b) => a.id - b.id);
+        }
+
+        async function fetchAllSongIds(id, type, button) {
+            const perPage = 50;
+            const workers = [1, 2, 3];
+            let ids = [];
+
+            await fetchPaginated({
+                startPages: workers,
+                fetchPage: (page) => fetchSongsPage(id, type, page, perPage),
+                updateButton: (count) => button.textContent = `Page: ${count}`,
+                onPageData: (json) => {
+                    const songs = parseSongsFromPage(json, type);
+                    for (const song of songs) ids.push(Number(song.id));
+                    return songs;
+                },
+                stopCondition: (songs) => !songs.length
+            });
+
+            return ids.sort((a, b) => a - b);
+        }
+
+        async function fetchSongDetailsByIds(songIds, button) {
+            const workers = 3;
+            let results = [];
+            let counter = 0;
+
+            async function worker(startIndex) {
+                let index = startIndex;
+                while (index < songIds.length) {
+                    const id = songIds[index];
+                    try {
+                        const json = await fetchSongDetails(id);
+                        results.push({ id, data: json });
+                        counter++;
+                        button.textContent = `Song: ${counter}`;
+                    } catch (err) {
+                        console.error("Error fetching song", id, err);
+                    }
+                    index += workers;
+                }
+            }
+
+            const promises = [];
+            for (let i = 0; i < workers; i++) {
+                await sleep(200 * i);
+                promises.push(worker(i));
+            }
+
+            await Promise.all(promises);
+            return results;
+        }
+
+
+        function filterSongIds(ids, text) {
+            if (!text) return ids;
+
+            if (text.includes(",")) {
+                const list = text
+                    .split(",")
+                    .map(x => Number(x.trim()))
+                    .filter(n => !isNaN(n));
+                return ids.filter(id => list.includes(id));
+            }
+
+            if (text.includes("-") && text.indexOf("-") > 0) {
+                const [minStr, maxStr] = text.split("-");
+                const min = Number(minStr);
+                const max = Number(maxStr);
+                return ids.filter(id => id >= min && id <= max);
+            }
+
+            if (text.startsWith("-")) {
+                const max = Number(text.slice(1));
+                return ids.filter(id => id <= max);
+            }
+
+            const min = Number(text);
+            return ids.filter(id => id >= min);
+        }
+
+        function exportCSV(rows, header, filename) {
+            const csv = "\uFEFF" + header.join(",") + "\n" + rows.join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        const profileContainer = document.querySelector('h2[class^="ProfileContent-desktop__Heading-"]');
+        if (!profileContainer) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.style.display = "flex";
+        wrapper.style.flexDirection = "row";
+        wrapper.style.width = "100%";
+        wrapper.style.gap = "0.5rem";
+
+        insertButtons(wrapper, [
+            // Spreadsheet 1
+            {
+                text: "Spreadsheet 1",
+                onClick: async (button) => {
+                    button.disabled = true;
+                    button.textContent = "Downloading CSV";
+
+                    const songs = await fetchAllSongsDirect(id, type, button);
+
+                    const header = [
+                        "Song ID",
+                        "Primary Artist",
+                        "Song Title",
+                        "URL",
+                        "Release Date",
+                        "Cover Image Info",
+                        "Lyrics Status",
+                        "Pageviews",
+                    ];
+
+                    const rows = songs.map(song =>
+                        [
+                            song.id,
+                            escapeCSV(song.primary_artist_names),
+                            escapeCSV(song.title),
+                            escapeCSV(song.url),
+                            escapeCSV(getReleaseDate(song.release_date_components)),
+                            escapeCSV(getCoverInfo(song.song_art_image_url)),
+                            escapeCSV(getLyricsStatus(song)),
+                            escapeCSV(song.stats.pageviews),
+                        ].join(",")
+                    );
+
+                    exportCSV(rows, header, `${type}_${id}_songs_1.csv`);
+
+                    button.textContent = "Spreadsheet 1";
+                    button.disabled = false;
+                }
+            },
+
+            // Input Field
+            {
+                type: "input",
+                placeholder: "Song ID",
+                marginLeft: "0.25rem",
+            },
+
+            // Spreadsheet 2
+            {
+                text: "Spreadsheet 2",
+                marginLeft: "0.25rem",
+                onClick: async (button) => {
+                    button.disabled = true;
+                    button.textContent = "Downloading CSV";
+
+                    const input = wrapper._songIdInput;
+                    const filterText = input?.value.trim() || "";
+
+                    const ids = await fetchAllSongIds(id, type, button);
+                    const filteredIds = filterSongIds(ids, filterText);
+
+                    let details = await fetchSongDetailsByIds(filteredIds, button);
+                    details = details.sort((a, b) => a.id - b.id);
+
+                    const header = [
+                        "Song ID",
+                        "Primary Artist",
+                        "Song Title",
+                        "URL",
+                        "Release Date",
+                        "Albums",
+                        "Cover Image Info",
+                        "Tags",
+                        "Language",
+                        "Lyrics Status",
+                        "Pending LEPs",
+                        "Pageviews",
+                    ];
+
+                    const rows = details.map(item => {
+                        const song = item.data.response.song;
+                        return [
+                            song.id,
+                            escapeCSV(song.primary_artist_names),
+                            escapeCSV(song.title),
+                            escapeCSV(song.url),
+                            escapeCSV(getReleaseDate(song.release_date_components)),
+                            escapeCSV(song.albums.map(a => a.name).join(", ")),
+                            escapeCSV(getCoverInfo(song.song_art_image_url)),
+                            escapeCSV([
+                                song.primary_tag?.name,
+                                ...song.tags
+                                    .map(tag => tag.name)
+                                    .filter(name => name !== song.primary_tag?.name)
+                                    .sort((a, b) => a.localeCompare(b))
+                            ].join(", ")),
+                            escapeCSV(song.language),
+                            escapeCSV(getLyricsStatus(song)),
+                            escapeCSV(song.pending_lyrics_edits_count),
+                            escapeCSV(song.stats.pageviews),
+                        ].join(",");
+                    });
+
+                    exportCSV(rows, header, `${type}_${id}_songs_2.csv`);
+
+                    button.textContent = "Spreadsheet 2";
+                    button.disabled = false;
+                }
+            }
+        ]);
+
+        profileContainer.parentNode.insertBefore(wrapper, profileContainer);
     }
 
 

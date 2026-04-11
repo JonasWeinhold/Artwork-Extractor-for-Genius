@@ -46,8 +46,6 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
 
         const currentUrl = window.location.href;
         const accessToken = await getSpotifyAccessToken();
-        console.log("Spotify Access Token:", accessToken);
-
 
         let coverUrl;
 
@@ -248,23 +246,28 @@ chrome.storage.local.get(['Services/spotify.js', 'isSpotifyCopyTracklist', 'isSp
 
 
   // Spotify Artwork Fetcher via DOM
-  function getSpotifyArtworkDOM() {
-    try {
-      const container = document.querySelector('.main-view-container');
-      if (!container) return null;
+ function getSpotifyArtworkDOM() {
+  try {
+    const container = document.querySelector('.main-view-container');
+    if (!container) return null;
 
-      const button = container.querySelector('button');
-      if (!button) return null;
-
-      const img = button.querySelector('img');
-      if (!img) return null;
-
-      return img.src;
-    } catch (error) {
-      console.error("Error fetching Spotify cover:", error);
-      return null;
+    const isTrackPage = window.location.pathname.includes('/track');
+    if (isTrackPage) {
+      const img = container.querySelector('img');
+      return img ? img.src : null;
     }
+
+    const button = container.querySelector('button');
+    if (!button) return null;
+
+    const img = button.querySelector('img');
+    return img ? img.src : null;
+
+  } catch (error) {
+    console.error("Error fetching Spotify cover:", error);
+    return null;
   }
+}
 
   // Modify Spotify Image URL for Higher Resolution
   function modifySpotifyImageUrl(originalUrl) {
