@@ -10,7 +10,8 @@ chrome.storage.local.get([
     'isGeniusAlbumSongCreditsButton',
     'isGeniusAlbumFollowButton',
     'isGeniusAlbumCleanupButton',
-    'functionOrder'
+    'functionOrder',
+    'isGeniusAlbumNewPage'
 ], function (result) {
     const isGeniusAlbumAlbumPage = result.isGeniusAlbumAlbumPage ?? true;
     const isGeniusAlbumAlbumPageZwsp = result.isGeniusAlbumAlbumPageZwsp ?? true;
@@ -22,6 +23,7 @@ chrome.storage.local.get([
     const isGeniusAlbumSongCreditsButton = result.isGeniusAlbumSongCreditsButton ?? true;
     const isGeniusAlbumFollowButton = result.isGeniusAlbumFollowButton ?? true;
     const isGeniusAlbumCleanupButton = result.isGeniusAlbumCleanupButton ?? true;
+    const isGeniusAlbumNewPage = result.isGeniusAlbumNewPage ?? false;
 
 
     if (result['Services/genius_album.js'] === false) {
@@ -179,6 +181,21 @@ chrome.storage.local.get([
             return;
         }
     });
+
+    if (isGeniusAlbumNewPage) {
+        document.addEventListener('click', function (event) {
+            const link = event.target.closest('a');
+            if (!link) return;
+
+            const href = link.href;
+            if (!href.startsWith('https://genius.com/albums/')) return;
+            if (href.includes('react=1')) return;
+
+            event.preventDefault();
+            const newUrl = href + (href.includes('?') ? '&' : '?') + 'react=1';
+            location.href = newUrl;
+        });
+    }
 
     new MutationObserver(() => {
         document.querySelector('.global_search-search_results')?.addEventListener('click', (event) => {
