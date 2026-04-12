@@ -14,6 +14,7 @@ chrome.storage.local.get([
     'isGeniusSongExpandSectionsButtons',
     'isGeniusSongAnnotationsButtons',
     'isGeniusSongFilterActivity',
+    'isGeniusSongFilterNotifications',
     'isGeniusSongSaveFilters',
     'isGeniusSongFilterFirehose',
     'isGeniusSongCopyCover',
@@ -38,6 +39,7 @@ chrome.storage.local.get([
     const isGeniusSongExpandSectionsButtons = result.isGeniusSongExpandSectionsButtons ?? false;
     const isGeniusSongAnnotationsButtons = result.isGeniusSongAnnotationsButtons ?? true;
     const isGeniusSongFilterActivity = result.isGeniusSongFilterActivity ?? true;
+    const isGeniusSongFilterNotifications = result.isGeniusSongFilterNotifications ?? true;
     const isGeniusSongSaveFilters = result.isGeniusSongSaveFilters ?? false;
     const isGeniusSongFilterFirehose = result.isGeniusSongFilterFirehose ?? true;
     const isGeniusSongCopyCover = result.isGeniusSongCopyCover ?? true;
@@ -57,15 +59,19 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    main();
+    queueMicrotask(main);
 
     async function main() {
         const isFirehose = window.location.href === 'https://genius.com/firehose';
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
 
+        const profilePath = getProfilePathFromDocument();
+
         if (isFirehose) {
             if (isGeniusSongFilterFirehose) filterFirehose();
         }
+
+        if (isGeniusSongFilterNotifications) filterNotifications(profilePath);
 
         if (!isSong) return
         getDomElements();
@@ -74,9 +80,7 @@ chrome.storage.local.get([
         editAppleMusicPlayer();
         playerSettings();
 
-
-
-        const { songId, userId, profilePath, songData } = await getSongInfo();
+        const { songId, userId, songData } = await getSongInfo();
 
         if (isGeniusSongSongId) showSongIdButton(songId);
         if (isGeniusSongCheckIndex) showIndexButton();
@@ -137,6 +141,13 @@ chrome.storage.local.get([
         };
     }
 
+    function getProfilePathFromDocument() {
+        const profileMatch = document.documentElement.innerHTML.match(/\\"profile_path\\":\\"([^"]+)\\"/);
+        const profilePath = profileMatch?.[1] ?? null;
+        if (profilePath) chrome.storage.local.set({ profilePath });
+        return profilePath;
+    }
+
     async function getSongInfo() {
         console.log("Run function getSongInfo()");
         // Song ID 
@@ -149,16 +160,11 @@ chrome.storage.local.get([
         const userId = userMatch?.[1] ?? null;
         if (userId) chrome.storage.local.set({ userId });
 
-        // Profile Path
-        const profileMatch = document.documentElement.innerHTML.match(/\\"profile_path\\":\\"([^"]+)\\"/);
-        const profilePath = profileMatch?.[1] ?? null;
-        if (profilePath) chrome.storage.local.set({ profilePath });
-
         // Song Data
         const response = await fetch(`https://genius.com/api/songs/${songId}`);
         const json = await response.json();
 
-        return { songId, userId, profilePath, songData: json.response.song };
+        return { songId, userId, songData: json.response.song };
     }
 
     document.addEventListener('click', function (event) {
@@ -2686,82 +2692,77 @@ chrome.storage.local.get([
             </svg>`,
     }
 
+    function getFilterConfig(ICONS) {
+        return {
+            FILTERS: [
+                { key: "metadata", label: "METADATA", color: "#000000", svg: ICONS.svgGenius },
+                { key: "annotations", label: "ANNOTATIONS", color: "#000000", svg: ICONS.svgGenius },
+                { key: "votes", label: "VOTES", color: "#000000", svg: ICONS.svgGenius },
+                { key: "lyrics", label: "LYRICS", color: "#000000", svg: ICONS.svgGenius },
+                { key: "q_and_a", label: "Q&A", color: "#000000", svg: ICONS.svgGenius },
+                { key: "other", label: "OTHER", color: "#000000", svg: ICONS.svgGenius },
+            ],
+            SUBFILTERS: {
+                votes: [
+                    { key: "votes__upvoted", label: "Upvotes", regex: /.*? upvoted/i, color: "#0ecb27", svg: ICONS.svgUpvoted },
+                    { key: "votes__downvoted", label: "Downvotes", regex: /.*? downvoted/i, color: "#ff1414", svg: ICONS.svgDownvoted },
+                ],
+
+                other: [
+                    { key: "other__locked", label: "Locked / Unlocked", regex: /.*? (locked|unlocked)/i, color: "#9a9a9a", svg: ICONS.svgLocked },
+                    { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: ICONS.svgHid },
+                    { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: ICONS.svgFollowed },
+                    { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: ICONS.svgPyonged },
+                    { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#0ecb27", svg: ICONS.svgPageviews },
+                ],
+
+                q_and_a: [
+                    { key: "q_and_a__edited", label: "Q&A Edits", regex: /.*? edited .*?(question|answer) on/i, color: "#9a9a9a", svg: ICONS.svgEdited },
+                    { key: "q_and_a__asked_answered", label: "Asked / Answered", regex: /.*?(asked a question|answered a question) on/i, color: "#9a9a9a", svg: ICONS.svgCreated },
+                    { key: "q_and_a__pinned_unpinned", label: "Pinned / Unpinned", regex: /.*? (pinned|unpinned) .*? question on/i, color: "#0ecb27", svg: ICONS.svgPinned },
+                    { key: "q_and_a__archived_cleared", label: "Archived / Cleared", regex: /.*?(archived .*? question|cleared .*? answer) on/i, color: "#ff1414", svg: ICONS.svgRejected }
+                ],
+
+                annotations: [
+                    { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked (?:an|the .*?) annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
+                    { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
+                    { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion)/i, color: "#9a9a9a", svg: ICONS.svgSuggested },
+                ],
+
+                lyrics: [
+                    { key: "lyrics__edited_lyrics", label: "Lyric edits", regex: /.*? edited the lyrics of/i, color: "#9a9a9a", svg: ICONS.svgEdited },
+                    { key: "lyrics__lep", label: "Lyric edit proposals", regex: /.*? (?:rejected .*?|created(?: \d+| a)?|accepted .*?|automatically archived .*?) lyrics edit proposal(?:s)? on/i, color: "#9a9a9a", svg: ICONS.svgEdited },
+                    { key: "lyrics__marked", label: "Marked real", regex: /.*?(marked as a real song|thanks! we've been looking for the lyrics to)/i, color: "#38ef51", svg: ICONS.svgRecognized },
+                    { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#ffff64", svg: ICONS.svgVerified },
+                    { key: "lyrics__complete", label: "(Un)completed lyrics", regex: /.*? (marked|un-?marked) the lyrics complete on/i, color: "#0ecb27", svg: ICONS.svgAccepted }
+                ],
+
+                metadata: [
+                    { key: "metadata__edited_metadata", label: "Metadata edits", regex: /.*? edited the metadata of/i, color: "#9a9a9a", svg: ICONS.svgEdited },
+                    { key: "metadata__created", label: "Song creation", regex: /.*? created$/i, color: "#9a9a9a", svg: ICONS.svgCreated }
+                ]
+            }
+        };
+    }
+
     function filterRecentActivity(profilePath) {
         console.log("Run function filterRecentActivity()");
 
         const { svgUpvoted, svgDownvoted, svgPinned, svgUnpinned, svgLocked, svgUnlocked, svgAccepted, svgRejected, svgRecognized, svgMerged, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgCurrentPageviews, svgMarked, svgVerified, svgGenius } = ICONS;
-
-        const FILTERS = [
-            { key: "metadata", label: "METADATA", color: "#000000", svg: svgGenius },
-            { key: "annotations", label: "ANNOTATIONS", color: "#000000", svg: svgGenius },
-            { key: "votes", label: "VOTES", color: "#000000", svg: svgGenius },
-            { key: "lyrics", label: "LYRICS", color: "#000000", svg: svgGenius },
-            { key: "q_and_a", label: "Q&A", color: "#000000", svg: svgGenius },
-            { key: "other", label: "OTHER", color: "#000000", svg: svgGenius },
-        ];
-
-        const SUBFILTERS = {
-            votes: [
-                { key: "votes__upvoted", label: "Upvotes", regex: /.*? upvoted/i, color: "#0ecb27", svg: svgUpvoted },
-                { key: "votes__downvoted", label: "Downvotes", regex: /.*? downvoted/i, color: "#ff1414", svg: svgDownvoted },
-            ],
-
-            other: [
-                { key: "other__locked", label: "Locked / Unlocked", regex: /.*? (locked|unlocked)/i, color: "#9a9a9a", svg: svgLocked },
-                { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: svgHid },
-                { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: svgFollowed },
-                { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: svgPyonged },
-                { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#0ecb27", svg: svgPageviews },
-            ],
-
-            q_and_a: [
-                { key: "q_and_a__edited", label: "Q&A Edits", regex: /.*? edited .*?(question|answer) on/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "q_and_a__asked_answered", label: "Asked / Answered", regex: /.*?(asked a question|answered a question) on/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "q_and_a__pinned_unpinned", label: "Pinned / Unpinned", regex: /.*? (pinned|unpinned) .*? question on/i, color: "#0ecb27", svg: svgPinned },
-                { key: "q_and_a__archived_cleared", label: "Archived / Cleared", regex: /.*?(archived .*? question|cleared .*? answer) on/i, color: "#ff1414", svg: svgRejected }
-            ],
-
-            annotations: [
-                { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked an annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion)/i, color: "#9a9a9a", svg: svgSuggested },
-            ],
-
-            lyrics: [
-                { key: "lyrics__edited_lyrics", label: "Lyric edits", regex: /.*? edited the lyrics of/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "lyrics__lep", label: "Lyric edit proposals", regex: /.*? (rejected .*?|created a|accepted .*?|automatically archived .*?) lyrics edit proposal on/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "lyrics__marked", label: "Marked real", regex: /.*?(marked as a real song|thanks! we've been looking for the lyrics to)/i, color: "#38ef51", svg: svgRecognized },
-                { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#ffff64", svg: svgVerified },
-                { key: "lyrics__complete", label: "(Un)completed lyrics", regex: /.*? (marked|un-?marked) the lyrics complete on/i, color: "#0ecb27", svg: svgAccepted }
-            ],
-
-            metadata: [
-                { key: "metadata__edited_metadata", label: "Metadata edits", regex: /.*? edited the metadata of/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "metadata__created", label: "Song creation", regex: /.*? created$/i, color: "#9a9a9a", svg: svgCreated }
-            ]
-        };
-
+        const { FILTERS, SUBFILTERS } = getFilterConfig(ICONS);
         const ALL_SUBFILTERS = Object.values(SUBFILTERS).flat();
-
         const STORAGE_KEY = "geniusRecentActivityFilters";
 
-        let savedStates = {
-            filters: {},
-            userText: ""
-        };
-
-        let currentUIState = {
-            checkboxes: null,
-            userInput: null
-        };
+        let savedStates = { filters: {}, userText: "" };
+        let currentUIState = { checkboxes: null, userInput: null };
 
         let filterInitialized = false;
         let activityObserver = null;
+        let currentActivityContainer = null;
 
 
         function saveStateToStorage() {
             if (!isGeniusSongSaveFilters) return;
-
             chrome.storage.local.set({
                 [STORAGE_KEY]: {
                     filters: savedStates.filters,
@@ -2792,45 +2793,36 @@ chrome.storage.local.get([
 
             if (username && profilePath) {
                 const normalizedProfilePath = profilePath.replace(/^\//, "").trim().toLowerCase();
-                if (username === normalizedProfilePath) {
-                    username = "you";
-                }
+                if (username === normalizedProfilePath) username = "you";
             }
 
-            const usernameRegex = username ? new RegExp(`\\b${username}\\b`, "i") : null;
+            const escapedUsername = username ? username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : null;
+            const usernameRegex = escapedUsername ? new RegExp(escapedUsername, "i") : null;
 
             items.forEach(item => {
                 let visible = true;
 
-                const span = item.querySelector('div[class^="LineItem__MessageContent-"] span');
+                //const span = item.querySelector('div[class^="LineItem__MessageContent-"] span');
+                const span = item.querySelector('div[class^="LineItem__MessageContent-"]')?.querySelector(':scope > span > span');
                 if (!span) return;
 
                 const clone = span.cloneNode(true);
                 clone.querySelectorAll("em").forEach(el => el.remove());
+                const text = clone.innerText.trim().toLowerCase().replace(/\s+/g, " ");
 
-                const text = clone.innerText
-                    .trim()
-                    .toLowerCase()
-                    .replace(/\s+/g, " ");
-
-                const match = ALL_SUBFILTERS.find(sf => sf.regex.test(text));
-
-                if (match) {
-                    const enabled = filters[match.key] ?? true;
-                    if (!enabled) visible = false;
-                }
-
-                if (visible && filters.user && usernameRegex) {
-                    if (!usernameRegex.test(text)) visible = false;
-                }
-
+                const match = ALL_SUBFILTERS.find(subfilter => subfilter.regex.test(text));
+                if (match && (filters[match.key] ?? true) === false) visible = false;
+                if (visible && usernameRegex && !usernameRegex.test(text)) visible = false;
                 item.style.display = visible ? "" : "none";
-
             });
         }
 
-        function getActivityItems() {
-            const container = document.querySelector('div[class^="LineItemList__Container-"]');
+        function getActivityModal() {
+            return document.querySelector('[class^="Modal-desktop__Contents"]');
+        }
+
+        function getActivityItems(modal = getActivityModal()) {
+            const container = modal?.querySelector('div[class^="LineItemList__Container-"]');
             if (!container) return null;
 
             return container.querySelectorAll('div[class^="LineItem__ItemRow-"]');
@@ -2841,6 +2833,7 @@ chrome.storage.local.get([
             checkboxes.forEach(cb => {
                 states[cb.dataset.filter] = cb.checked;
             });
+            states.user = Boolean(userInput.value.trim());
 
             savedStates.filters = { ...savedStates.filters, ...states };
             savedStates.userText = userInput.value;
@@ -2938,8 +2931,8 @@ chrome.storage.local.get([
                 SUBFILTERS[f.key].forEach(sf => {
                     const subLabel = document.createElement("label");
                     flexRow(subLabel);
-                    subLabel.style.fontSize = "0.9em"
-                        ;
+                    subLabel.style.fontSize = "0.9em";
+
                     const subCb = document.createElement("input");
                     subCb.type = "checkbox";
                     subCb.dataset.filter = sf.key;
@@ -3000,11 +2993,11 @@ chrome.storage.local.get([
             return grid;
         }
 
-        function addActivityFilterButton() {
-            const title = document.querySelector('[class^="RecentActivity__Title"]');
+        function addActivityFilterButton(modal) {
+            const title = modal?.querySelector('[class^="RecentActivity__Title"]');
             if (!title) return;
 
-            if (document.getElementById("filter-activity-button")) return;
+            if (modal.querySelector("#filter-activity-button")) return;
 
             const referenceButton = document.querySelector('button[class^="SmallButton__Container"]');
             if (!referenceButton) return;
@@ -3065,7 +3058,7 @@ chrome.storage.local.get([
             wrapper.appendChild(toggleAllButton);
 
             filterButton.addEventListener("click", () => {
-                let dropdown = document.getElementById("activity-filter-dropdown");
+                let dropdown = modal.querySelector("#activity-filter-dropdown");
 
                 if (dropdown) {
                     const isClosed = dropdown.style.display === "none";
@@ -3109,9 +3102,8 @@ chrome.storage.local.get([
                     });
 
                     const userCb = dropdown.querySelector('input[data-filter="user"]');
-                    if (userCb) userCb.checked = savedStates.filters.user ?? false;
-
                     if (userInput) userInput.value = savedStates.userText ?? "";
+                    if (userCb) userCb.checked = Boolean((userInput?.value || "").trim()) || savedStates.filters.user === true;
 
                     updateIconColors(dropdown, FILTERS);
                     applyActivityFilterFromState();
@@ -3150,7 +3142,10 @@ chrome.storage.local.get([
 
                 grid.addEventListener("input", e => {
                     if (e.target.id === "activity-filter-text") {
+                        const userCb = dropdown.querySelector('input[data-filter="user"]');
+                        if (userCb) userCb.checked = Boolean(e.target.value.trim());
                         savedStates.userText = e.target.value;
+                        updateIconColors(dropdown, FILTERS);
                         applyActivityFilterFromState();
                     }
                 });
@@ -3164,13 +3159,11 @@ chrome.storage.local.get([
             });
         }
 
-        function updateActivityItemCount() {
-            const container = document.querySelector('div[class^="LineItemList__Container-"]');
-            if (!container) return;
+        function updateActivityItemCount(modal = getActivityModal()) {
+            const items = getActivityItems(modal);
+            if (!items) return;
 
-            const items = container.querySelectorAll('div[class^="LineItem__ItemRow-"]');
-
-            const counter = document.getElementById("activity-item-count");
+            const counter = modal?.querySelector("#activity-item-count");
             if (counter) counter.textContent = `Pages: ${Math.ceil((items.length - 1) / 30)}`;
         }
 
@@ -3178,10 +3171,14 @@ chrome.storage.local.get([
             const container = modal.querySelector('div[class^="LineItemList__Container-"]');
             if (!container) return;
 
+            if (container === currentActivityContainer) return;
+
             if (activityObserver) {
                 activityObserver.disconnect();
                 activityObserver = null;
             }
+
+            currentActivityContainer = container;
 
             loadStateFromStorage(() => {
                 applyActivityFilterFromSavedState();
@@ -3196,6 +3193,8 @@ chrome.storage.local.get([
                 childList: true,
                 subtree: true
             });
+
+            activityObserver = observer;
         }
 
         const modalObserver = new MutationObserver(() => {
@@ -3203,12 +3202,17 @@ chrome.storage.local.get([
             const title = modal?.querySelector('[class^="RecentActivity__Title"]');
 
             if (modal && title && !filterInitialized) {
-                addActivityFilterButton();
+                addActivityFilterButton(modal);
                 filterInitialized = true;
             }
 
             if (!modal && filterInitialized) {
                 filterInitialized = false;
+                currentActivityContainer = null;
+                currentUIState = {
+                    checkboxes: null,
+                    userInput: null
+                };
                 if (activityObserver) {
                     activityObserver.disconnect();
                     activityObserver = null;
@@ -3221,6 +3225,520 @@ chrome.storage.local.get([
         });
 
         modalObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+
+    function filterNotifications(profilePath) {
+        console.log("Run function filterNotifications()");
+
+        const { svgUpvoted, svgDownvoted, svgPinned, svgLocked, svgAccepted, svgRejected, svgRecognized, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgVerified, svgGenius } = ICONS;
+        const { FILTERS, SUBFILTERS } = getFilterConfig(ICONS);
+        const ALL_SUBFILTERS = Object.values(SUBFILTERS).flat();
+        const STORAGE_KEY = "geniusNotificationFilters";
+
+        let savedStates = { filters: {}, userText: "" };
+        let currentUIState = { checkboxes: null, userInput: null };
+
+        let notificationObserver = null;
+        let currentContainer = null;
+        let dropdownObserverScheduled = false;
+        let notificationObserverScheduled = false;
+        let hadActiveFilter = false;
+
+        function saveStateToStorage() {
+            if (!isGeniusSongSaveFilters) return;
+            chrome.storage.local.set({
+                [STORAGE_KEY]: {
+                    filters: savedStates.filters,
+                    userText: savedStates.userText
+                }
+            });
+        }
+
+        function loadStateFromStorage(callback) {
+            if (!isGeniusSongSaveFilters) {
+                callback();
+                return;
+            }
+
+            chrome.storage.local.get(STORAGE_KEY, data => {
+                if (data && data[STORAGE_KEY]) {
+                    const stored = data[STORAGE_KEY];
+                    savedStates.filters = stored.filters || {};
+                    savedStates.userText = stored.userText || "";
+                }
+                callback();
+            });
+        }
+
+        function getHeader(dropdown) {
+            return dropdown?.querySelector('div[class^="PageHeaderInbox-desktop__DropdownHeader-"], .feed_dropdown-header') || null;
+        }
+
+        function getListContainer(dropdown) {
+            return dropdown?.querySelector('div[class^="LineItemList__Container-"], div[infinite-scroll]') || null;
+        }
+
+        function isVisibleDropdown(dropdown) {
+            if (!dropdown) return false;
+            const style = window.getComputedStyle(dropdown);
+            return style.display !== "none" && style.visibility !== "hidden";
+        }
+
+        function getDropdown() {
+            return [...document.querySelectorAll('div[class*="PageHeaderDropdown-desktop__Container-"], div.feed_dropdown')].find(dropdown =>
+                isVisibleDropdown(dropdown) &&
+                getHeader(dropdown) &&
+                getListContainer(dropdown)
+            ) || null;
+        }
+
+        function getItems(dropdown = getDropdown()) {
+            const container = getListContainer(dropdown);
+            if (!container) return null;
+
+            return container.querySelectorAll('div[class^="LineItem__ItemRow-"], div.feed_dropdown-item:not(.placeholder)');
+        }
+
+
+
+        function filterItems(items, filters, userText) {
+            let username = userText?.trim().toLowerCase();
+
+            if (username && profilePath) {
+                const normalizedProfilePath = profilePath.replace(/^\//, "").trim().toLowerCase();
+                if (username === normalizedProfilePath) username = "you";
+            }
+
+            const escapedUsername = username ? username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : null;
+            const usernameRegex = escapedUsername ? new RegExp(escapedUsername, "i") : null;
+
+            items.forEach(item => {
+                let visible = true;
+
+                const span = item.querySelector('div[class^="LineItem__MessageContent-"] span, div.inbox_line_item-content span');
+                if (!span) return;
+
+                const clone = span.cloneNode(true);
+                clone.querySelectorAll("em").forEach(el => el.remove());
+                const text = clone.innerText.trim().toLowerCase().replace(/\s+/g, " ");
+
+                const match = ALL_SUBFILTERS.find(subfilter => subfilter.regex.test(text));
+                if (match && (filters[match.key] ?? true) === false) visible = false;
+                if (visible && usernameRegex && !usernameRegex.test(text)) visible = false;
+                item.style.display = visible ? "" : "none";
+            });
+        }
+
+        function hasActiveFilters(filters, userText) {
+            const hasDisabledFilter = Object.entries(filters).some(([key, value]) => key !== "user" && value === false);
+            const hasUserFilter = Boolean(userText?.trim());
+            return hasDisabledFilter || hasUserFilter;
+        }
+
+        function applyNotificationFilter(checkboxes, userInput) {
+            const states = {};
+            checkboxes.forEach(cb => {
+                states[cb.dataset.filter] = cb.checked;
+            });
+            states.user = Boolean(userInput.value.trim());
+
+            savedStates.filters = { ...savedStates.filters, ...states };
+            savedStates.userText = userInput.value;
+            saveStateToStorage();
+            applyNotificationFilterFromSavedState();
+        }
+
+        function applyNotificationFilterFromState() {
+            if (!currentUIState.checkboxes || !currentUIState.userInput) return;
+            applyNotificationFilter(currentUIState.checkboxes, currentUIState.userInput);
+        }
+
+        function applyNotificationFilterFromSavedState() {
+            const items = getItems();
+            if (!items) return;
+
+            const activeFilters = hasActiveFilters(savedStates.filters, savedStates.userText);
+            if (!activeFilters) {
+                if (hadActiveFilter) {
+                    items.forEach(item => {
+                        item.style.display = "";
+                    });
+                }
+                hadActiveFilter = false;
+                updateNotificationItemCount();
+                return;
+            }
+
+            hadActiveFilter = true;
+            filterItems(items, savedStates.filters, savedStates.userText);
+            updateNotificationItemCount();
+        }
+
+        function flexRow(el) {
+            el.style.display = "flex";
+            el.style.alignItems = "center";
+            el.style.gap = "6px";
+            el.style.cursor = "pointer";
+        }
+
+        function createIconSpan(key, svg) {
+            const span = document.createElement("span");
+            span.dataset.icon = key;
+            span.style.display = "inline-flex";
+            span.innerHTML = svg;
+            return span;
+        }
+
+        function updateIconColors(root) {
+            FILTERS.forEach(filter => {
+                const cb = root.querySelector(`input[data-filter="${filter.key}"]`);
+                const icon = root.querySelector(`[data-icon="${filter.key}"] svg`);
+                if (cb && icon) icon.setAttribute("fill", cb.checked ? filter.color : "#ddd");
+            });
+
+            ALL_SUBFILTERS.forEach(subfilter => {
+                const cb = root.querySelector(`input[data-filter="${subfilter.key}"]`);
+                const icon = root.querySelector(`[data-icon="${subfilter.key}"] svg`);
+                if (cb && icon) icon.setAttribute("fill", cb.checked ? subfilter.color : "#ddd");
+            });
+
+            const userCb = root.querySelector('input[data-filter="user"]');
+            const userIcon = root.querySelector('[data-icon="user"] svg');
+            if (userIcon && userCb) userIcon.setAttribute("fill", userCb.checked ? "#000" : "#ddd");
+        }
+
+        function createFilterGrid() {
+            const grid = document.createElement("div");
+            grid.style.display = "grid";
+            grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+            grid.style.gap = "6px 12px";
+
+            FILTERS.forEach(filter => {
+                const wrapper = document.createElement("div");
+
+                const masterLabel = document.createElement("label");
+                flexRow(masterLabel);
+                masterLabel.style.color = "black";
+                masterLabel.style.fontWeight = "600";
+                masterLabel.style.marginBottom = "4px";
+
+                const masterCb = document.createElement("input");
+                masterCb.type = "checkbox";
+                masterCb.dataset.filter = filter.key;
+                masterCb.classList.add("master-filter");
+                masterCb.style.display = "none";
+
+                masterLabel.appendChild(masterCb);
+                masterLabel.appendChild(createIconSpan(filter.key, filter.svg));
+                masterLabel.append(filter.label);
+                wrapper.appendChild(masterLabel);
+
+                const sub = document.createElement("div");
+               
+                SUBFILTERS[filter.key].forEach(subfilter => {
+                    const subLabel = document.createElement("label");
+                    flexRow(subLabel);
+                    subLabel.style.color = "black";
+                    subLabel.style.fontSize = "0.9em";
+                    subLabel.style.marginBottom = "2px";
+
+                    const subCb = document.createElement("input");
+                    subCb.type = "checkbox";
+                    subCb.dataset.filter = subfilter.key;
+                    subCb.classList.add("subfilter");
+                    subCb.style.display = "none";
+
+                    subLabel.appendChild(subCb);
+                    subLabel.appendChild(createIconSpan(subfilter.key, subfilter.svg));
+                    subLabel.append(subfilter.label);
+                    sub.appendChild(subLabel);
+                });
+
+                wrapper.appendChild(sub);
+                grid.appendChild(wrapper);
+            });
+
+            const userWrapper = document.createElement("div");
+            userWrapper.style.paddingTop = "8px";
+            userWrapper.style.borderTop = "1px solid #ececec";
+            userWrapper.style.gridColumn = "1 / span 3";
+
+
+            const userLabel = document.createElement("label");
+            userLabel.style.display = "flex";
+            userLabel.style.alignItems = "center";
+            userLabel.style.gap = "6px";
+            userLabel.style.cursor = "pointer";
+
+            const userCb = document.createElement("input");
+            userCb.type = "checkbox";
+            userCb.dataset.filter = "user";
+            userCb.classList.add("master-filter");
+            userCb.style.display = "none";
+
+            const userInput = document.createElement("input");
+            userInput.id = "notification-filter-text";
+            userInput.placeholder = "User name";
+            userInput.style.flex = "1";
+            userInput.style.padding = "6px";
+            userInput.style.border = "1px solid #ccc";
+            userInput.style.borderRadius = "4px";
+
+            const userText = document.createElement("span");
+            userText.textContent = "USER";
+            userText.style.color = "black";
+            userText.style.fontWeight = "600";
+
+            userLabel.appendChild(userCb);
+            userLabel.appendChild(createIconSpan("user", svgGenius));
+            userLabel.appendChild(userText);
+            userLabel.appendChild(userInput);
+            userWrapper.appendChild(userLabel);
+            grid.appendChild(userWrapper);
+
+            return grid;
+        }
+
+        function getNotificationButtonClassName() {
+            const referenceButton = document.querySelector('button[class^="SmallButton__Container"], button.SmallButton__Container-sc-52e3e09f-0');
+            return referenceButton?.className || "SmallButton__Container-sc-52e3e09f-0 eAerHv StickyToolbar__SmallButton-sc-6f69c667-5 bmfuOf";
+        }
+
+        function createButton(label, className) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.style.justifyContent = "center";
+            button.style.backgroundColor = "white";
+            button.style.color = "black";
+            button.style.borderColor = "black";
+
+            button.addEventListener("mouseover", () => {
+                button.style.backgroundColor = "black";
+                button.style.color = "white";
+                button.style.borderColor = "white";
+            });
+
+            button.addEventListener("mouseout", () => {
+                button.style.backgroundColor = "white";
+                button.style.color = "black";
+                button.style.borderColor = "black";
+            });
+            if (className) button.className = className;
+            if (label) button.textContent = label;
+            return button;
+        }
+
+        function updateNotificationItemCount() {
+            const dropdown = getDropdown();
+            const counter = dropdown?.querySelector("#notification-item-count");
+            if (!counter) return;
+
+            const items = [...(getItems(dropdown) || [])];
+            const visibleItems = items.filter(item => item.style.display !== "none");
+            counter.textContent = `Showing ${visibleItems.length}/${items.length}`;
+        }
+
+        function addNotificationFilterButton(dropdown) {
+            const header = getHeader(dropdown);
+            if (!header || dropdown.querySelector("#notification-filter-button")) return;
+            const headerLabel = header.querySelector('span[class^="TextLabel-"]') || header.querySelector('span.text_label');
+            const label = headerLabel ? headerLabel.textContent.trim().toLowerCase() : "";
+            if (label === "forums") return;
+
+
+
+            const buttonClassName = getNotificationButtonClassName();
+
+            const controls = document.createElement("div");
+            controls.style.display = "flex";
+            controls.style.alignItems = "center";
+            controls.style.gap = "8px";
+            controls.style.flexWrap = "wrap";
+            controls.style.padding = "8px 12px";
+            controls.style.background = "#fafafa";
+
+            const counter = document.createElement("span");
+            counter.id = "notification-item-count";
+            counter.style.marginRight = "auto";
+            counter.style.fontSize = "12px";
+            counter.style.color = "#666";
+            counter.textContent = "Showing 0/0";
+
+            const toggleAllButton = createButton("All / None", buttonClassName);
+            toggleAllButton.id = "notification-filter-toggle-all";
+            toggleAllButton.style.display = "none";
+
+            const filterButton = createButton("", buttonClassName);
+            filterButton.id = "notification-filter-button";
+
+            const arrowSpan = document.createElement("span");
+            arrowSpan.style.display = "inline-flex";
+            arrowSpan.style.alignItems = "center";
+            arrowSpan.style.justifyContent = "center";
+            arrowSpan.style.marginLeft = "0.375rem";
+            arrowSpan.appendChild(arrowSvgClosed.cloneNode(true));
+
+            filterButton.append("Filter ", arrowSpan);
+            controls.appendChild(counter);
+            controls.appendChild(toggleAllButton);
+            controls.appendChild(filterButton);
+            header.insertAdjacentElement("afterend", controls);
+
+            filterButton.addEventListener("click", () => {
+                let panel = dropdown.querySelector("#notification-filter-dropdown");
+
+                if (panel) {
+                    const isClosed = panel.style.display === "none";
+                    panel.style.display = isClosed ? "block" : "none";
+                    arrowSpan.replaceChildren(
+                        isClosed ? arrowSvgOpen.cloneNode(true) : arrowSvgClosed.cloneNode(true)
+                    );
+                    toggleAllButton.style.display = isClosed ? "block" : "none";
+                    return;
+                }
+
+                panel = document.createElement("div");
+                panel.id = "notification-filter-dropdown";
+                panel.style.padding = "10px 12px 12px";
+                panel.style.background = "#fafafa";
+
+                const grid = createFilterGrid();
+                panel.appendChild(grid);
+                controls.insertAdjacentElement("afterend", panel);
+
+                arrowSpan.replaceChildren(arrowSvgOpen.cloneNode(true));
+                toggleAllButton.style.display = "block";
+
+                const checkboxes = panel.querySelectorAll('input[type="checkbox"]');
+                const normalCheckboxes = [...checkboxes].filter(cb => cb.dataset.filter !== "user");
+                const userInput = panel.querySelector("#notification-filter-text");
+
+                currentUIState.checkboxes = checkboxes;
+                currentUIState.userInput = userInput;
+
+                loadStateFromStorage(() => {
+                    FILTERS.forEach(filter => {
+                        const cb = panel.querySelector(`input[data-filter="${filter.key}"]`);
+                        if (cb) cb.checked = savedStates.filters[filter.key] ?? true;
+                    });
+
+                    ALL_SUBFILTERS.forEach(subfilter => {
+                        const cb = panel.querySelector(`input[data-filter="${subfilter.key}"]`);
+                        if (cb) cb.checked = savedStates.filters[subfilter.key] ?? true;
+                    });
+
+                    const userCb = panel.querySelector('input[data-filter="user"]');
+                    if (userInput) userInput.value = savedStates.userText ?? "";
+                    if (userCb) userCb.checked = Boolean((userInput?.value || "").trim()) || savedStates.filters.user === true;
+
+                    updateIconColors(panel);
+                    applyNotificationFilterFromState();
+                });
+
+                updateIconColors(panel);
+
+                grid.addEventListener("change", e => {
+                    const target = e.target;
+
+                    if (target.classList.contains("master-filter")) {
+                        const key = target.dataset.filter;
+                        const subfilters = grid.querySelectorAll(`input[data-filter^="${key}__"]`);
+                        subfilters.forEach(cb => cb.checked = target.checked);
+                    }
+
+                    if (target.classList.contains("subfilter")) {
+                        const [key] = target.dataset.filter.split("__");
+                        const subfilters = grid.querySelectorAll(`input[data-filter^="${key}__"]`);
+                        const master = grid.querySelector(`input[data-filter="${key}"]`);
+                        if (master) master.checked = [...subfilters].every(cb => cb.checked);
+                    }
+
+                    updateIconColors(panel);
+                    applyNotificationFilterFromState();
+                });
+
+                grid.addEventListener("input", e => {
+                    if (e.target.id === "notification-filter-text") {
+                        const userCb = panel.querySelector('input[data-filter="user"]');
+                        if (userCb) userCb.checked = Boolean(e.target.value.trim());
+                        savedStates.userText = e.target.value;
+                        updateIconColors(panel);
+                        applyNotificationFilterFromState();
+                    }
+                });
+
+                toggleAllButton.addEventListener("click", () => {
+                    const newState = !normalCheckboxes.every(cb => cb.checked);
+                    normalCheckboxes.forEach(cb => cb.checked = newState);
+                    updateIconColors(panel);
+                    applyNotificationFilterFromState();
+                });
+            });
+        }
+
+        function startNotificationObserverIn(dropdown) {
+            const container = getListContainer(dropdown);
+            if (!container || container === currentContainer) return;
+
+            if (notificationObserver) {
+                notificationObserver.disconnect();
+                notificationObserver = null;
+            }
+
+            currentContainer = container;
+            notificationObserverScheduled = false;
+
+            loadStateFromStorage(() => {
+                applyNotificationFilterFromSavedState();
+            });
+
+            const observer = new MutationObserver(() => {
+                if (notificationObserverScheduled) return;
+                notificationObserverScheduled = true;
+                requestAnimationFrame(() => {
+                    notificationObserverScheduled = false;
+                    applyNotificationFilterFromSavedState();
+                });
+            });
+
+            observer.observe(container, {
+                childList: true,
+                subtree: true
+            });
+
+            notificationObserver = observer;
+        }
+
+        const notificationDropdownObserver = new MutationObserver(() => {
+            if (dropdownObserverScheduled) return;
+            dropdownObserverScheduled = true;
+
+            requestAnimationFrame(() => {
+                dropdownObserverScheduled = false;
+                const dropdown = getDropdown();
+
+                if (!dropdown) {
+                    currentContainer = null;
+                    hadActiveFilter = false;
+                    currentUIState = { checkboxes: null, userInput: null };
+                    if (notificationObserver) {
+                        notificationObserver.disconnect();
+                        notificationObserver = null;
+                    }
+                    return;
+                }
+
+                addNotificationFilterButton(dropdown);
+                startNotificationObserverIn(dropdown);
+                updateNotificationItemCount();
+            });
+        });
+
+        notificationDropdownObserver.observe(document.body, {
             childList: true,
             subtree: true
         });
