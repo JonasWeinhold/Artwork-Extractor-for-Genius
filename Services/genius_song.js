@@ -64,6 +64,7 @@ chrome.storage.local.get([
     async function main() {
         const isFirehose = window.location.href === 'https://genius.com/firehose';
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
+        const pageProfilePath = getProfilePathFromDocument();
 
         const profilePath = getProfilePathFromDocument();
 
@@ -98,7 +99,7 @@ chrome.storage.local.get([
         if (isGeniusSongSectionsButtons) lyricsSectionsButtons(songData);
         if (isGeniusSongAnnotationsButtons) lyricsAnnotationsButtons();
 
-        if (isGeniusSongFilterActivity) filterRecentActivity(profilePath);
+        if (isGeniusSongFilterActivity) filterRecentActivity(resolvedProfilePath);
 
         if (songData.apple_music_id) storeAppleMusicStructure();
 
