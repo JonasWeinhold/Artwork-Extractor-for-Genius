@@ -14,6 +14,7 @@ chrome.storage.local.get([
     'isGeniusSongExpandSectionsButtons',
     'isGeniusSongAnnotationsButtons',
     'isGeniusSongFilterActivity',
+    'isGeniusSongFilterNotifications',
     'isGeniusSongSaveFilters',
     'isGeniusSongFilterFirehose',
     'isGeniusSongCopyCover',
@@ -38,6 +39,7 @@ chrome.storage.local.get([
     const isGeniusSongExpandSectionsButtons = result.isGeniusSongExpandSectionsButtons ?? false;
     const isGeniusSongAnnotationsButtons = result.isGeniusSongAnnotationsButtons ?? true;
     const isGeniusSongFilterActivity = result.isGeniusSongFilterActivity ?? true;
+    const isGeniusSongFilterNotifications = result.isGeniusSongFilterNotifications ?? true;
     const isGeniusSongSaveFilters = result.isGeniusSongSaveFilters ?? false;
     const isGeniusSongFilterFirehose = result.isGeniusSongFilterFirehose ?? true;
     const isGeniusSongCopyCover = result.isGeniusSongCopyCover ?? true;
@@ -64,11 +66,13 @@ chrome.storage.local.get([
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
         const pageProfilePath = getProfilePathFromDocument();
 
+        const profilePath = getProfilePathFromDocument();
+
         if (isFirehose) {
             if (isGeniusSongFilterFirehose) filterFirehose();
         }
 
-        if (isGeniusSongFilterActivity) filterNotifications(pageProfilePath);
+        if (isGeniusSongFilterNotifications) filterNotifications(profilePath);
 
         if (!isSong) return
         getDomElements();
@@ -77,8 +81,7 @@ chrome.storage.local.get([
         editAppleMusicPlayer();
         playerSettings();
 
-        const { songId, userId, profilePath, songData } = await getSongInfo();
-        const resolvedProfilePath = profilePath ?? pageProfilePath;
+        const { songId, userId, songData } = await getSongInfo();
 
         if (isGeniusSongSongId) showSongIdButton(songId);
         if (isGeniusSongCheckIndex) showIndexButton();
@@ -158,13 +161,11 @@ chrome.storage.local.get([
         const userId = userMatch?.[1] ?? null;
         if (userId) chrome.storage.local.set({ userId });
 
-        const profilePath = getProfilePathFromDocument();
-
         // Song Data
         const response = await fetch(`https://genius.com/api/songs/${songId}`);
         const json = await response.json();
 
-        return { songId, userId, profilePath, songData: json.response.song };
+        return { songId, userId, songData: json.response.song };
     }
 
     document.addEventListener('click', function (event) {
@@ -2692,74 +2693,69 @@ chrome.storage.local.get([
             </svg>`,
     }
 
+    function getFilterConfig(ICONS) {
+        return {
+            FILTERS: [
+                { key: "metadata", label: "METADATA", color: "#000000", svg: ICONS.svgGenius },
+                { key: "annotations", label: "ANNOTATIONS", color: "#000000", svg: ICONS.svgGenius },
+                { key: "votes", label: "VOTES", color: "#000000", svg: ICONS.svgGenius },
+                { key: "lyrics", label: "LYRICS", color: "#000000", svg: ICONS.svgGenius },
+                { key: "q_and_a", label: "Q&A", color: "#000000", svg: ICONS.svgGenius },
+                { key: "other", label: "OTHER", color: "#000000", svg: ICONS.svgGenius },
+            ],
+            SUBFILTERS: {
+                votes: [
+                    { key: "votes__upvoted", label: "Upvotes", regex: /.*? upvoted/i, color: "#0ecb27", svg: ICONS.svgUpvoted },
+                    { key: "votes__downvoted", label: "Downvotes", regex: /.*? downvoted/i, color: "#ff1414", svg: ICONS.svgDownvoted },
+                ],
+
+                other: [
+                    { key: "other__locked", label: "Locked / Unlocked", regex: /.*? (locked|unlocked)/i, color: "#9a9a9a", svg: ICONS.svgLocked },
+                    { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: ICONS.svgHid },
+                    { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: ICONS.svgFollowed },
+                    { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: ICONS.svgPyonged },
+                    { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#0ecb27", svg: ICONS.svgPageviews },
+                ],
+
+                q_and_a: [
+                    { key: "q_and_a__edited", label: "Q&A Edits", regex: /.*? edited .*?(question|answer) on/i, color: "#9a9a9a", svg: ICONS.svgEdited },
+                    { key: "q_and_a__asked_answered", label: "Asked / Answered", regex: /.*?(asked a question|answered a question) on/i, color: "#9a9a9a", svg: ICONS.svgCreated },
+                    { key: "q_and_a__pinned_unpinned", label: "Pinned / Unpinned", regex: /.*? (pinned|unpinned) .*? question on/i, color: "#0ecb27", svg: ICONS.svgPinned },
+                    { key: "q_and_a__archived_cleared", label: "Archived / Cleared", regex: /.*?(archived .*? question|cleared .*? answer) on/i, color: "#ff1414", svg: ICONS.svgRejected }
+                ],
+
+                annotations: [
+                    { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked (?:an|the .*?) annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
+                    { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
+                    { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion)/i, color: "#9a9a9a", svg: ICONS.svgSuggested },
+                ],
+
+                lyrics: [
+                    { key: "lyrics__edited_lyrics", label: "Lyric edits", regex: /.*? edited the lyrics of/i, color: "#9a9a9a", svg: ICONS.svgEdited },
+                    { key: "lyrics__lep", label: "Lyric edit proposals", regex: /.*? (?:rejected .*?|created(?: \d+| a)?|accepted .*?|automatically archived .*?) lyrics edit proposal(?:s)? on/i, color: "#9a9a9a", svg: ICONS.svgEdited },
+                    { key: "lyrics__marked", label: "Marked real", regex: /.*?(marked as a real song|thanks! we've been looking for the lyrics to)/i, color: "#38ef51", svg: ICONS.svgRecognized },
+                    { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#ffff64", svg: ICONS.svgVerified },
+                    { key: "lyrics__complete", label: "(Un)completed lyrics", regex: /.*? (marked|un-?marked) the lyrics complete on/i, color: "#0ecb27", svg: ICONS.svgAccepted }
+                ],
+
+                metadata: [
+                    { key: "metadata__edited_metadata", label: "Metadata edits", regex: /.*? edited the metadata of/i, color: "#9a9a9a", svg: ICONS.svgEdited },
+                    { key: "metadata__created", label: "Song creation", regex: /.*? created$/i, color: "#9a9a9a", svg: ICONS.svgCreated }
+                ]
+            }
+        };
+    }
+
     function filterRecentActivity(profilePath) {
         console.log("Run function filterRecentActivity()");
 
         const { svgUpvoted, svgDownvoted, svgPinned, svgUnpinned, svgLocked, svgUnlocked, svgAccepted, svgRejected, svgRecognized, svgMerged, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgCurrentPageviews, svgMarked, svgVerified, svgGenius } = ICONS;
-
-        const FILTERS = [
-            { key: "metadata", label: "METADATA", color: "#000000", svg: svgGenius },
-            { key: "annotations", label: "ANNOTATIONS", color: "#000000", svg: svgGenius },
-            { key: "votes", label: "VOTES", color: "#000000", svg: svgGenius },
-            { key: "lyrics", label: "LYRICS", color: "#000000", svg: svgGenius },
-            { key: "q_and_a", label: "Q&A", color: "#000000", svg: svgGenius },
-            { key: "other", label: "OTHER", color: "#000000", svg: svgGenius },
-        ];
-
-        const SUBFILTERS = {
-            votes: [
-                { key: "votes__upvoted", label: "Upvotes", regex: /.*? upvoted/i, color: "#0ecb27", svg: svgUpvoted },
-                { key: "votes__downvoted", label: "Downvotes", regex: /.*? downvoted/i, color: "#ff1414", svg: svgDownvoted },
-            ],
-
-            other: [
-                { key: "other__locked", label: "Locked / Unlocked", regex: /.*? (locked|unlocked)/i, color: "#9a9a9a", svg: svgLocked },
-                { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: svgHid },
-                { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: svgFollowed },
-                { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: svgPyonged },
-                { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#0ecb27", svg: svgPageviews },
-            ],
-
-            q_and_a: [
-                { key: "q_and_a__edited", label: "Q&A Edits", regex: /.*? edited .*?(question|answer) on/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "q_and_a__asked_answered", label: "Asked / Answered", regex: /.*?(asked a question|answered a question) on/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "q_and_a__pinned_unpinned", label: "Pinned / Unpinned", regex: /.*? (pinned|unpinned) .*? question on/i, color: "#0ecb27", svg: svgPinned },
-                { key: "q_and_a__archived_cleared", label: "Archived / Cleared", regex: /.*?(archived .*? question|cleared .*? answer) on/i, color: "#ff1414", svg: svgRejected }
-            ],
-
-            annotations: [
-                { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked (?:an|the .*?) annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion)/i, color: "#9a9a9a", svg: svgSuggested },
-            ],
-
-            lyrics: [
-                { key: "lyrics__edited_lyrics", label: "Lyric edits", regex: /.*? edited the lyrics of/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "lyrics__lep", label: "Lyric edit proposals", regex: /.*? (?:rejected .*?|created(?: \d+| a)?|accepted .*?|automatically archived .*?) lyrics edit proposal(?:s)? on/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "lyrics__marked", label: "Marked real", regex: /.*?(marked as a real song|thanks! we've been looking for the lyrics to)/i, color: "#38ef51", svg: svgRecognized },
-                { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#ffff64", svg: svgVerified },
-                { key: "lyrics__complete", label: "(Un)completed lyrics", regex: /.*? (marked|un-?marked) the lyrics complete on/i, color: "#0ecb27", svg: svgAccepted }
-            ],
-
-            metadata: [
-                { key: "metadata__edited_metadata", label: "Metadata edits", regex: /.*? edited the metadata of/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "metadata__created", label: "Song creation", regex: /.*? created$/i, color: "#9a9a9a", svg: svgCreated }
-            ]
-        };
-
+        const { FILTERS, SUBFILTERS } = getFilterConfig(ICONS);
         const ALL_SUBFILTERS = Object.values(SUBFILTERS).flat();
-
         const STORAGE_KEY = "geniusRecentActivityFilters";
 
-        let savedStates = {
-            filters: {},
-            userText: ""
-        };
-
-        let currentUIState = {
-            checkboxes: null,
-            userInput: null
-        };
+        let savedStates = { filters: {}, userText: "" };
+        let currentUIState = { checkboxes: null, userInput: null };
 
         let filterInitialized = false;
         let activityObserver = null;
@@ -2768,7 +2764,6 @@ chrome.storage.local.get([
 
         function saveStateToStorage() {
             if (!isGeniusSongSaveFilters) return;
-
             chrome.storage.local.set({
                 [STORAGE_KEY]: {
                     filters: savedStates.filters,
@@ -2799,9 +2794,7 @@ chrome.storage.local.get([
 
             if (username && profilePath) {
                 const normalizedProfilePath = profilePath.replace(/^\//, "").trim().toLowerCase();
-                if (username === normalizedProfilePath) {
-                    username = "you";
-                }
+                if (username === normalizedProfilePath) username = "you";
             }
 
             const escapedUsername = username ? username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : null;
@@ -2810,30 +2803,18 @@ chrome.storage.local.get([
             items.forEach(item => {
                 let visible = true;
 
-                const span = item.querySelector('div[class^="LineItem__MessageContent-"] span');
+                //const span = item.querySelector('div[class^="LineItem__MessageContent-"] span');
+                const span = item.querySelector('div[class^="LineItem__MessageContent-"]')?.querySelector(':scope > span > span');
                 if (!span) return;
 
                 const clone = span.cloneNode(true);
                 clone.querySelectorAll("em").forEach(el => el.remove());
+                const text = clone.innerText.trim().toLowerCase().replace(/\s+/g, " ");
 
-                const text = clone.innerText
-                    .trim()
-                    .toLowerCase()
-                    .replace(/\s+/g, " ");
-
-                const match = ALL_SUBFILTERS.find(sf => sf.regex.test(text));
-
-                if (match) {
-                    const enabled = filters[match.key] ?? true;
-                    if (!enabled) visible = false;
-                }
-
-                if (visible && usernameRegex) {
-                    if (!usernameRegex.test(text)) visible = false;
-                }
-
+                const match = ALL_SUBFILTERS.find(subfilter => subfilter.regex.test(text));
+                if (match && (filters[match.key] ?? true) === false) visible = false;
+                if (visible && usernameRegex && !usernameRegex.test(text)) visible = false;
                 item.style.display = visible ? "" : "none";
-
             });
         }
 
@@ -2951,8 +2932,8 @@ chrome.storage.local.get([
                 SUBFILTERS[f.key].forEach(sf => {
                     const subLabel = document.createElement("label");
                     flexRow(subLabel);
-                    subLabel.style.fontSize = "0.9em"
-                        ;
+                    subLabel.style.fontSize = "0.9em";
+
                     const subCb = document.createElement("input");
                     subCb.type = "checkbox";
                     subCb.dataset.filter = sf.key;
@@ -3255,56 +3236,13 @@ chrome.storage.local.get([
         console.log("Run function filterNotifications()");
 
         const { svgUpvoted, svgDownvoted, svgPinned, svgLocked, svgAccepted, svgRejected, svgRecognized, svgCreated, svgEdited, svgSuggested, svgFollowed, svgHid, svgPyonged, svgPageviews, svgVerified, svgGenius } = ICONS;
-
-        const FILTERS = [
-            { key: "metadata", label: "METADATA", color: "#000000", svg: svgGenius },
-            { key: "annotations", label: "ANNOTATIONS", color: "#000000", svg: svgGenius },
-            { key: "votes", label: "VOTES", color: "#000000", svg: svgGenius },
-            { key: "lyrics", label: "LYRICS", color: "#000000", svg: svgGenius },
-            { key: "q_and_a", label: "Q&A", color: "#000000", svg: svgGenius },
-            { key: "other", label: "OTHER", color: "#000000", svg: svgGenius },
-        ];
-
-        const SUBFILTERS = {
-            votes: [
-                { key: "votes__upvoted", label: "Upvotes", regex: /.*? upvoted/i, color: "#0ecb27", svg: svgUpvoted },
-                { key: "votes__downvoted", label: "Downvotes", regex: /.*? downvoted/i, color: "#ff1414", svg: svgDownvoted },
-            ],
-            other: [
-                { key: "other__locked", label: "Locked / Unlocked", regex: /.*? (locked|unlocked)/i, color: "#9a9a9a", svg: svgLocked },
-                { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: svgHid },
-                { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: svgFollowed },
-                { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: svgPyonged },
-                { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#0ecb27", svg: svgPageviews },
-            ],
-            q_and_a: [
-                { key: "q_and_a__edited", label: "Q&A Edits", regex: /.*? edited .*?(question|answer) on/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "q_and_a__asked_answered", label: "Asked / Answered", regex: /.*?(asked a question|answered a question) on/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "q_and_a__pinned_unpinned", label: "Pinned / Unpinned", regex: /.*? (pinned|unpinned) .*? question on/i, color: "#0ecb27", svg: svgPinned },
-                { key: "q_and_a__archived_cleared", label: "Archived / Cleared", regex: /.*?(archived .*? question|cleared .*? answer) on/i, color: "#ff1414", svg: svgRejected }
-            ],
-            annotations: [
-                { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked (?:an|the .*?) annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: svgCreated },
-                { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion)/i, color: "#9a9a9a", svg: svgSuggested },
-            ],
-            lyrics: [
-                { key: "lyrics__edited_lyrics", label: "Lyric edits", regex: /.*? edited the lyrics of/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "lyrics__lep", label: "Lyric edit proposals", regex: /.*? (?:rejected .*?|created(?: \d+| a)?|accepted .*?|automatically archived .*?) lyrics edit proposal(?:s)? on/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "lyrics__marked", label: "Marked real", regex: /.*?(marked as a real song|thanks! we've been looking for the lyrics to)/i, color: "#38ef51", svg: svgRecognized },
-                { key: "lyrics__verified", label: "(Un)verified lyrics", regex: /.*? (verified|unverified) the lyrics of/i, color: "#ffff64", svg: svgVerified },
-                { key: "lyrics__complete", label: "(Un)completed lyrics", regex: /.*? (marked|un-?marked) the lyrics complete on/i, color: "#0ecb27", svg: svgAccepted }
-            ],
-            metadata: [
-                { key: "metadata__edited_metadata", label: "Metadata edits", regex: /.*? edited the metadata of/i, color: "#9a9a9a", svg: svgEdited },
-                { key: "metadata__created", label: "Song creation", regex: /.*? created$/i, color: "#9a9a9a", svg: svgCreated }
-            ]
-        };
-
+        const { FILTERS, SUBFILTERS } = getFilterConfig(ICONS);
         const ALL_SUBFILTERS = Object.values(SUBFILTERS).flat();
         const STORAGE_KEY = "geniusNotificationFilters";
+
         let savedStates = { filters: {}, userText: "" };
         let currentUIState = { checkboxes: null, userInput: null };
+
         let notificationObserver = null;
         let currentContainer = null;
         let dropdownObserverScheduled = false;
@@ -3366,14 +3304,7 @@ chrome.storage.local.get([
             return container.querySelectorAll('div[class^="LineItem__ItemRow-"], div.feed_dropdown-item:not(.placeholder)');
         }
 
-        function getText(item) {
-            const span = item.querySelector('div[class^="LineItem__MessageContent-"] span, div.inbox_line_item-content span');
-            if (!span) return "";
 
-            const clone = span.cloneNode(true);
-            clone.querySelectorAll("em").forEach(el => el.remove());
-            return clone.innerText.trim().toLowerCase().replace(/\s+/g, " ");
-        }
 
         function filterItems(items, filters, userText) {
             let username = userText?.trim().toLowerCase();
@@ -3388,8 +3319,13 @@ chrome.storage.local.get([
 
             items.forEach(item => {
                 let visible = true;
-                const text = getText(item);
-                if (!text) return;
+
+                const span = item.querySelector('div[class^="LineItem__MessageContent-"] span, div.inbox_line_item-content span');
+                if (!span) return;
+
+                const clone = span.cloneNode(true);
+                clone.querySelectorAll("em").forEach(el => el.remove());
+                const text = clone.innerText.trim().toLowerCase().replace(/\s+/g, " ");
 
                 const match = ALL_SUBFILTERS.find(subfilter => subfilter.regex.test(text));
                 if (match && (filters[match.key] ?? true) === false) visible = false;
@@ -3478,24 +3414,16 @@ chrome.storage.local.get([
 
         function createFilterGrid() {
             const grid = document.createElement("div");
-            grid.style.display = "flex";
-            grid.style.flexDirection = "column";
-            grid.style.gap = "8px";
-
-            const sections = document.createElement("div");
-            sections.style.columnWidth = "180px";
-            sections.style.columnGap = "14px";
+            grid.style.display = "grid";
+            grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+            grid.style.gap = "6px 12px";
 
             FILTERS.forEach(filter => {
                 const wrapper = document.createElement("div");
-                wrapper.style.display = "inline-block";
-                wrapper.style.width = "100%";
-                wrapper.style.marginBottom = "10px";
-                wrapper.style.breakInside = "avoid";
-                wrapper.style.webkitColumnBreakInside = "avoid";
 
                 const masterLabel = document.createElement("label");
                 flexRow(masterLabel);
+                masterLabel.style.color = "black";
                 masterLabel.style.fontWeight = "600";
                 masterLabel.style.marginBottom = "4px";
 
@@ -3511,15 +3439,13 @@ chrome.storage.local.get([
                 wrapper.appendChild(masterLabel);
 
                 const sub = document.createElement("div");
-                sub.style.display = "flex";
-                sub.style.flexDirection = "column";
-                sub.style.gap = "4px";
-                sub.style.paddingLeft = "2px";
-
+               
                 SUBFILTERS[filter.key].forEach(subfilter => {
                     const subLabel = document.createElement("label");
                     flexRow(subLabel);
+                    subLabel.style.color = "black";
                     subLabel.style.fontSize = "0.9em";
+                    subLabel.style.marginBottom = "2px";
 
                     const subCb = document.createElement("input");
                     subCb.type = "checkbox";
@@ -3534,12 +3460,14 @@ chrome.storage.local.get([
                 });
 
                 wrapper.appendChild(sub);
-                sections.appendChild(wrapper);
+                grid.appendChild(wrapper);
             });
 
             const userWrapper = document.createElement("div");
             userWrapper.style.paddingTop = "8px";
             userWrapper.style.borderTop = "1px solid #ececec";
+            userWrapper.style.gridColumn = "1 / span 3";
+
 
             const userLabel = document.createElement("label");
             userLabel.style.display = "flex";
@@ -3563,6 +3491,7 @@ chrome.storage.local.get([
 
             const userText = document.createElement("span");
             userText.textContent = "USER";
+            userText.style.color = "black";
             userText.style.fontWeight = "600";
 
             userLabel.appendChild(userCb);
@@ -3570,7 +3499,6 @@ chrome.storage.local.get([
             userLabel.appendChild(userText);
             userLabel.appendChild(userInput);
             userWrapper.appendChild(userLabel);
-            grid.appendChild(sections);
             grid.appendChild(userWrapper);
 
             return grid;
@@ -3584,6 +3512,22 @@ chrome.storage.local.get([
         function createButton(label, className) {
             const button = document.createElement("button");
             button.type = "button";
+            button.style.justifyContent = "center";
+            button.style.backgroundColor = "white";
+            button.style.color = "black";
+            button.style.borderColor = "black";
+
+            button.addEventListener("mouseover", () => {
+                button.style.backgroundColor = "black";
+                button.style.color = "white";
+                button.style.borderColor = "white";
+            });
+
+            button.addEventListener("mouseout", () => {
+                button.style.backgroundColor = "white";
+                button.style.color = "black";
+                button.style.borderColor = "black";
+            });
             if (className) button.className = className;
             if (label) button.textContent = label;
             return button;
@@ -3602,6 +3546,12 @@ chrome.storage.local.get([
         function addNotificationFilterButton(dropdown) {
             const header = getHeader(dropdown);
             if (!header || dropdown.querySelector("#notification-filter-button")) return;
+            const headerLabel = header.querySelector('span[class^="TextLabel-"]') || header.querySelector('span.text_label');
+            const label = headerLabel ? headerLabel.textContent.trim().toLowerCase() : "";
+            if (label === "forums") return;
+
+
+
             const buttonClassName = getNotificationButtonClassName();
 
             const controls = document.createElement("div");
@@ -3611,8 +3561,6 @@ chrome.storage.local.get([
             controls.style.flexWrap = "wrap";
             controls.style.padding = "8px 12px";
             controls.style.background = "#fafafa";
-            controls.style.borderTop = "1px solid #f2f2f2";
-            controls.style.borderBottom = "1px solid #f2f2f2";
 
             const counter = document.createElement("span");
             counter.id = "notification-item-count";
@@ -3658,7 +3606,6 @@ chrome.storage.local.get([
                 panel.id = "notification-filter-dropdown";
                 panel.style.padding = "10px 12px 12px";
                 panel.style.background = "#fafafa";
-                panel.style.borderBottom = "1px solid #f2f2f2";
 
                 const grid = createFilterGrid();
                 panel.appendChild(grid);
@@ -3773,22 +3720,22 @@ chrome.storage.local.get([
 
             requestAnimationFrame(() => {
                 dropdownObserverScheduled = false;
-            const dropdown = getDropdown();
+                const dropdown = getDropdown();
 
-            if (!dropdown) {
-                currentContainer = null;
-                hadActiveFilter = false;
-                currentUIState = { checkboxes: null, userInput: null };
-                if (notificationObserver) {
-                    notificationObserver.disconnect();
-                    notificationObserver = null;
+                if (!dropdown) {
+                    currentContainer = null;
+                    hadActiveFilter = false;
+                    currentUIState = { checkboxes: null, userInput: null };
+                    if (notificationObserver) {
+                        notificationObserver.disconnect();
+                        notificationObserver = null;
+                    }
+                    return;
                 }
-                return;
-            }
 
-            addNotificationFilterButton(dropdown);
-            startNotificationObserverIn(dropdown);
-            updateNotificationItemCount();
+                addNotificationFilterButton(dropdown);
+                startNotificationObserverIn(dropdown);
+                updateNotificationItemCount();
             });
         });
 

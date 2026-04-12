@@ -9,6 +9,7 @@ chrome.storage.local.get([
     'isGeniusArtistAllSongsAlbumsPageZwsp',
     'isGeniusArtistFollowButton',
     'isGeniusArtistSpreadsheetButton',
+    'isGeniusArtistSearchArtistMetadata',
     'isGeniusArtistRecords',
     'isGeniusArtistNewPage'
 ], async function (result) {
@@ -21,6 +22,7 @@ chrome.storage.local.get([
     const isGeniusArtistAllSongsAlbumsPageZwsp = result.isGeniusArtistAllSongsAlbumsPageZwsp ?? true;
     const isGeniusArtistFollowButton = result.isGeniusArtistFollowButton ?? false;
     const isGeniusArtistSpreadsheetButton = result.isGeniusArtistSpreadsheetButton ?? false;
+    const isGeniusArtistSearchArtistMetadata = result.isGeniusArtistSearchArtistMetadata ?? true;
     const isGeniusArtistRecords = result.isGeniusArtistRecords ?? true;
     const isGeniusArtistNewPage = result.isGeniusArtistNewPage ?? true;
 
@@ -70,6 +72,8 @@ chrome.storage.local.get([
 
             if (isGeniusArtistFollowButton) FollowButtonArtistPageNew(artistId);
             if (isGeniusArtistSpreadsheetButton) getSpreadsheetNew(artistId, "artist");
+
+            if (isGeniusArtistSearchArtistMetadata) searchArtistMetadata(artistData);
 
         } else if (isArtist) {
             const { artistId, userId, artistData } = await getArtistInfo();
@@ -129,6 +133,8 @@ chrome.storage.local.get([
         document.addEventListener('click', function (event) {
             const link = event.target.closest('a');
             if (!link) return;
+
+            if ([...link.classList].some(cls => cls.startsWith('OptOutButton__Container-'))) return;
 
             const href = link.href;
             if (!href.startsWith('https://genius.com/artists/')) return;
@@ -514,7 +520,7 @@ chrome.storage.local.get([
 
         const referenceClass = referenceButton.className;
 
-        const createInput = ({ placeholder = ""}) => {
+        const createInput = ({ placeholder = "" }) => {
             const input = document.createElement("input");
             input.type = "text";
             input.placeholder = placeholder;
@@ -1462,6 +1468,73 @@ chrome.storage.local.get([
         ]);
 
         profileContainer.parentNode.insertBefore(wrapper, profileContainer);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                             SEARCH ARTISTMETADATA                              //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    function searchArtistMetadata(artistData) {
+        console.log("Run function searchArtistMetadata()");
+
+        const observer = new MutationObserver(() => {
+            const modal = document.querySelector('form[class^="MetadataModal-shared__MetadataModalForm"]');
+            if (!modal) return;
+
+            const streamingSection = modal.querySelector('#collapsible-streaming_links-content');
+            if (!streamingSection) return;
+
+            const fields = streamingSection.querySelectorAll('div[class^="Field-shared__FieldControlWithLabel-"]');
+
+            fields.forEach(row => {
+                const labelSpan = row.querySelector('span[class^="Field-shared__FieldLabel-"]');
+                if (!labelSpan) return;
+
+                const innerLabel = row.querySelector('span[class^="EditLinksGrid__LabelWithIcon-"]');
+                if (!innerLabel) return;
+
+                const service = innerLabel.textContent.trim().toLowerCase();
+                if (service.includes("shazam")) return;
+
+                if (labelSpan.querySelector(".metadata-search-button")) return;
+
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "metadata-search-button";
+                btn.textContent = "Search ⤤";
+
+                btn.addEventListener("mouseenter", () => { btn.style.textDecoration = "underline"; });
+                btn.addEventListener("mouseleave", () => { btn.style.textDecoration = "none"; });
+
+                btn.addEventListener("click", () => {
+                    const baseName = artistData?.name_components?.base_name;
+                    if (!baseName) return;
+
+                    const SEARCH_URLS = {
+                        "apple music": n => `https://music.apple.com/search?term=${encodeURIComponent(n)}`,
+                        "spotify": n => `https://open.spotify.com/search/${encodeURIComponent(n)}`,
+                        "youtube": n => `https://www.youtube.com/results?search_query=${encodeURIComponent(n)}`,
+                        "tidal": n => `https://listen.tidal.com/search?q=${encodeURIComponent(n)}`,
+                        "amazon music": n => `https://music.amazon.com/search/${encodeURIComponent(n)}`,
+                        "bandcamp": n => `https://bandcamp.com/search?q=${encodeURIComponent(n)}`,
+                        "soundcloud": n => `https://soundcloud.com/search?q=${encodeURIComponent(n)}`,
+                    };
+
+                    const key = Object.keys(SEARCH_URLS).find(k => service.includes(k));
+                    if (!key) return;
+
+                    const url = SEARCH_URLS[key](baseName);
+
+                    window.open(url, "_blank");
+                });
+
+                labelSpan.appendChild(btn);
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 
 

@@ -187,6 +187,8 @@ chrome.storage.local.get([
             const link = event.target.closest('a');
             if (!link) return;
 
+            if ([...link.classList].some(cls => cls.startsWith('OptOutButton__Container-'))) return;
+
             const href = link.href;
             if (!href.startsWith('https://genius.com/albums/')) return;
             if (href.includes('react=1')) return;
