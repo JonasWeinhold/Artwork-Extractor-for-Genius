@@ -59,6 +59,19 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    let filterNotificationsDestroy = null;
+
+    chrome.storage.onChanged.addListener(function (changes, area) {
+        if (area !== 'local' || !('isGeniusSongFilterNotifications' in changes)) return;
+        const enabled = changes.isGeniusSongFilterNotifications.newValue ?? true;
+        if (enabled && !filterNotificationsDestroy) {
+            filterNotificationsDestroy = filterNotifications(getProfilePathFromDocument());
+        } else if (!enabled && filterNotificationsDestroy) {
+            filterNotificationsDestroy();
+            filterNotificationsDestroy = null;
+        }
+    });
+
     queueMicrotask(main);
 
     async function main() {
@@ -72,7 +85,7 @@ chrome.storage.local.get([
             if (isGeniusSongFilterFirehose) filterFirehose();
         }
 
-        if (isGeniusSongFilterNotifications) filterNotifications(profilePath);
+        if (isGeniusSongFilterNotifications) filterNotificationsDestroy = filterNotifications(profilePath);
 
         if (!isSong) return
         getDomElements();
@@ -151,7 +164,7 @@ chrome.storage.local.get([
 
     async function getSongInfo() {
         console.log("Run function getSongInfo()");
-        // Song ID 
+        // Song ID
         const metaContent = document.querySelector('[property="twitter:app:url:iphone"]')?.content ?? "";
         const parts = metaContent.split("/");
         const songId = parts[2] === "songs" ? parts[3] : null;
@@ -386,14 +399,14 @@ chrome.storage.local.get([
             const dot = document.createElement('span');
             dot.className = 'black-dot';
             dot.style.cssText = `
-            height: 8px; 
-            width: 8px; 
-            background-color: #2C2C2C; 
-            border-radius: 50%; 
-            display: inline-block; 
-            position: absolute; 
-            top: 50%; 
-            transform: translate(-50%, -50%); 
+            height: 8px;
+            width: 8px;
+            background-color: #2C2C2C;
+            border-radius: 50%;
+            display: inline-block;
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
         `;
             circle.appendChild(dot);
         }
@@ -3439,7 +3452,7 @@ chrome.storage.local.get([
                 wrapper.appendChild(masterLabel);
 
                 const sub = document.createElement("div");
-               
+
                 SUBFILTERS[filter.key].forEach(subfilter => {
                     const subLabel = document.createElement("label");
                     flexRow(subLabel);
@@ -3743,6 +3756,17 @@ chrome.storage.local.get([
             childList: true,
             subtree: true
         });
+
+        return function () {
+            notificationDropdownObserver.disconnect();
+            if (notificationObserver) {
+                notificationObserver.disconnect();
+                notificationObserver = null;
+            }
+            document.querySelector('#notification-filter-button')?.parentElement.remove();
+            document.querySelector('#notification-filter-dropdown')?.remove();
+            currentContainer = null;
+        };
     }
 
 
