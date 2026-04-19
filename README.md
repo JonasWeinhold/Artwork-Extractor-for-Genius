@@ -6,158 +6,146 @@
 <div align="center">
   <a href="#memo-description">Description</a> &#xa0; | &#xa0;
   <a href="#rocket-installation">Installation</a> &#xa0; | &#xa0;
-  <a href="#open_book-usage--general-information">Usage & General Information</a> &#xa0; | &#xa0;
+  <a href="#gear-configuration">Configuration</a> &#xa0; | &#xa0;
+  <a href="#open_book-usage">Usage</a> &#xa0; | &#xa0;
   <a href="#bug-troubleshooting">Troubleshooting</a> &#xa0; | &#xa0;
   <a href="#card_file_box-project-roadmap">Project Roadmap</a>
 </div>
 &#xa0;
 
 <div align="center">
-  <a href="#card_file_box-changelog"><img alt="Last version released" src="https://img.shields.io/github/v/release/JonasWeinhold/Artwork-Extractor-for-Genius?logo=semver&color=blue" /></a>
+  <a href="CHANGELOG.md"><img alt="Last version released" src="https://img.shields.io/github/v/release/JonasWeinhold/Artwork-Extractor-for-Genius?logo=semver&color=blue" /></a>
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/commits/main"><img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/JonasWeinhold/Artwork-Extractor-for-Genius?color=blueviolet&logo=clarifai" /></a>
 </div>
 <div align="center">
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/JonasWeinhold/Artwork-Extractor-for-Genius?color=red&logo=stackedit" /></a>
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/JonasWeinhold/Artwork-Extractor-for-Genius?style=flat&color=%23ffe937&logo=github" /></a>
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/JonasWeinhold/Artwork-Extractor-for-Genius?color=forestgreen&logo=target" /></a>
-  <a href="#card_file_box-changelog"><img alt="GitHub repository size" src="https://img.shields.io/github/languages/code-size/JonasWeinhold/Artwork-Extractor-for-Genius?color=blue&logo=frontify" /></a>
 </div>
 &#xa0;
 
 ## :memo: Description
 
-A browser extension that adds “Copy Cover” / “Save Cover” helpers on Genius and popular music platforms.  
-It's primarily built to quickly grab cover artwork URLs (and optionally convert/host/download them) while working with [genius.com](https://genius.com).  
+**Artwork Extractor for Genius** is a powerful browser extension designed for music contributors, editors, and transcribers. It facilitates rapid metadata transfer, artwork extraction, and provides powerful on-site editing scripts between streaming services and [Genius.com](https://genius.com).
+
 **Compatible with Chrome, Firefox, Edge, and all other Chromium web browsers!**
 
-### :musical_note: Features
+### :musical_note: Key Features
 
-- Adds UI buttons on supported sites (see below) to copy an artwork URL to your clipboard, or download the image.
-  - Genius: `genius.com` (+ `genius-staging.com`)
-  - Apple Music: `*.apple.com`
-  - Spotify: `*.spotify.com`
-  - Deezer: `*.deezer.com`
-  - Tidal: `*.tidal.com`
-  - YouTube Music: `music.youtube.com`
-  - SoundCloud: `*.soundcloud.com`
-  - Bandcamp: `*.bandcamp.com`
-  - Yandex Music: `*.yandex.ru`
-  - 45cat / 45worlds / 45spaces
-  - DistroKid: `*.distrokid.com`
-- Adds a popup UI to enable/disable each supported site script per-browser.
-- Adds a settings page with lots of per-site toggles (copy cover, copy tracklist, popups, conversions, hosting options, etc.).
-- On Genius pages, it can also add various editing/utility helpers (song/album/artist tools).
+#### 🌐 Supported Platforms
+Adds "Copy Cover" / "Save Cover" buttons and scripts to the following domains:
+- **Genius:** `genius.com` (+ `genius-staging.com`)
+- **Apple Music:** `*.apple.com`
+- **Spotify:** `*.spotify.com`
+- **Deezer:** `*.deezer.com`
+- **Tidal:** `*.tidal.com`
+- **YouTube Music:** `music.youtube.com`
+- **SoundCloud:** `*.soundcloud.com`
+- **Bandcamp:** `*.bandcamp.com`
+- **Yandex Music:** `*.yandex.ru`
+- **Instagram:** `*.instagram.com`
+- **Databases:** `45cat.com`, `45worlds.com`, `45spaces.com`
+
+#### 🎨 Artwork & Image Tools
+- **Extraction Modes:**
+  - **Copy image URL** (default)
+  - **Download/save image** (programmatic file download)
+  - **Convert to PNG** (client-side canvas conversion for JPG sources)
+  - **Host image** (upload to ImgBB or Genius and copy the new URL)
+- **High-Res Retrieval:** Fetches maximum resolution artwork (up to 1000x1000 or higher) using internal APIs for Spotify and Tidal.
+
+#### 🧠 Genius Editing Suite
+- **Metadata Editor:** A custom overlay on Album pages to bulk edit Song Relationships, Languages, Tags, Release Dates, and Credits for all tracks at once.
+- **Quality of Life:**
+  - **ZWSP Detection:** Visual indicators (colored dots) for "Zero Width Spaces" in titles.
+  - **Lyrics Status:** Visual indicators in tracklists showing if lyrics are complete/verified.
+  - **Cover Art Status:** Visual indicators in tracklists showing if the uploaded song (cover) art is of good quality.
+  - **Mass Actions:** "Follow All Songs" / "Unfollow All Songs" on Artist pages.
+- **Tracklist Management:** Tools to expand tracklists, fix numbering, and mark tracks as unreleased.
+- **Formatting Tools:** Toolbar in the Lyrics Editor for quick formatting (Headers, Bold, Italic) and cleanup.
+
+#### 🎧 Streaming Service Enhancements
+- **Copy Tracklist (CT):** Copies formatted song titles from Spotify/Apple Music playlists for easy pasting into Genius.
+- **Copy Credits (CC):** Extracts credit information from Tidal and Apple Music.
+- **Ad Blocking:** Auto-closes premium popups on Deezer/Tidal and banners on SoundCloud.
 
 ## :rocket: Installation
 
-Either install the extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/artwork-extractor-for-gen/oifdmdbfhcamieniopjddpohkbbmoaeb) or the [Mozilla Add-ons site](https://addons.mozilla.org/de/firefox/addon/artwork-extractor-for-genius/).  
+### Official Stores
+- [Chrome Extension](https://chromewebstore.google.com/detail/artwork-extractor-for-gen/oifdmdbfhcamieniopjddpohkbbmoaeb)
+- [Mozilla / Firefox Extension](https://addons.mozilla.org/en-US/firefox/addon/artwork-extractor-for-genius/)
+
+### Manual Installation (Development)
 If you want to install it manually (for local build or development), follow these instructions:
 
-1. Open your browser's extensions page.
-   - Chrome: `chrome://extensions`
-   - Edge: `edge://extensions`
-2. Enable **Developer mode**.
-3. Click **Load unpacked**.
-4. Select the folder: `Artwork-Extractor-for-Genius/`
+1.  **Download:** Clone this repository or download the ZIP.
+2.  **Unzip:** Extract the `Artwork-Extractor-for-Genius/` folder.
+3.  **Load in Browser:**
+    *   **Chrome/Edge/Brave:** Go to `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the extracted folder.
+    *   **Firefox:** Go to `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select the `manifest.json` file.
 
-### Hosting & API keys
+## :gear: Configuration
 
-This extension supports multiple “outputs” when you click Copy/Save:
+Access the dashboard by clicking the extension icon and selecting **"Settings & Guides"**.
 
-- **Copy image URL** (default)
-- **Download/save image** (writes a file via a programmatic download)
-- **Convert to PNG** (client-side canvas conversion for JPG sources)
-- **Host image** (upload and then copy the hosted URL)
+### Hosting & API Keys
+To unlock full functionality, you may need to provide API keys. These are stored in browser extension storage (or `Services/secrets.js` for dev):
 
-#### ImgBB
+1.  **ImgBB:**
+    *   Required if you enable "Host Image" functionality via ImgBB.
+    *   Set the key in the Settings page.
 
-If you enable ImgBB hosting, you must provide an ImgBB API key:
+2.  **Genius / Filestack (Genius S3):**
+    *   Required for uploading covers directly to Genius.
+    *   **Setup:** The extension needs to capture `GENIUS_API`, `GENIUS_POLICY`, and `GENIUS_SIGNATURE`. Go to any Genius page with an image uploader (e.g., "Edit Cover Art"), open the upload dialog, and the extension will automatically scrape/save these keys.
 
-- Set it in the settings page (stored in `chrome.storage.local`).
+3.  **Spotify & Tidal Credentials:**
+    *   Required for fetching high-res artwork via official APIs.
+    *   **Variables:** `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` and `TIDAL_CLIENT_ID` / `TIDAL_CLIENT_SECRET`.
+    *   *Note:* Ensure your credentials allow the `client_credentials` flow.
 
-#### Genius / Filestack (Genius S3)
+## :open_book: Usage
 
-Some hosting modes use Filestack endpoints with Genius credentials (`GENIUS_API`, `GENIUS_POLICY`, `GENIUS_SIGNATURE`).  
-If hosting fails with a “Hosting Error”, open a Genius page where the Filestack uploader appears (e.g., an image upload flow) so the extension can capture the credentials.
+### On Streaming Services
+1.  Navigate to a supported site (e.g., Spotify Album Page).
+2.  **Check Status:** Click the extension icon and ensure the site is enabled (icon should not look "inactive").
+3.  **Refresh:** Reload the tab (Important for SPAs like Spotify).
+4.  **Action:** Use the injected **"Copy Cover"**, **"Save Cover"**, or **"CT" (Copy Tracklist)** buttons.
 
-#### Spotify / Tidal API credentials
-
-Some features fetch artwork via official APIs and require client credentials:
-
-- Spotify: `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`
-- Tidal: `TIDAL_CLIENT_ID` / `TIDAL_CLIENT_SECRET`
-
-These are currently defined in [Services/secrets.js](Services/secrets.js) as empty strings.  
-For local development, you will need to populate them.
-
-> Keep your credentials private. Don't commit real keys.
-
-## :open_book: Usage & General Information
-
-1. Navigate to a supported site (e.g. Spotify album page, Genius song page).
-2. Click the extension icon to open the popup.
-3. Ensure the site you're on is **enabled** (icon should not look “inactive”).
-4. Reload the tab (some sites are single-page apps; reload helps scripts attach).
-5. Use the injected buttons (e.g. **Copy Cover** / **Save Cover**).
-
-### 📝 Development notes
-
-There is no build pipeline; edits are plain HTML/CSS/JS.
-Key files:
-
-- [manifest.json](manifest.json): MV3 manifest + content script registration
-- [Popup/popup.html](Popup/popup.html): popup UI
-- [Popup/popup.js](Popup/popup.js): per-site enable/disable toggles
-- [Popup/settings_guides.html](Popup/settings_guides.html): settings UI
-- [Popup/settings_guides.js](Popup/settings_guides.js): settings logic (stored in `chrome.storage.local`)
-- [Services/streaming_utils.js](Services/streaming_utils.js): shared image processing (convert/download/upload/copy)
-- [Services/secrets.js](Services/secrets.js): API key placeholders + local storage wiring
-
-Typical workflow:
-
-1. Load unpacked extension.
-2. Make changes.
-3. Go to `chrome://extensions` and click **Reload** on the extension.
-4. Reload the target website tab.
-5. Add new work, and document your core code to make it easily understandable by all.
+### On Genius.com
+1.  **Song Page:** Use the added toolbar buttons to format lyrics or check metadata.
+2.  **Album Page:**
+    *   Click **"Song Credits"** to open the Bulk Metadata Editor overlay.
+    *   Use the **"Tracklist"** tools to fix numbering or expand all credits.
+3.  **Artist Page:** Use the **"Follow All"** button to track an artist's entire discography.
 
 ## :bug: Troubleshooting
 
-### Buttons don't appear
+### "Hosting Error" / Filestack Issues
+If uploading to Genius (Filestack) fails, the extension likely needs a fresh session key.
+1.  Go to any Genius page with an image uploader.
+2.  Open the upload dialog window.
+3.  Wait for the extension to capture the new credentials.
+4.  Try your action again.
 
-- Ensure the site is enabled in the popup.
-- Reload the page (many supported sites are SPAs).
-- Try interacting once (some scripts attach on click).
-
-### “Hosting Error” / Filestack hosting doesn't work
-
-- The required Genius/Filestack credentials may not be captured yet. Trigger a Genius flow that opens the Filestack upload dialog so the extension can extract and store them.
-
-### ImgBB upload fails
-
-- Verify you saved an ImgBB API key in settings.
-
-### Spotify/Tidal artwork fetch fails
-
-- Populate API credentials in [Services/secrets.js](Services/secrets.js).
-- Confirm your credentials allow the `client_credentials` flow.
-
-### Any other problem
-
-- Check the developer console (F12) for errors
-- Try refreshing the page
-
-If the issue persists, [**open an issue**](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/issues) with details about your web browser and the page URL.
+### Buttons Not Appearing?
+*   **Enable the Site:** Check the extension popup icon.
+*   **Refresh:** Reload the tab. Scripts sometimes fail to attach on the first load of Single Page Applications (SPAs).
+*   **Interact:** Sometimes buttons appear only after clicking the page once.
 
 ## :card_file_box: Project Roadmap
 
-Find detailed versioning in the [CHANGELOG.md](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/blob/main/CHANGELOG.md) file.
+Find detailed versioning in the [CHANGELOG.md](CHANGELOG.md) file.
+Find releases/versions in the [/releases](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/releases) section.
 
-### 🔮 Possible future improvements
+### 🔮 Future Improvements
+All planned features are listed in the [Issues tab](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/issues).
+*   🚀 = New Features
+*   ↗️ = Improvements
 
-All of them are listed in the [issues](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/issues).  
-Those with the 🚀 emoji are new features, those with the ↗️ emoji are improvements!  
-Don't hesitate to suggest new ideas by **opening an issue** yourself!
+Don't hesitate to suggest new ideas by **opening an issue**!
+
+You can also join our Discord server [here](https://discord.com/invite/genius)
 
 ---
 
