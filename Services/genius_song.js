@@ -64,7 +64,6 @@ chrome.storage.local.get([
     async function main() {
         const isFirehose = window.location.href === 'https://genius.com/firehose';
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
-        const pageProfilePath = getProfilePathFromDocument();
 
         const profilePath = getProfilePathFromDocument();
 
@@ -99,7 +98,7 @@ chrome.storage.local.get([
         if (isGeniusSongSectionsButtons) lyricsSectionsButtons(songData);
         if (isGeniusSongAnnotationsButtons) lyricsAnnotationsButtons();
 
-        if (isGeniusSongFilterActivity) filterRecentActivity(resolvedProfilePath);
+        if (isGeniusSongFilterActivity) filterRecentActivity(profilePath);
 
         if (songData.apple_music_id) storeAppleMusicStructure();
 
@@ -151,7 +150,7 @@ chrome.storage.local.get([
 
     async function getSongInfo() {
         console.log("Run function getSongInfo()");
-        // Song ID 
+        // Song ID
         const metaContent = document.querySelector('[property="twitter:app:url:iphone"]')?.content ?? "";
         const parts = metaContent.split("/");
         const songId = parts[2] === "songs" ? parts[3] : null;
@@ -253,6 +252,8 @@ chrome.storage.local.get([
 
         const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
         const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
+        const primaryColor = songData.song_art_primary_color;
+        const secondaryColor = songData.song_art_secondary_color;
         const textColor = songData.song_art_text_color;
 
         const resolutionInfo = document.createElement('p');
@@ -262,7 +263,7 @@ chrome.storage.local.get([
         resolutionInfo.style.color = textColor;
 
         resolutionInfo.dataset.type = "resolution-info";
-        resolutionInfo.innerHTML = `${resolutionText} ${formatText} | ${songData.song_art_primary_color} | ${songData.song_art_secondary_color} | ${textColor}`;
+        resolutionInfo.innerHTML = `${resolutionText} ${formatText} | ${primaryColor} | ${secondaryColor} | ${textColor}`;
 
         const updateStyles = () => {
             const imgWidth = sizedimageImage.clientWidth || 1000;
@@ -386,15 +387,15 @@ chrome.storage.local.get([
             const dot = document.createElement('span');
             dot.className = 'black-dot';
             dot.style.cssText = `
-            height: 8px; 
-            width: 8px; 
-            background-color: #2C2C2C; 
-            border-radius: 50%; 
-            display: inline-block; 
-            position: absolute; 
-            top: 50%; 
-            transform: translate(-50%, -50%); 
-        `;
+                height: 8px;
+                width: 8px;
+                background-color: #2C2C2C;
+                border-radius: 50%;
+                display: inline-block;
+                position: absolute;
+                top: 50%;
+                transform: translate(-50%, -50%);
+            `;
             circle.appendChild(dot);
         }
     }
@@ -2727,7 +2728,7 @@ chrome.storage.local.get([
                 annotations: [
                     { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked (?:an|the .*?) annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
                     { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
-                    { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion)/i, color: "#9a9a9a", svg: ICONS.svgSuggested },
+                    { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion|mentioned\s.*? in a suggestion on)/i, color: "#9a9a9a", svg: ICONS.svgSuggested },  
                 ],
 
                 lyrics: [
@@ -3439,7 +3440,7 @@ chrome.storage.local.get([
                 wrapper.appendChild(masterLabel);
 
                 const sub = document.createElement("div");
-               
+
                 SUBFILTERS[filter.key].forEach(subfilter => {
                     const subLabel = document.createElement("label");
                     flexRow(subLabel);
@@ -3548,7 +3549,7 @@ chrome.storage.local.get([
             if (!header || dropdown.querySelector("#notification-filter-button")) return;
             const headerLabel = header.querySelector('span[class^="TextLabel-"]') || header.querySelector('span.text_label');
             const label = headerLabel ? headerLabel.textContent.trim().toLowerCase() : "";
-            if (label === "forums") return;
+            if (label === "forums" || label === "messages") return;
 
 
 

@@ -2,6 +2,8 @@ chrome.storage.local.get([
     'Services/genius_album.js',
     'isGeniusAlbumAlbumPage',
     'isGeniusAlbumAlbumPageZwsp',
+    'isGeniusAlbumAlbumPageInfo',
+    'isGeniusAlbumAlbumId',
     'isGeniusAlbumAlbumPageLyrics',
     'isGeniusAlbumExpandTracklist',
     'isGeniusAlbumEditTracklist',
@@ -15,6 +17,8 @@ chrome.storage.local.get([
 ], function (result) {
     const isGeniusAlbumAlbumPage = result.isGeniusAlbumAlbumPage ?? true;
     const isGeniusAlbumAlbumPageZwsp = result.isGeniusAlbumAlbumPageZwsp ?? true;
+    const isGeniusAlbumAlbumPageInfo = result.isGeniusAlbumAlbumPageInfo ?? true;
+    const isGeniusAlbumAlbumId = result.isGeniusAlbumAlbumId ?? true;
     const isGeniusAlbumAlbumPageLyrics = result.isGeniusAlbumAlbumPageLyrics ?? false;
     const isGeniusAlbumExpandTracklist = result.isGeniusAlbumExpandTracklist ?? true;
     const isGeniusAlbumEditTracklist = result.isGeniusAlbumEditTracklist ?? true;
@@ -35,13 +39,26 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    checkPage();
+    main();
 
-    async function checkPage() {
-        const isAlbum = window.location.href.startsWith('https://genius.com/albums') || window.location.href.startsWith('https://genius-staging.com/albums');
+    async function main() {
+        const isAlbum = /https:\/\/(genius\.com|genius-staging\.com)\/albums\/[^/]+\/[^/]+$/.test(window.location.href);
+        const isAlbumNew = /https:\/\/(genius\.com|genius-staging\.com)\/albums\/[^/]+\/[^/?]+\?react=1$/.test(window.location.href);
 
-        if (isAlbum) {
+        if (isAlbumNew) {
+            const userId = getId("currentUser");
+            const albumId = getId("album");
+            const { album: albumData } = await getApiData(albumId, "albums");
 
+            if (isGeniusAlbumAlbumId) showAlbumIdButton(albumId);
+
+            if (isGeniusAlbumAlbumPageInfo) showCoverInfo(albumData);
+            if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
+
+
+
+        } else if (isAlbum) {
+            console.log("Album Page detected");
             const [albumId, userId] = await getAlbumInfo();
             const userRoles = await getUserRoles(userId);
             if (isGeniusAlbumRenameButtons) renameAlbumButtons();
@@ -67,35 +84,6 @@ chrome.storage.local.get([
             //const response = await fetch(`https://genius.com/api/albums/${albumId}`);
             //const json = await response.json();
 
-
-
-            if (userId == 4670957) {
-                const columnContainer = document.querySelector(".column_layout-column_span.column_layout-column_span--one_quarter");
-                const newTransclude = document.createElement("ng-transclude");
-                newTransclude.setAttribute("ng-transclude-slot", "secondary");
-                const newSecondary = document.createElement("secondary");
-                const newMetadataPreview = document.createElement("div");
-                newMetadataPreview.className = "header_with_cover_art-metadata_preview u-small_top_margin u-right_margin";
-                const albumIdDiv = document.createElement("div");
-                albumIdDiv.className = "header_with_cover_art-metadata_preview-unit";
-                const staticTextSpan = document.createElement("span");
-                staticTextSpan.className = "text_label text_label--gray text_label--x_small_text_size";
-                staticTextSpan.textContent = "Album ID: ";
-                staticTextSpan.style.textTransform = "none";
-                const albumIdLink = document.createElement("a");
-                albumIdLink.href = `https://genius.com/api/albums/${albumId}`;
-                albumIdLink.target = "_blank";
-                albumIdLink.textContent = albumId;
-                albumIdLink.className = "text_label text_label--gray text_label--x_small_text_size";
-                albumIdLink.onmouseover = () => albumIdLink.style.textDecoration = "underline";
-                albumIdLink.onmouseout = () => albumIdLink.style.textDecoration = "none";
-                albumIdDiv.appendChild(staticTextSpan);
-                albumIdDiv.appendChild(albumIdLink);
-                newMetadataPreview.appendChild(albumIdDiv);
-                newSecondary.appendChild(newMetadataPreview);
-                newTransclude.appendChild(newSecondary);
-                columnContainer.appendChild(newTransclude);
-            }
             return [albumId, userId];
         }
 
@@ -165,6 +153,17 @@ chrome.storage.local.get([
 
     }
 
+    function getDomElements() {
+        const metadatastatsContainer = document.querySelector('div[class^="AlbumMetadataStats__Container-"]');
+        const labelwithiconLabel = metadatastatsContainer?.querySelector('span[class^="LabelWithIcon__Label-"]');
+        const stackedCoverArts = document.querySelector('div[class^="StackedCoverArts__Container-"]');
+        const CoverArtAnnotationNavigationContainer = document.querySelector('div[class^="CoverArtAnnotationNavigation__Container-"]');
+
+
+        return { metadatastatsContainer, labelwithiconLabel, stackedCoverArts, CoverArtAnnotationNavigationContainer };
+    }
+
+
     document.addEventListener('click', (event) => {
         const link = event.target.closest('a');
         if (!link || !link.href) return;
@@ -210,9 +209,213 @@ chrome.storage.local.get([
     }).observe(document.body, { childList: true, subtree: true });
 
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                ALBUM ID BUTTON                                 //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function showAlbumIdButton(albumId) {
+        const { metadatastatsContainer, labelwithiconLabel } = getDomElements();
+
+        if (metadatastatsContainer && !document.getElementById("album-id-button")) {
+            const albumIdElement = document.createElement('span');
+            albumIdElement.id = "album-id-button";
+            albumIdElement.className = labelwithiconLabel?.className;
+
+            const albumIdLink = document.createElement('a');
+            albumIdLink.href = `https://genius.com/api/albums/${albumId}`;
+            albumIdLink.target = "_blank";
+            albumIdLink.textContent = albumId;
+            albumIdLink.style.textDecoration = "none";
+            albumIdLink.style.color = "inherit";
+            albumIdLink.onmouseover = () => albumIdLink.style.textDecoration = "underline";
+            albumIdLink.onmouseout = () => albumIdLink.style.textDecoration = "none";
+
+            albumIdElement.textContent = "Album ID: ";
+            albumIdElement.appendChild(albumIdLink);
+
+            metadatastatsContainer.appendChild(albumIdElement);
+        }
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////                                   INDICATORS                                   //////////
+    //////////                                   COVER INFO                                   //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function showCoverInfo(albumData) {
+        console.log("Run function showCoverInfo()");
+
+        const { stackedCoverArts } = getDomElements();
+
+        if (stackedCoverArts) {
+            const existing = stackedCoverArts.querySelector('p[data-type="resolution-info"]');
+            if (existing) existing.remove();
+
+            const infoElement = createResolutionInfo(albumData, stackedCoverArts);
+            stackedCoverArts.append(infoElement);
+        }
+    }
+
+    function createResolutionInfo(albumData, stackedCoverArts) {
+        const resolutionMatch = albumData.cover_art_url.match(/(\d+)x(\d+)/);
+        const formatMatch = albumData.cover_art_url.match(/\.(\w+)$/);
+
+        const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
+        const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
+        const primaryColor = albumData.album_art_primary_color;
+        const secondaryColor = albumData.album_art_secondary_color;
+        const textColor = albumData.album_art_text_color;
+
+        const resolutionInfo = document.createElement('p');
+        resolutionInfo.style.fontWeight = "100";
+        resolutionInfo.style.justifySelf = "center";
+        resolutionInfo.style.position = "absolute";
+        resolutionInfo.style.color = textColor;
+
+        resolutionInfo.dataset.type = "resolution-info";
+        resolutionInfo.innerHTML = `${resolutionText} ${formatText} | ${primaryColor} | ${secondaryColor} | ${textColor}`;
+
+        const updateStyles = () => {
+            const imgWidth = stackedCoverArts.clientWidth || 1000;
+            const dynamicFontPx = imgWidth * 0.05;
+            const fontSizeRem = Math.min(pxToRem(dynamicFontPx), 0.75);
+            resolutionInfo.style.fontSize = `${fontSizeRem}rem`;
+            const topRem = -fontSizeRem / 2;
+
+            resolutionInfo.style.top = `${topRem - 0.625}rem`;
+        };
+
+        updateStyles();
+
+        const observer = new ResizeObserver(updateStyles);
+        observer.observe(stackedCoverArts);
+
+        return resolutionInfo;
+    }
+
+    function pxToRem(px) {
+        const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+        return px / rootFontSize;
+    }
+
+    function showCoverArtInfo() {
+        console.log("Run function showCoverArtInfo()");
+
+        let modalObserver = null;
+        let modalCloseObserver = null;
+        let coverObserver = null;
+
+        startModalObserver();
+
+        function startModalObserver() {
+            modalObserver = new MutationObserver(() => {
+                const modal = document.getElementById("artwork-annotation-modal");
+                if (!modal) return;
+
+                setTimeout(() => observeCoverElement(modal), 50);
+
+                modalObserver.disconnect();
+                startModalCloseObserver(modal);
+            });
+
+            modalObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        function startModalCloseObserver(modal) {
+            modalCloseObserver = new MutationObserver(() => {
+                if (!document.body.contains(modal)) {
+                    reset();
+                }
+            });
+
+            modalCloseObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        function observeCoverElement(modal) {
+            const coverDiv = modal.querySelector('div[class*="CoverArtAnnotationModalContent__SizedImage-"]');
+            if (!coverDiv) return;
+
+            if (coverObserver) coverObserver.disconnect();
+
+            coverObserver = new MutationObserver(() => updateInfo(coverDiv, modal));
+            coverObserver.observe(coverDiv, {
+                attributes: true,
+                attributeFilter: ["style", "class"]
+            });
+
+            updateInfo(coverDiv, modal);
+        }
+
+        function updateInfo(coverDiv, modal) {
+            const { CoverArtAnnotationNavigationContainer } = getDomElements();
+            if (!CoverArtAnnotationNavigationContainer) return;
+
+            const CoverArtAnnotationNavigationArrows = CoverArtAnnotationNavigationContainer.querySelector('[class*="CoverArtAnnotationNavigation__Arrows-"]');
+            if (!CoverArtAnnotationNavigationArrows) return;
+
+            const bg = getComputedStyle(coverDiv).backgroundImage;
+            const match = bg.match(/url\(["']?(.*?)["']?\)/);
+            if (!match) return;
+
+            let rawUrl = match[1];
+            let decoded = decodeURIComponent(rawUrl.split("/").pop());
+            const finalUrl = decoded.startsWith("https") ? decoded : rawUrl;
+
+            const existing = CoverArtAnnotationNavigationContainer.querySelector('[data-type="annotation-resolution-info"]');
+            if (existing) existing.remove();
+
+            const info = createAnnotationResolutionInfo(finalUrl);
+
+            CoverArtAnnotationNavigationContainer.insertBefore(info, CoverArtAnnotationNavigationArrows);
+        }
+
+        function createAnnotationResolutionInfo(url) {
+            const resolution = extractResolutionFromUrl(url);
+            const formatMatch = url.match(/\.(\w+)$/);
+            const format = formatMatch ? formatMatch[1].toUpperCase() : "Cover";
+
+            const el = document.createElement("div");
+            el.dataset.type = "annotation-resolution-info"; 
+
+            el.style.position = "relative";
+            el.style.marginLeft = "auto";
+            el.style.marginRight = "1.5rem";
+            el.style.alignContent = "center";
+            el.style.fontSize = "0.875rem";
+            el.style.fontWeight = "100";
+
+            el.textContent = `${resolution} ${format}`;
+
+            return el;
+        }
+
+        function extractResolutionFromUrl(url) {
+            const match = url.match(/(\d+)x(\d+)/);
+            return match ? `${match[1]}x${match[2]}` : null;
+        }
+
+        function reset() {
+            if (coverObserver) coverObserver.disconnect();
+            if (modalCloseObserver) modalCloseObserver.disconnect();
+
+            coverObserver = null;
+            modalCloseObserver = null;
+
+            startModalObserver();
+        }
+    }
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                                COVER INDICATOR                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function addBlackCross(square) {
@@ -1604,7 +1807,7 @@ chrome.storage.local.get([
                         albumId[1].remove();
                     }
 
-                    checkPage()
+                    main()
                 }, 1000);
 
             });
@@ -3583,7 +3786,7 @@ chrome.storage.local.get([
                 if (expandText) expandText.remove();
 
                 setTimeout(() => {
-                    checkPage();
+                    main();
                 }, 1000);
 
             });
@@ -3641,7 +3844,7 @@ chrome.storage.local.get([
             if (expandText) expandText.remove();
 
             setTimeout(() => {
-                checkPage();
+                main();
             }, 1000);
         });
         albumAdminMenu.parentNode.insertBefore(actionButton, albumAdminMenu);

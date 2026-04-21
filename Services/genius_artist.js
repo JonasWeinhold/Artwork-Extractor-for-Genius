@@ -56,7 +56,7 @@ chrome.storage.local.get([
         const isAllAlbums = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/albums$/.test(window.location.href);
         const isAllSongs = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/songs$/.test(window.location.href);
         const isArtist = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+$/.test(window.location.href);
-        const isArtistNew = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\?react=1$/.test(window.location.href);
+        const isArtistNew = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/?]+\?react=1$/.test(window.location.href);
         const isUser = profilePath ? new RegExp(`https:\\/\\/(genius\\.com|genius-staging\\.com)${profilePath}$`).test(window.location.href) : false;
 
         if (isAllSongs || isAllAlbums) {
