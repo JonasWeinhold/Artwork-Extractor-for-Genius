@@ -587,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isYouTubeMusicSaveImage').checked = result.isYouTubeMusicSaveImage !== undefined ? result.isYouTubeMusicSaveImage : false;
     });
 
-    // Event Listener für die Schieberegler
+    // Event listeners for the save button and checkboxes
     document.getElementById("saveMetadataButton").addEventListener("click", saveOrder);
     document.getElementById('isGeniusSongSongPage').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongSongPageZwsp').addEventListener('change', saveSettings);

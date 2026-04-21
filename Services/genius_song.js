@@ -59,6 +59,19 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    let filterNotificationsDestroy = null;
+
+    chrome.storage.onChanged.addListener(function (changes, area) {
+        if (area !== 'local' || !('isGeniusSongFilterNotifications' in changes)) return;
+        const enabled = changes.isGeniusSongFilterNotifications.newValue ?? true;
+        if (enabled && !filterNotificationsDestroy) {
+            filterNotificationsDestroy = filterNotifications(getProfilePathFromDocument());
+        } else if (!enabled && filterNotificationsDestroy) {
+            filterNotificationsDestroy();
+            filterNotificationsDestroy = null;
+        }
+    });
+
     queueMicrotask(main);
 
     async function main() {
@@ -71,7 +84,7 @@ chrome.storage.local.get([
             if (isGeniusSongFilterFirehose) filterFirehose();
         }
 
-        if (isGeniusSongFilterNotifications) filterNotifications(profilePath);
+        if (isGeniusSongFilterNotifications) filterNotificationsDestroy = filterNotifications(profilePath);
 
         if (!isSong) return
         getDomElements();
@@ -3744,6 +3757,17 @@ chrome.storage.local.get([
             childList: true,
             subtree: true
         });
+
+        return function () {
+            notificationDropdownObserver.disconnect();
+            if (notificationObserver) {
+                notificationObserver.disconnect();
+                notificationObserver = null;
+            }
+            document.querySelector('#notification-filter-button')?.parentElement.remove();
+            document.querySelector('#notification-filter-dropdown')?.remove();
+            currentContainer = null;
+        };
     }
 
 
