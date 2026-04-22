@@ -48,12 +48,19 @@ chrome.storage.local.get([
         if (isAlbumNew) {
             const userId = getId("currentUser");
             const albumId = getId("album");
+            const { user: userData } = await getApiData(userId, "users");
             const { album: albumData } = await getApiData(albumId, "albums");
+            if (!userId || !albumId || !userData || !albumData) return;
+
 
             if (isGeniusAlbumAlbumId) showAlbumIdButton(albumId);
 
-            if (isGeniusAlbumAlbumPageInfo) showCoverInfo(albumData);
             if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
+            if (isGeniusAlbumAlbumPageInfo) showCoverInfo(albumData);
+            //if (isGeniusAlbumAlbumPage) checkAlbumCover(albumData)
+
+            if (isGeniusAlbumEditTracklist) addUnreleasedCheckbox();
+
 
 
 
@@ -61,6 +68,7 @@ chrome.storage.local.get([
             console.log("Album Page detected");
             const [albumId, userId] = await getAlbumInfo();
             const userRoles = await getUserRoles(userId);
+
             if (isGeniusAlbumRenameButtons) renameAlbumButtons();
             if (isGeniusAlbumAlbumPage) checkAlbumPage();
             if (isGeniusAlbumExpandTracklist) expandAllTracksInTracklist();
@@ -88,16 +96,8 @@ chrome.storage.local.get([
         }
 
         async function getUserRoles(userId) {
-            try {
-                const endpoint = `https://genius.com/api/users/${userId}`;
-                const response = await fetch(endpoint);
-                const data = await response.json();
-                const userRoles = data?.response?.user?.roles_for_display ?? [];
-                return userRoles;
-            } catch (error) {
-                console.error("Error:", error);
-                return [];
-            }
+            const { user: userData } = await getApiData(userId, "users");
+            return userData?.roles_for_display ?? [];
         }
 
         async function getSongData(html) {
@@ -158,7 +158,6 @@ chrome.storage.local.get([
         const labelwithiconLabel = metadatastatsContainer?.querySelector('span[class^="LabelWithIcon__Label-"]');
         const stackedCoverArts = document.querySelector('div[class^="StackedCoverArts__Container-"]');
         const CoverArtAnnotationNavigationContainer = document.querySelector('div[class^="CoverArtAnnotationNavigation__Container-"]');
-
 
         return { metadatastatsContainer, labelwithiconLabel, stackedCoverArts, CoverArtAnnotationNavigationContainer };
     }
@@ -241,62 +240,6 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                   COVER INFO                                   //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    function showCoverInfo(albumData) {
-        console.log("Run function showCoverInfo()");
-
-        const { stackedCoverArts } = getDomElements();
-
-        if (stackedCoverArts) {
-            const existing = stackedCoverArts.querySelector('p[data-type="resolution-info"]');
-            if (existing) existing.remove();
-
-            const infoElement = createResolutionInfo(albumData, stackedCoverArts);
-            stackedCoverArts.append(infoElement);
-        }
-    }
-
-    function createResolutionInfo(albumData, stackedCoverArts) {
-        const resolutionMatch = albumData.cover_art_url.match(/(\d+)x(\d+)/);
-        const formatMatch = albumData.cover_art_url.match(/\.(\w+)$/);
-
-        const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
-        const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
-        const primaryColor = albumData.album_art_primary_color;
-        const secondaryColor = albumData.album_art_secondary_color;
-        const textColor = albumData.album_art_text_color;
-
-        const resolutionInfo = document.createElement('p');
-        resolutionInfo.style.fontWeight = "100";
-        resolutionInfo.style.justifySelf = "center";
-        resolutionInfo.style.position = "absolute";
-        resolutionInfo.style.color = textColor;
-
-        resolutionInfo.dataset.type = "resolution-info";
-        resolutionInfo.innerHTML = `${resolutionText} ${formatText} | ${primaryColor} | ${secondaryColor} | ${textColor}`;
-
-        const updateStyles = () => {
-            const imgWidth = stackedCoverArts.clientWidth || 1000;
-            const dynamicFontPx = imgWidth * 0.05;
-            const fontSizeRem = Math.min(pxToRem(dynamicFontPx), 0.75);
-            resolutionInfo.style.fontSize = `${fontSizeRem}rem`;
-            const topRem = -fontSizeRem / 2;
-
-            resolutionInfo.style.top = `${topRem - 0.625}rem`;
-        };
-
-        updateStyles();
-
-        const observer = new ResizeObserver(updateStyles);
-        observer.observe(stackedCoverArts);
-
-        return resolutionInfo;
-    }
-
-    function pxToRem(px) {
-        const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-        return px / rootFontSize;
-    }
 
     function showCoverArtInfo() {
         console.log("Run function showCoverArtInfo()");
@@ -381,7 +324,7 @@ chrome.storage.local.get([
             const format = formatMatch ? formatMatch[1].toUpperCase() : "Cover";
 
             const el = document.createElement("div");
-            el.dataset.type = "annotation-resolution-info"; 
+            el.dataset.type = "annotation-resolution-info";
 
             el.style.position = "relative";
             el.style.marginLeft = "auto";
@@ -411,12 +354,100 @@ chrome.storage.local.get([
         }
     }
 
+    function showCoverInfo(albumData) {
+        console.log("Run function showCoverInfo()");
 
+        const { stackedCoverArts } = getDomElements();
+        if (!stackedCoverArts) return;
+
+        const existing = stackedCoverArts.querySelector('div[data-type="resolution-info"]');
+        if (existing) existing.remove();
+
+        const pxToRem = (px) => {
+            const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+            return px / rootFontSize;
+        };
+
+        const createResolutionInfo = () => {
+            const resolutionMatch = albumData.cover_art_url.match(/(\d+)x(\d+)/);
+            const formatMatch = albumData.cover_art_url.match(/\.(\w+)$/);
+
+            const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
+            const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
+            const primaryColor = albumData.album_art_primary_color;
+            const secondaryColor = albumData.album_art_secondary_color;
+            const textColor = albumData.album_art_text_color;
+
+            const resolutionInfo = document.createElement('div');
+            resolutionInfo.dataset.type = "resolution-info";
+            resolutionInfo.style.fontWeight = "100";
+            resolutionInfo.style.justifySelf = "center";
+            resolutionInfo.style.position = "absolute";
+            resolutionInfo.style.color = textColor;
+
+            resolutionInfo.textContent = [`${resolutionText} ${formatText}`, primaryColor, secondaryColor, textColor].join(" | ");
+
+            const updateStyles = () => {
+                const imgWidth = stackedCoverArts.clientWidth || 1000;
+                const dynamicFontPx = imgWidth * 0.05;
+                const fontSizeRem = Math.min(pxToRem(dynamicFontPx), 0.75);
+                resolutionInfo.style.fontSize = `${fontSizeRem}rem`;
+
+                const topRem = -fontSizeRem / 2;
+                resolutionInfo.style.top = `${topRem - 0.625}rem`;
+            };
+
+            updateStyles();
+
+            const observer = new ResizeObserver(updateStyles);
+            observer.observe(stackedCoverArts);
+
+            return resolutionInfo;
+        };
+
+        const infoElement = createResolutionInfo();
+        stackedCoverArts.append(infoElement);
+    }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                COVER INDICATOR                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function checkAlbumCover(albumData) {
+        console.log("Run function checkAlbumCover()");
+
+        const { editmetadatabutonSmallbutton } = getDomElements();
+        if (!editmetadatabutonSmallbutton) return;
+
+        const metaTag = document.querySelector('meta[property="og:image"]');
+        if (metaTag) {
+            const coverImageUrl = metaTag.getAttribute('content');
+            const editAlbumButton = document.querySelectorAll('.square_button.u-bottom_margin');
+            if (editAlbumButton.length > 1) {
+                const secondEditAlbumButton = editAlbumButton[1];
+                let color, borderColor;
+                if (coverImageUrl.endsWith("1000x1000x1.png")) {
+                    color = '#99f2a5'; // Green
+                    borderColor = '#66bfa3';
+                } else if (coverImageUrl.startsWith("http://assets.genius.com/images/sharing_fallback.png")) {
+                    if (document.head.innerHTML.match(/&quot;cover_art_url&quot;:&quot;http:\/\/assets.genius.com/) ||
+                        document.head.innerHTML.match(/&quot;cover_art_url&quot;:&quot;https:\/\/assets.genius.com/)) {
+                        color = '#dddddd'; // Grey
+                        borderColor = '#aaaaaa';
+                    } else {
+                        color = '#ffff64'; // Yellow 
+                        borderColor = '#cccc00';
+                    }
+                } else {
+                    color = '#fa7878'; // Red 
+                    borderColor = '#a74d4d';
+                }
+                addColoredSquare(secondEditAlbumButton, color, borderColor);
+                if (isGeniusAlbumAlbumPageZwsp) checkAlbumTitleForZeroWidthSpace();
+            }
+        }
+    }
 
     function addBlackCross(square) {
         const existingCross = square.querySelector('.black-cross');
@@ -629,6 +660,76 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                TRACKLIST BUTTON                                //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function addUnreleasedCheckbox() {
+        console.log("Run function addUnreleasedCheckbox()");
+
+        const observer = new MutationObserver(() => {
+            const tracklist = document.querySelector('[data-testid="album-edit-tracklist"]');
+            if (!tracklist) return;
+
+            const header = tracklist.querySelector('div[class^="SectionHeader-sc-"]');
+            if (!header) return;
+
+            if (header.querySelector('.unreleased-checkbox-wrapper')) return;
+
+            const wrapper = document.createElement("label");
+            wrapper.className = "unreleased-checkbox-wrapper";
+            wrapper.style.display = "flex";
+            wrapper.style.alignItems = "center";
+            wrapper.style.gap = "0.35rem";
+            wrapper.style.cursor = "pointer";
+            wrapper.style.color = "#000000a8";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+
+            Object.assign(checkbox.style, {
+                appearance: "none",
+                border: "1px solid rgb(0,0,0)",
+                width: "0.75rem",
+                height: "0.75rem",
+                backgroundColor: "white",
+                cursor: "pointer"
+            });
+
+            const checkSvg = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
+
+            const updateCheckboxStyle = () => {
+                if (checkbox.checked) {
+                    checkbox.style.backgroundColor = "rgb(0,0,0)";
+                    checkbox.style.backgroundImage = checkSvg;
+                } else {
+                    checkbox.style.backgroundColor = "white";
+                    checkbox.style.backgroundImage = "none";
+                }
+            };
+
+            checkbox.addEventListener("change", () => {
+                updateCheckboxStyle();
+
+                const trackCheckboxes = tracklist.querySelectorAll('label[class^="EditableTrack__CheckboxLabel-sc-"] input[type="checkbox"]');
+                trackCheckboxes.forEach(cb => {
+                    cb.checked = checkbox.checked;
+                    cb.dispatchEvent(new Event("change", { bubbles: true }));
+                });
+            });
+
+            const text = document.createElement("span");
+            text.textContent = "UNRELEASED";
+            text.style.fontSize = "0.75rem";
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(text);
+            header.appendChild(wrapper);
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
 
     function expandAllTracksInTracklist() {
         let expanded = false;

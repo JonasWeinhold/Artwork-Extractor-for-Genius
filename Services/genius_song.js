@@ -59,19 +59,6 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    let filterNotificationsDestroy = null;
-
-    chrome.storage.onChanged.addListener(function (changes, area) {
-        if (area !== 'local' || !('isGeniusSongFilterNotifications' in changes)) return;
-        const enabled = changes.isGeniusSongFilterNotifications.newValue ?? true;
-        if (enabled && !filterNotificationsDestroy) {
-            filterNotificationsDestroy = filterNotifications(getProfilePathFromDocument());
-        } else if (!enabled && filterNotificationsDestroy) {
-            filterNotificationsDestroy();
-            filterNotificationsDestroy = null;
-        }
-    });
-
     queueMicrotask(main);
 
     async function main() {
@@ -84,7 +71,7 @@ chrome.storage.local.get([
             if (isGeniusSongFilterFirehose) filterFirehose();
         }
 
-        if (isGeniusSongFilterNotifications) filterNotificationsDestroy = filterNotifications(profilePath);
+        if (isGeniusSongFilterNotifications) filterNotifications(profilePath);
 
         if (!isSong) return
         getDomElements();
@@ -93,7 +80,11 @@ chrome.storage.local.get([
         editAppleMusicPlayer();
         playerSettings();
 
-        const { songId, userId, songData } = await getSongInfo();
+        const userId = getId("currentUser");
+        const songId = getId("song");
+        const { song: songData } = await getApiData(songId, "songs");
+        if (!userId || !songId || !songData) return;
+
 
         if (isGeniusSongSongId) showSongIdButton(songId);
         if (isGeniusSongCheckIndex) showIndexButton();
@@ -141,7 +132,7 @@ chrome.storage.local.get([
             stickyNavContainer: document.querySelector('nav[class^="StickyNav-desktop__Container-"]'),
             texteditorTextarea: document.querySelector('textarea[class*="TextEditor__TextArea"]'),
             lyricseditexplainerContainer: document.querySelector('div[class^="LyricsEditExplainer__Container-"]'),
-            expandingtextareaTextarea: document.querySelector('textarea[class^="ExpandingTextarea__Textarea-"]'),
+            lyricsTextareaInputTextarea: document.querySelector('textarea[class*="LyricsTextareaInput-"]'),
             mediaplayerscontainerContainer: document.querySelector('[class^="MediaPlayersContainer__Container-"]'),
             transcriptionplayerContainer: document.querySelector('div[class^="TranscriptionPlayer__Container-"]'),
             youtubebuttonPlayvideobutton: document.querySelector('[class*="YoutubeButton__PlayVideoButton-"]'),
@@ -159,25 +150,6 @@ chrome.storage.local.get([
         const profilePath = profileMatch?.[1] ?? null;
         if (profilePath) chrome.storage.local.set({ profilePath });
         return profilePath;
-    }
-
-    async function getSongInfo() {
-        console.log("Run function getSongInfo()");
-        // Song ID
-        const metaContent = document.querySelector('[property="twitter:app:url:iphone"]')?.content ?? "";
-        const parts = metaContent.split("/");
-        const songId = parts[2] === "songs" ? parts[3] : null;
-
-        // User ID
-        const userMatch = document.documentElement.innerHTML.match(/let current_user = JSON.parse\('{\\"id\\":(\d+)/);
-        const userId = userMatch?.[1] ?? null;
-        if (userId) chrome.storage.local.set({ userId });
-
-        // Song Data
-        const response = await fetch(`https://genius.com/api/songs/${songId}`);
-        const json = await response.json();
-
-        return { songId, userId, songData: json.response.song };
     }
 
     document.addEventListener('click', function (event) {
@@ -249,55 +221,56 @@ chrome.storage.local.get([
         console.log("Run function showCoverInfo()");
 
         const { sizedimageImage, songheaderCoverart } = getDomElements();
+        if (!sizedimageImage || !songheaderCoverart) return;
 
-        if (sizedimageImage && songheaderCoverart) {
-            const existing = songheaderCoverart.querySelector('p[data-type="resolution-info"]');
-            if (existing) existing.remove();
+        const existing = songheaderCoverart.querySelector('div[data-type="resolution-info"]');
+        if (existing) existing.remove();
 
-            const infoElement = createResolutionInfo(songData, sizedimageImage);
-            songheaderCoverart.prepend(infoElement);
-        }
-    }
-
-    function createResolutionInfo(songData, sizedimageImage) {
-        const resolutionMatch = songData.header_image_url.match(/(\d+)x(\d+)/);
-        const formatMatch = songData.header_image_url.match(/\.(\w+)$/);
-
-        const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
-        const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
-        const primaryColor = songData.song_art_primary_color;
-        const secondaryColor = songData.song_art_secondary_color;
-        const textColor = songData.song_art_text_color;
-
-        const resolutionInfo = document.createElement('p');
-        resolutionInfo.style.fontWeight = "100";
-        resolutionInfo.style.textAlign = "center";
-        resolutionInfo.style.position = "relative";
-        resolutionInfo.style.color = textColor;
-
-        resolutionInfo.dataset.type = "resolution-info";
-        resolutionInfo.innerHTML = `${resolutionText} ${formatText} | ${primaryColor} | ${secondaryColor} | ${textColor}`;
-
-        const updateStyles = () => {
-            const imgWidth = sizedimageImage.clientWidth || 1000;
-            const dynamicFontPx = imgWidth * 0.05;
-            const fontSizeRem = Math.min(pxToRem(dynamicFontPx), 0.75);
-            resolutionInfo.style.fontSize = `${fontSizeRem}rem`;
-            const topRem = -fontSizeRem / 2;
-            resolutionInfo.style.top = `${topRem - 0.075}rem`;
+        const pxToRem = (px) => {
+            const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+            return px / rootFontSize;
         };
 
-        updateStyles();
+        const createResolutionInfo = () => {
+            const resolutionMatch = songData.header_image_url.match(/(\d+)x(\d+)/);
+            const formatMatch = songData.header_image_url.match(/\.(\w+)$/);
 
-        const observer = new ResizeObserver(updateStyles);
-        observer.observe(sizedimageImage);
+            const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
+            const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
+            const primaryColor = songData.song_art_primary_color;
+            const secondaryColor = songData.song_art_secondary_color;
+            const textColor = songData.song_art_text_color;
 
-        return resolutionInfo;
-    }
+            const resolutionInfo = document.createElement('div');
+            resolutionInfo.dataset.type = "resolution-info";
+            resolutionInfo.style.fontWeight = "100";
+            resolutionInfo.style.textAlign = "center";
+            resolutionInfo.style.position = "relative";
+            resolutionInfo.style.color = textColor;
 
-    function pxToRem(px) {
-        const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-        return px / rootFontSize;
+            resolutionInfo.textContent = [`${resolutionText} ${formatText}`, primaryColor, secondaryColor, textColor].join(" | ");
+
+            const updateStyles = () => {
+                const imgWidth = sizedimageImage.clientWidth || 1000;
+                const dynamicFontPx = imgWidth * 0.05;
+                const fontSizeRem = Math.min(pxToRem(dynamicFontPx), 0.75);
+
+                resolutionInfo.style.fontSize = `${fontSizeRem}rem`;
+
+                const topRem = -fontSizeRem / 2;
+                resolutionInfo.style.top = `${topRem - 0.075}rem`;
+            };
+
+            updateStyles();
+
+            const observer = new ResizeObserver(updateStyles);
+            observer.observe(sizedimageImage);
+
+            return resolutionInfo;
+        };
+
+        const infoElement = createResolutionInfo();
+        songheaderCoverart.prepend(infoElement);
     }
 
 
@@ -309,7 +282,6 @@ chrome.storage.local.get([
         console.log("Run function checkSongCover()");
 
         const { editmetadatabutonSmallbutton } = getDomElements();
-
         if (!editmetadatabutonSmallbutton) return;
 
         let color, borderColor;
@@ -743,8 +715,8 @@ chrome.storage.local.get([
         });
 
         const toggleDropdownButton = () => {
-            const { expandingtextareaTextarea } = getDomElements();
-            dropdownContainer.style.display = expandingtextareaTextarea ? 'block' : 'none';
+            const { lyricsTextareaInputTextarea } = getDomElements();
+            dropdownContainer.style.display = lyricsTextareaInputTextarea ? 'block' : 'none';
         };
 
         const observer = new MutationObserver(() => requestAnimationFrame(toggleDropdownButton));
@@ -1095,46 +1067,46 @@ chrome.storage.local.get([
         };
 
         const insertTextAtCursor = (text) => {
-            const { expandingtextareaTextarea } = getDomElements();
-            if (expandingtextareaTextarea) {
-                const startPos = expandingtextareaTextarea.selectionStart;
-                const endPos = expandingtextareaTextarea.selectionEnd;
+            const { lyricsTextareaInputTextarea } = getDomElements();
+            if (lyricsTextareaInputTextarea) {
+                const startPos = lyricsTextareaInputTextarea.selectionStart;
+                const endPos = lyricsTextareaInputTextarea.selectionEnd;
 
-                let beforeText = expandingtextareaTextarea.value.substring(0, startPos).trimEnd();
-                const afterText = expandingtextareaTextarea.value.substring(endPos);
+                let beforeText = lyricsTextareaInputTextarea.value.substring(0, startPos).trimEnd();
+                const afterText = lyricsTextareaInputTextarea.value.substring(endPos);
 
                 while (!beforeText.endsWith('\n\n')) {
                     beforeText += '\n';
                 }
 
-                expandingtextareaTextarea.value = beforeText + text + '\n' + afterText;
+                lyricsTextareaInputTextarea.value = beforeText + text + '\n' + afterText;
 
                 const newCursorPos = beforeText.length + text.length + 1;
-                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
-                expandingtextareaTextarea.focus();
+                lyricsTextareaInputTextarea.setSelectionRange(newCursorPos, newCursorPos);
+                lyricsTextareaInputTextarea.focus();
 
-                expandingtextareaTextarea.value = expandingtextareaTextarea.value.replace(/^\s+/, '');
-                expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                lyricsTextareaInputTextarea.value = lyricsTextareaInputTextarea.value.replace(/^\s+/, '');
+                lyricsTextareaInputTextarea.dispatchEvent(new Event('input', { bubbles: true }));
             }
         };
 
         function insertSeoHeader(songData, headerType, storedLanguage) {
-            const { expandingtextareaTextarea } = getDomElements();
-            if (!expandingtextareaTextarea) return;
+            const { lyricsTextareaInputTextarea } = getDomElements();
+            if (!lyricsTextareaInputTextarea) return;
 
             const insertText = (text, position = "begin") => {
-                expandingtextareaTextarea.focus();
-                const currentText = expandingtextareaTextarea.value.trim();
+                lyricsTextareaInputTextarea.focus();
+                const currentText = lyricsTextareaInputTextarea.value.trim();
 
                 if (position === "begin" && !currentText.startsWith(text)) {
-                    expandingtextareaTextarea.value = text + "\n\n" + currentText;
-                    expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                    expandingtextareaTextarea.setSelectionRange(text.length + 2, text.length + 2);
+                    lyricsTextareaInputTextarea.value = text + "\n\n" + currentText;
+                    lyricsTextareaInputTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    lyricsTextareaInputTextarea.setSelectionRange(text.length + 2, text.length + 2);
                 }
 
                 if (position === "end" && !currentText.endsWith(text)) {
-                    expandingtextareaTextarea.value = currentText + "\n\n" + text;
-                    expandingtextareaTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    lyricsTextareaInputTextarea.value = currentText + "\n\n" + text;
+                    lyricsTextareaInputTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             };
 
@@ -1272,35 +1244,35 @@ chrome.storage.local.get([
         function insertPartHeader(fullText) {
             insertTextAtCursor(`<b>[${fullText}]</b>`);
 
-            const { expandingtextareaTextarea } = getDomElements();
-            if (expandingtextareaTextarea) {
-                const oldCursorPos = expandingtextareaTextarea.selectionStart;
+            const { lyricsTextareaInputTextarea } = getDomElements();
+            if (lyricsTextareaInputTextarea) {
+                const oldCursorPos = lyricsTextareaInputTextarea.selectionStart;
 
                 let i = 1;
-                const oldValue = expandingtextareaTextarea.value;
+                const oldValue = lyricsTextareaInputTextarea.value;
 
                 const newValue = oldValue.replace(
                     new RegExp(`<b>\\[${fullText}(?: [IVXLCDM]+)?`, "g"),
                     () => `<b>[${fullText} ${convertToRoman(i++)}`
                 );
 
-                expandingtextareaTextarea.value = newValue;
+                lyricsTextareaInputTextarea.value = newValue;
 
                 const diff = newValue.length - oldValue.length;
                 const newCursorPos = oldCursorPos + diff;
-                expandingtextareaTextarea.focus();
-                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
+                lyricsTextareaInputTextarea.focus();
+                lyricsTextareaInputTextarea.setSelectionRange(newCursorPos, newCursorPos);
             }
         }
 
         function insertVerseHeader(fullText) {
             insertTextAtCursor(`[${fullText}]`);
 
-            const { expandingtextareaTextarea } = getDomElements();
-            if (expandingtextareaTextarea) {
-                const oldCursorPos = expandingtextareaTextarea.selectionStart;
+            const { lyricsTextareaInputTextarea } = getDomElements();
+            if (lyricsTextareaInputTextarea) {
+                const oldCursorPos = lyricsTextareaInputTextarea.selectionStart;
 
-                const oldValue = expandingtextareaTextarea.value;
+                const oldValue = lyricsTextareaInputTextarea.value;
 
                 const otherTags = ["Part", "Teil", "Część", "Часть", "Pjesa", "Kısım", "Qism"];
                 const sectionRegex = new RegExp(
@@ -1344,13 +1316,13 @@ chrome.storage.local.get([
                 }
 
                 updatedText += renumberTags(oldValue.substring(lastIndex));
-                expandingtextareaTextarea.value = updatedText;
+                lyricsTextareaInputTextarea.value = updatedText;
 
                 const diff = updatedText.length - oldValue.length;
                 const newCursorPos = oldCursorPos + diff;
 
-                expandingtextareaTextarea.focus();
-                expandingtextareaTextarea.setSelectionRange(newCursorPos, newCursorPos);
+                lyricsTextareaInputTextarea.focus();
+                lyricsTextareaInputTextarea.setSelectionRange(newCursorPos, newCursorPos);
             }
         }
 
@@ -1369,19 +1341,19 @@ chrome.storage.local.get([
         };
 
         const applyTextFormatting = (openTag, closeTag) => {
-            const { expandingtextareaTextarea } = getDomElements();
-            if (!expandingtextareaTextarea) return;
+            const { lyricsTextareaInputTextarea } = getDomElements();
+            if (!lyricsTextareaInputTextarea) return;
 
-            const start = expandingtextareaTextarea.selectionStart;
-            const end = expandingtextareaTextarea.selectionEnd;
+            const start = lyricsTextareaInputTextarea.selectionStart;
+            const end = lyricsTextareaInputTextarea.selectionEnd;
 
             if (start === end) {
-                expandingtextareaTextarea.setRangeText(openTag + closeTag, start, end, "end");
+                lyricsTextareaInputTextarea.setRangeText(openTag + closeTag, start, end, "end");
                 const cursor = start + openTag.length;
-                expandingtextareaTextarea.selectionStart = cursor;
-                expandingtextareaTextarea.selectionEnd = cursor;
+                lyricsTextareaInputTextarea.selectionStart = cursor;
+                lyricsTextareaInputTextarea.selectionEnd = cursor;
             } else {
-                let selected = expandingtextareaTextarea.value.substring(start, end);
+                let selected = lyricsTextareaInputTextarea.value.substring(start, end);
                 let trailing = "";
 
                 while (/[ \n\r]$/.test(selected)) {
@@ -1389,10 +1361,10 @@ chrome.storage.local.get([
                     selected = selected.slice(0, -1);
                 }
 
-                expandingtextareaTextarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
+                lyricsTextareaInputTextarea.setRangeText(openTag + selected + closeTag + trailing, start, end, "end");
             }
 
-            expandingtextareaTextarea.focus();
+            lyricsTextareaInputTextarea.focus();
         };
 
         const renderButtons = (container, buttons, classNameMapper, storedLanguage) => {
@@ -2335,12 +2307,12 @@ chrome.storage.local.get([
     }
 
     function lyricsCleanupLogic(cleanupType) {
-        const { expandingtextareaTextarea } = getDomElements();
+        const { lyricsTextareaInputTextarea } = getDomElements();
 
-        if (expandingtextareaTextarea) {
-            const originalText = expandingtextareaTextarea.value;
+        if (lyricsTextareaInputTextarea) {
+            const originalText = lyricsTextareaInputTextarea.value;
 
-            let text = expandingtextareaTextarea.value;
+            let text = lyricsTextareaInputTextarea.value;
 
             const storedLanguage = localStorage.getItem("selectedLanguage");
 
@@ -2574,11 +2546,11 @@ chrome.storage.local.get([
                 return line;
             });
 
-            expandingtextareaTextarea.value = processedLines.join('\n');
+            lyricsTextareaInputTextarea.value = processedLines.join('\n');
 
             document.addEventListener('keydown', (event) => {
                 if (event.ctrlKey && event.shiftKey && event.key === 'Z') {
-                    expandingtextareaTextarea.value = originalText;
+                    lyricsTextareaInputTextarea.value = originalText;
                 }
             });
         }
@@ -2741,7 +2713,7 @@ chrome.storage.local.get([
                 annotations: [
                     { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked (?:an|the .*?) annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
                     { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
-                    { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion|mentioned\s.*? in a suggestion on)/i, color: "#9a9a9a", svg: ICONS.svgSuggested },  
+                    { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion|mentioned\s.*? in a suggestion on)/i, color: "#9a9a9a", svg: ICONS.svgSuggested },
                 ],
 
                 lyrics: [
@@ -3757,17 +3729,6 @@ chrome.storage.local.get([
             childList: true,
             subtree: true
         });
-
-        return function () {
-            notificationDropdownObserver.disconnect();
-            if (notificationObserver) {
-                notificationObserver.disconnect();
-                notificationObserver = null;
-            }
-            document.querySelector('#notification-filter-button')?.parentElement.remove();
-            document.querySelector('#notification-filter-dropdown')?.remove();
-            currentContainer = null;
-        };
     }
 
 
@@ -4297,9 +4258,9 @@ chrome.storage.local.get([
             }
             if (isGeniusSongLyricEditor) {
                 function adjustSpotifyPlayerGridColumn() {
-                    const { stickytoolbarContainer, stickyNavContainer, expandingtextareaTextarea } = getDomElements();
+                    const { stickytoolbarContainer, stickyNavContainer, lyricsTextareaInputTextarea } = getDomElements();
 
-                    if (expandingtextareaTextarea) {
+                    if (lyricsTextareaInputTextarea) {
                         spotifyIframe.style.gridColumn = "right-start / page-end";
                         spotifyIframe.style.marginRight = "1rem";
                         if (applemusicplayerPositioningcontainer) {
@@ -4307,9 +4268,9 @@ chrome.storage.local.get([
                         } else {
                             spotifyIframe.style.paddingLeft = "1.25rem"; spotifyIframe.style.paddingRight = "1rem";
                         }
-                        expandingtextareaTextarea.style.marginRight = "0rem";
-                        expandingtextareaTextarea.style.position = "relative";
-                        expandingtextareaTextarea.style.zIndex = "5";
+                        lyricsTextareaInputTextarea.style.marginRight = "0rem";
+                        lyricsTextareaInputTextarea.style.position = "relative";
+                        lyricsTextareaInputTextarea.style.zIndex = "5";
                         stickytoolbarContainer.style.zIndex = "7";
                         stickyNavContainer.style.zIndex = "8";
                     } else {
@@ -4409,10 +4370,10 @@ chrome.storage.local.get([
 
         if (isGeniusSongLyricEditor) {
             function adjustPlayerGridColumn() {
-                const { expandingtextareaTextarea, applemusicplayerPositioningcontainer, applemusicplayerIframecontainer, soundcloudplayerIframecontainer } = getDomElements();
+                const { lyricsTextareaInputTextarea, applemusicplayerPositioningcontainer, applemusicplayerIframecontainer, soundcloudplayerIframecontainer } = getDomElements();
 
                 if (applemusicplayerPositioningcontainer && applemusicplayerIframecontainer) {
-                    if (expandingtextareaTextarea) {
+                    if (lyricsTextareaInputTextarea) {
                         applemusicplayerIframecontainer.style.gridColumn = "right-start / page-end";
                         applemusicplayerIframecontainer.style.marginRight = "0rem";
                         applemusicplayerPositioningcontainer.style.paddingBottom = "0rem";
@@ -4424,7 +4385,7 @@ chrome.storage.local.get([
                 }
 
                 if (soundcloudplayerIframecontainer) {
-                    if (expandingtextareaTextarea) {
+                    if (lyricsTextareaInputTextarea) {
                         console.log("1");
                         soundcloudplayerIframecontainer.style.gridColumn = "right-start / page-end";
                     } else {
