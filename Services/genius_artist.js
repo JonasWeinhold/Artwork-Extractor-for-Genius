@@ -60,12 +60,17 @@ chrome.storage.local.get([
         const isUser = profilePath ? new RegExp(`https:\\/\\/(genius\\.com|genius-staging\\.com)${profilePath}$`).test(window.location.href) : false;
 
         if (isAllSongs || isAllAlbums) {
-            const { artistId, userId, artistData } = await getArtistInfoNew();
+            const userId = getId("currentUser");
+            const artistId = getId("artist");
+            const { artist: artistData } = await getApiData(artistId, "artists");
+            if (!userId || !artistId || !artistData) return;
 
             if (isGeniusArtistAllSongsAlbumsPage || isGeniusArtistAllSongsAlbumsPageMetadata) checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums);
         } else if (isArtistNew) {
-            const { artistId, userId, artistData } = await getArtistInfoNew();
-            if (!artistId || !userId || !artistData) return;
+            const userId = getId("currentUser");
+            const artistId = getId("artist");
+            const { artist: artistData } = await getApiData(artistId, "artists");
+            if (!userId || !artistId || !artistData) return;
 
             if (isGeniusArtistArtistId) showArtistIdButtonNew(artistData);
             if (isGeniusArtistArtistPageInfo) showCoverInfoNew(artistData);
@@ -104,23 +109,6 @@ chrome.storage.local.get([
         const userId = userMatch?.[1];
 
         if (!artistId || !userId) return { artistId: null, userId, artistData: null };
-
-        // Artist Data
-        const response = await fetch(`https://genius.com/api/artists/${artistId}`);
-        const json = await response.json();
-
-        return { artistId, userId, artistData: json.response.artist };
-    }
-
-    async function getArtistInfoNew() {
-        console.log("Run function getArtistInfoNew()");
-        // Artist ID
-        const artistIdMatch = document.documentElement.innerHTML.match(/\\?"artist\\?":(\d+)/);
-        const artistId = artistIdMatch ? artistIdMatch[1] : null;
-
-        // User ID
-        const userMatch = document.documentElement.innerHTML.match(/\\?"currentUser\\?":(\d+)/);
-        const userId = userMatch ? userMatch[1] : null;
 
         // Artist Data
         const response = await fetch(`https://genius.com/api/artists/${artistId}`);

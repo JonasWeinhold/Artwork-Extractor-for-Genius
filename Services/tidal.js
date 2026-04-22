@@ -31,7 +31,9 @@ chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyA
         fontSize: '16px',
         fontWeight: '600',
         lineHeight: '24px',
-        width: '160px'
+        maxWidth: '160px',
+        width: '50%',
+        flexShrink: '0'
       });
 
       copyButton.addEventListener('click', async (event) => {
