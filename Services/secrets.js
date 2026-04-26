@@ -63,3 +63,31 @@ chrome.storage.local.get(['geniusApi', 'geniusPolicy', 'geniusSignature'], (resu
     }
 })();
 
+(function () {
+    const scripts = document.body.querySelectorAll("script:not([src])");
+
+    for (const script of scripts) {
+        const text = script.textContent;
+
+        const preloadedMatch = text.match(/window\.__PRELOADED_STATE__\s*=\s*JSON\.parse\('(.+?)'\)/s);
+        const appConfigMatch = text.match(/window\.__APP_CONFIG__\s*=\s*JSON\.parse\('(.+?)'\)/s);
+        if (!preloadedMatch || !appConfigMatch) continue;
+
+        const jsonString1 = preloadedMatch[1];
+        const jsonString2 = appConfigMatch[1];
+
+        const geniusPath = jsonString1.match(/\\"filepickerPath\\":\\"([^"]+)\\"/)?.[1];
+        const geniusPolicy = jsonString1.match(/\\"filepickerPolicy\\":\\"([^"]+)\\"/)?.[1];
+        const geniusSignature = jsonString1.match(/\\"filepickerSignature\\":\\"([^"]+)\\"/)?.[1];
+        const geniusApi = jsonString2.match(/\\"filepicker_api_key\\":\\"([^"]+)\\"/)?.[1];
+
+        if (geniusApi && geniusPolicy && geniusSignature) {
+            chrome.storage.local.set({ geniusApi, geniusPolicy, geniusSignature });
+
+            window.secrets.GENIUS_API = geniusApi;
+            window.secrets.GENIUS_POLICY = geniusPolicy;
+            window.secrets.GENIUS_SIGNATURE = geniusSignature;
+            break;
+        }
+    }
+})();

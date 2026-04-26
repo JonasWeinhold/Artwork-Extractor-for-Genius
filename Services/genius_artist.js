@@ -1489,6 +1489,7 @@ chrome.storage.local.get([
                 btn.type = "button";
                 btn.className = "metadata-search-button";
                 btn.textContent = "Search ⤤";
+                btn.style.marginLeft = "auto";
 
                 btn.addEventListener("mouseenter", () => { btn.style.textDecoration = "underline"; });
                 btn.addEventListener("mouseleave", () => { btn.style.textDecoration = "none"; });
