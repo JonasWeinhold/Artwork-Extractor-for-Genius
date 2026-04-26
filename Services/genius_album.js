@@ -48,6 +48,7 @@ chrome.storage.local.get([
         if (isAlbumNew) {
             const userId = getId("currentUser");
             const albumId = getId("album");
+            const songIds = getSongIds();
             const { user: userData } = await getApiData(userId, "users");
             const { album: albumData } = await getApiData(albumId, "albums");
             if (!userId || !albumId || !userData || !albumData) return;
@@ -60,6 +61,21 @@ chrome.storage.local.get([
             //if (isGeniusAlbumAlbumPage) checkAlbumCover(albumData)
 
             if (isGeniusAlbumEditTracklist) addUnreleasedCheckbox();
+
+            if (isGeniusAlbumUploadCover) uploadAlbumCover(albumId, albumData);
+
+
+            const songDataAlbum = await Promise.all(
+                songIds.map(async songId => {
+                    const { song: songData } = await getApiData(songId, "songs");
+                    return songData;
+                })
+            );
+            if (!songDataAlbum) return;
+
+            if (isGeniusAlbumFollowButton) followButtonAlbumPage(songDataAlbum, albumData);
+            if (isGeniusAlbumCleanupButton) cleanupMetadata(songDataAlbum, userData);
+            if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(songDataAlbum, userData);
 
 
 
@@ -77,9 +93,9 @@ chrome.storage.local.get([
 
             getSongData(document.documentElement.innerHTML).then(json => {
                 if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPage(json);
-                if (isGeniusAlbumFollowButton) followButtonAlbumPage(json);
-                if (isGeniusAlbumCleanupButton) cleanupMetadata(userId, userRoles, json);
-                if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(userRoles, json);
+                if (isGeniusAlbumFollowButton) followButtonAlbumPageOld(json);
+                if (isGeniusAlbumCleanupButton) cleanupMetadataOld(userId, userRoles, json);
+                if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklistOld(userRoles, json);
             });
 
             monitorTracklist();
@@ -158,8 +174,11 @@ chrome.storage.local.get([
         const labelwithiconLabel = metadatastatsContainer?.querySelector('span[class^="LabelWithIcon__Label-"]');
         const stackedCoverArts = document.querySelector('div[class^="StackedCoverArts__Container-"]');
         const CoverArtAnnotationNavigationContainer = document.querySelector('div[class^="CoverArtAnnotationNavigation__Container-"]');
+        const stickyToolbarLeft = document.querySelector('div[class^="StickyToolbar__Left-"]');
+        const smallButton = stickyToolbarLeft?.querySelector('button[class*="SmallButton__Container-"]');
 
-        return { metadatastatsContainer, labelwithiconLabel, stackedCoverArts, CoverArtAnnotationNavigationContainer };
+
+        return { metadatastatsContainer, labelwithiconLabel, stackedCoverArts, CoverArtAnnotationNavigationContainer, stickyToolbarLeft, smallButton };
     }
 
 
@@ -620,7 +639,8 @@ chrome.storage.local.get([
     //////////                                 FOLLOW BUTTON                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    async function followButtonAlbumPage(songData) {
+    async function followButtonAlbumPageOld(songData) {
+        console.log(songData);
         const albumAdminMenu = document.querySelector('album-admin-menu');
         const storageKey = "followState";
         sessionStorage.removeItem(storageKey);
@@ -654,6 +674,54 @@ chrome.storage.local.get([
             }
         });
     }
+
+    async function followButtonAlbumPage(songData, albumData) {
+        console.log("Run function followButtonAlbumPage()");
+
+        const { stickyToolbarLeft, smallButton } = getDomElements();
+        if (!stickyToolbarLeft || !smallButton) return;
+
+        const existingFollowButton = [...stickyToolbarLeft.querySelectorAll("button")].find(btn => ["Follow", "Following", "Loading…"].includes(btn.textContent.trim()));
+        if (existingFollowButton) existingFollowButton.remove();
+
+        const followButton = document.createElement("button");
+        followButton.type = "button";
+        followButton.className = smallButton.className;
+        followButton.textContent = "Loading…";
+        stickyToolbarLeft.appendChild(followButton);
+
+        const followingSongStates = songData.map(song => ({ songId: song.id, following: song.current_user_metadata?.interactions?.following }));
+        const followingAlbumStates = { songId: albumData.id, following: albumData.current_user_metadata?.interactions?.following, isAlbum: true };
+
+        const allFollowStates = [...followingSongStates, followingAlbumStates];
+        const initiallyFollowing = allFollowStates.filter(s => s.following);
+        let isFollowingAll = initiallyFollowing.length === allFollowStates.length;
+
+        followButton.textContent = isFollowingAll ? "Following" : "Follow";
+
+        followButton.addEventListener("click", async () => {
+            followButton.disabled = true;
+
+            if (!isFollowingAll) {
+                followButton.textContent = "Following…";
+                const toFollow = allFollowStates.filter(s => !s.following);
+                await Promise.all(toFollow.map(s => followId(s.songId, s.isAlbum ? "albums" : "songs", "follow")));
+                toFollow.forEach(s => s.following = true);
+                isFollowingAll = true;
+                followButton.textContent = "Following";
+            } else {
+                followButton.textContent = "Unfollowing…";
+                const toUnfollow = allFollowStates.filter(s => s.following);
+                await Promise.all(toUnfollow.map(s => followId(s.songId, s.isAlbum ? "albums" : "songs", "unfollow")));
+                toUnfollow.forEach(s => s.following = false);
+                isFollowingAll = false;
+                followButton.textContent = "Follow";
+            }
+
+            followButton.disabled = false;
+        });
+    }
+
 
 
 
@@ -1066,6 +1134,237 @@ chrome.storage.local.get([
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
+    function uploadAlbumCover(albumId, albumData) {
+        console.log("Run function uploadAlbumCover()");
+
+        const rows = [];
+        const coverArts = albumData.cover_arts;
+
+        let modalObserver = null;
+        let modalCloseObserver = null;
+
+        function createLeftCol() {
+            const row = document.createElement("div");
+            row.style.display = "flex";
+            row.style.flexDirection = "row";
+            row.style.alignItems = "center";
+            row.style.gap = "1rem";
+            row.style.flex = "1 1 auto";
+
+            const checkboxRow = document.createElement("div");
+            checkboxRow.style.display = "flex";
+            checkboxRow.style.flexDirection = "row";
+            checkboxRow.style.alignItems = "center";
+            checkboxRow.style.gap = "0.5rem";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.style.appearance = "none";
+            checkbox.style.border = "1px solid rgb(0,0,0)";
+            checkbox.style.backgroundColor = "white";
+            checkbox.style.width = "1rem";
+            checkbox.style.height = "1rem";
+            checkbox.style.cursor = "pointer";
+            checkbox.style.backgroundRepeat = "no-repeat";
+            checkbox.style.backgroundPosition = "center";
+            checkbox.style.backgroundSize = "contain";
+
+            const checkSvg = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
+
+            checkbox.addEventListener("change", () => {
+                checkbox.style.backgroundColor = checkbox.checked ? "rgb(0,0,0)" : "white";
+                checkbox.style.backgroundImage = checkbox.checked ? checkSvg : "none";
+            });
+
+            const checkboxLabel = document.createElement("label");
+            checkboxLabel.style.cursor = "pointer";
+            checkboxLabel.style.fontFamily = `Programme, "Programme Pan", Arial, sans-serif`;
+            checkboxLabel.style.fontSize = "0.75rem";
+            checkboxLabel.style.fontWeight = "100";
+            checkboxLabel.style.lineHeight = "1.1";
+
+            checkboxLabel.appendChild(document.createTextNode("OVER-"));
+            checkboxLabel.appendChild(document.createElement("br"));
+            checkboxLabel.appendChild(document.createTextNode("WRITE"));
+
+            checkboxRow.appendChild(checkbox);
+            checkboxRow.appendChild(checkboxLabel);
+
+            const input1 = document.createElement("input");
+            input1.type = "text";
+            input1.placeholder = "Nr.";
+            styleTextbox(input1);
+            input1.style.flex = "0 0 3rem";
+
+            const input2 = document.createElement("input");
+            input2.type = "text";
+            input2.placeholder = "Image URL";
+            styleTextbox(input2);
+            input2.style.flex = "1 1 auto";
+
+            row.appendChild(checkboxRow);
+            row.appendChild(input1);
+            row.appendChild(input2);
+
+            rows.push({ checkbox, input1, input2 });
+
+            return row;
+        }
+
+        function createRow(modal) {
+            const artworkSection = modal.querySelectorAll('section[class^="ScrollableTabsSection__Container-"]')?.[1];
+            if (!artworkSection) return;
+
+            const wrapper = document.createElement("div");
+            wrapper.dataset.ui = "album-cover-ui";
+            wrapper.style.display = "flex";
+            wrapper.style.gap = "1rem";
+            wrapper.style.marginTop = "1rem";
+            wrapper.style.padding = "1rem";
+            wrapper.style.border = "1px solid";
+
+            const leftCol = document.createElement("div");
+            leftCol.style.display = "flex";
+            leftCol.style.flexDirection = "column";
+            leftCol.style.gap = "0.75rem";
+            leftCol.style.flex = "1 1 auto";
+
+            leftCol.appendChild(createLeftCol());
+
+            const rightCol = document.createElement("div");
+            rightCol.style.display = "flex";
+            rightCol.style.gap = "0.75rem";
+            rightCol.style.flex = "0 0 auto";
+
+            const addBtn = document.createElement("button");
+            addBtn.type = "button";
+            addBtn.textContent = "+ Add";
+            styleButton(addBtn);
+
+            const saveBtn = document.createElement("button");
+            saveBtn.type = "button";
+            saveBtn.textContent = "Save";
+            styleButton(saveBtn);
+
+            rightCol.appendChild(addBtn);
+            rightCol.appendChild(saveBtn);
+
+            addBtn.addEventListener("click", () => {
+                leftCol.appendChild(createLeftCol());
+            });
+
+            saveBtn.addEventListener("click", async () => {
+                saveBtn.disabled = true;
+
+                for (const { checkbox, input1, input2 } of rows) {
+                    const inputNumber = input1.value.trim();
+                    const imageUrl = input2.value.trim();
+
+                    if (!imageUrl) continue;
+
+                    if (checkbox.checked) {
+                        const position = inputNumber === "" ? 1 : (/^\d+$/.test(inputNumber) ? parseInt(inputNumber, 10) : null);
+
+                        const coverId = await sendCoverArts(imageUrl, albumId);
+                        if (position > 0 && position <= coverArts.length) {
+                            await moveCoverArts(position, coverId, coverArts);
+                            await deleteCoverArts(coverArts[position - 1].id);
+                        }
+                    } else {
+                        const position = /^\d+$/.test(inputNumber) ? parseInt(inputNumber, 10) : null;
+
+                        const coverId = await sendCoverArts(imageUrl, albumId);
+                        if (position > 0 && position <= coverArts.length) {
+                            await moveCoverArts(position, coverId, coverArts);
+                        }
+                    }
+                }
+
+                const closeButton = modal.querySelector('[aria-label="Cancel"]');
+                if (closeButton) closeButton.click();
+            });
+
+
+            wrapper.appendChild(leftCol);
+            wrapper.appendChild(rightCol);
+            artworkSection.appendChild(wrapper);
+        }
+
+        function styleTextbox(el) {
+            el.style.padding = "0.5rem";
+            el.style.border = "1px solid rgb(0, 0, 0)";
+            el.style.fontFamily = `Programme, "Programme Pan", Arial, sans-serif`;
+            el.style.fontSize = "1rem";
+            el.style.fontWeight = "100";
+            el.style.width = "100%";
+        }
+
+        function styleButton(btn) {
+            btn.style.padding = "0.5rem 1.313rem";
+            btn.style.border = "1px solid rgb(0, 0, 0)";
+            btn.style.borderRadius = "1.25rem";
+            btn.style.fontFamily = `Programme, "Programme Pan", Arial, sans-serif`;
+            btn.style.fontSize = "1rem";
+            btn.style.fontWeight = "100";
+            btn.style.lineHeight = "1.1";
+            btn.style.flex = "0 0 auto";
+        }
+
+        function startModalObserver() {
+            modalObserver = new MutationObserver(() => {
+                const modal = document.getElementById("edit-metadata-overlay");
+                if (!modal) return;
+
+                modalObserver.disconnect();
+                createRow(modal);
+                startModalCloseObserver(modal);
+            });
+
+            modalObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        function startModalCloseObserver(modal) {
+            modalCloseObserver = new MutationObserver(() => {
+                if (!document.body.contains(modal)) {
+                    reset();
+                }
+            });
+
+            modalCloseObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        function reset() {
+            if (modalObserver) modalObserver.disconnect();
+            if (modalCloseObserver) modalCloseObserver.disconnect();
+            modalObserver = null;
+            modalCloseObserver = null;
+
+            startModalObserver();
+        }
+
+        const existingModal = document.getElementById("edit-metadata-overlay");
+        if (existingModal) {
+            createRow(existingModal);
+            startModalCloseObserver(existingModal);
+            return;
+        } else {
+            startModalObserver();
+        }
+    }
+
+
+
+
+
+
+
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1073,6 +1372,7 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function songCreditsButtonAlbumPage(songData) {
+        console.log(songData);
         const albumAdminMenu = document.querySelector('album-admin-menu');
 
         if (!albumAdminMenu) return;
@@ -3456,7 +3756,7 @@ chrome.storage.local.get([
     //////////                             TRACKLIST LYRIC STATE                              //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function lyricStateTracklist(userRoles, songDataArray) {
+    function lyricStateTracklistOld(userRoles, songDataArray) {
         if (!Array.isArray(songDataArray)) return;
 
         songDataArray.forEach(entry => {
@@ -3521,18 +3821,64 @@ chrome.storage.local.get([
         });
     }
 
+    function lyricStateTracklist(songData, userData) {
+        console.log("Run function lyricStateTracklist()");
+
+        songData.forEach(song => {
+            const trackContainer = document.querySelector(`a[href="${song.url}"]`)?.closest('a[class^="Track__Container-"]');
+            if (!trackContainer) return;
+
+            const viewsContainer = trackContainer.querySelector('div[class^="Track__Views-"]');
+            if (!viewsContainer) return;
+
+            if (viewsContainer.querySelector('.lyric-status-box')) return;
+
+            const lyricsAreValidated = song.lyrics_marked_complete_by || song.lyrics_marked_staff_approved_by || song.lyrics_verified === true;
+            const userRoles = userData?.roles_for_display;
+
+            let color = '#ff7878';
+            if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
+                if (lyricsAreValidated && song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+                    color = '#99f2a5';
+                } else if (song.lyrics_state === 'complete' &&
+                    song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+                    color = '#ffff64';
+                } else if (song.lyrics_state === 'complete' && song.current_user_metadata?.permissions?.includes("award_transcription_iq")) {
+                    color = '#ffa335';
+                }
+            } else {
+                if (lyricsAreValidated) {
+                    color = '#99f2a5';
+                } else if (song.lyrics_state === 'complete') {
+                    color = '#ffff64';
+                }
+            }
+
+            const box = document.createElement('div');
+            box.className = 'lyric-status-box';
+            box.style.width = '0.625rem';
+            box.style.height = '100%';
+            box.style.borderRadius = '1.25rem';
+            box.style.backgroundColor = color;
+            box.style.marginLeft = 'auto';
+
+            const wrapper = document.createElement("div");
+            wrapper.style.marginLeft = "0.5rem";
+
+            viewsContainer.appendChild(wrapper);
+            viewsContainer.appendChild(box);
+        });
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                CLEANUP METADATA                                //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function cleanupMetadata(userId, userRoles, songList) {
-        console.log(userId, userRoles);
+    function cleanupMetadataOld(userId, userRoles, songList) {
         let songsWithZeroWidthSpace = [];
-        let songsWithPrimaryArtists = [];
         let songsWithRenamedLabels = [];
         let songsWithWriterArtists = [];
-        let songsWithPrimarytoGroupMembers = [];
         let songsWithDuplicateCoverArt = [];
 
         const coverArtUsageMap = new Map();
@@ -3541,23 +3887,15 @@ chrome.storage.local.get([
             const song = json.response.song;
 
             if (checkZeroWidthSpaces(song)) songsWithZeroWidthSpace.push(song);
-            const needsPrimaryArtistsRemoval = checkPrimaryArtists(song);
             const needsLabelRename = checkLabelRenames(song);
             const needsWritersAdd = checkWriterArtists(song);
-            const needsPrimarytoGroupMembers = checkPrimarytoGroupMembers(song);
 
 
-            if (needsPrimaryArtistsRemoval) {
-                songsWithPrimaryArtists.push(song);
-            }
             if (needsLabelRename) {
                 songsWithRenamedLabels.push(needsLabelRename);
             }
             if (needsWritersAdd) {
                 songsWithWriterArtists.push(needsWritersAdd);
-            }
-            if (needsPrimarytoGroupMembers) {
-                songsWithPrimarytoGroupMembers.push(needsPrimarytoGroupMembers);
             }
 
             const coverUrl = song.custom_song_art_image_url;
@@ -3569,7 +3907,6 @@ chrome.storage.local.get([
             }
         });
 
-        // Cover-Art-Auswertung
         for (const [coverUrl, songs] of coverArtUsageMap.entries()) {
             if (songs.length > 1) {
                 const singleAlbumSongs = songs.filter(song => song.albums?.length === 1);
@@ -3583,18 +3920,64 @@ chrome.storage.local.get([
             }
         }
 
-        addCleanupButton(songsWithZeroWidthSpace, "ZWSP", "Remove ZWSP", { title: "remove_zwsp" });
-        addCleanupButton(songsWithPrimaryArtists, "PrimaryArtists", "Remove Primary Artists", { primaryArtists: true });
+        addCleanupButtonOld(songsWithZeroWidthSpace, "ZWSP", "Remove ZWSP", { title: "remove_zwsp" });
+        addCleanupButtonOld(songsWithRenamedLabels, "LabelRenames", "Fix Metadata", { renameLabels: true });
+        addCleanupButtonOld(songsWithWriterArtists, "Writers", "Add Writers", { writerArtists: true });
+        if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
+            addCleanupButtonOld(songsWithDuplicateCoverArt, "CoverArt", "Remove Cover Art", { coverArt: true });
+        }
+    }
+
+    function cleanupMetadata(songData, userData) {
+        console.log("Run function cleanupMetadata()");
+
+        const userRoles = userData?.roles_for_display;
+
+        let songsWithRenamedLabels = [];
+        let songsWithWriterArtists = [];
+        let songsWithDuplicateCoverArt = [];
+
+        const coverArtUsageMap = new Map();
+
+        songData.forEach(song => {
+            const needsLabelRename = checkLabelRenames(song);
+            const needsWritersAdd = checkWriterArtists(song);
+
+            if (needsLabelRename) {
+                songsWithRenamedLabels.push(needsLabelRename);
+            }
+            if (needsWritersAdd) {
+                songsWithWriterArtists.push(needsWritersAdd);
+            }
+
+            const coverUrl = song.custom_song_art_image_url;
+            if (coverUrl) {
+                if (!coverArtUsageMap.has(coverUrl)) {
+                    coverArtUsageMap.set(coverUrl, []);
+                }
+                coverArtUsageMap.get(coverUrl).push(song);
+            }
+        });
+
+        for (const [coverUrl, songs] of coverArtUsageMap.entries()) {
+            if (songs.length > 1) {
+                const singleAlbumSongs = songs.filter(song => song.albums?.length === 1);
+                if (singleAlbumSongs.length > 0) {
+                    console.log(`Cover URL: ${coverUrl}`);
+                    singleAlbumSongs.forEach(song => {
+                        console.log(`- ${song.title} (ID: ${song.id})`);
+                        songsWithDuplicateCoverArt.push(song);
+                    });
+                }
+            }
+        }
+
         addCleanupButton(songsWithRenamedLabels, "LabelRenames", "Fix Metadata", { renameLabels: true });
         addCleanupButton(songsWithWriterArtists, "Writers", "Add Writers", { writerArtists: true });
         if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
             addCleanupButton(songsWithDuplicateCoverArt, "CoverArt", "Remove Cover Art", { coverArt: true });
         }
-        if (userId == 5934018 || userId == 4670957) {
-            addCleanupButton(songsWithPrimarytoGroupMembers, "LabelRenames", "Primary Artists → Group Members", { renameLabels: true });
-        }
     }
-
 
 
     function checkZeroWidthSpaces(song) {
@@ -3612,62 +3995,9 @@ chrome.storage.local.get([
         return song.title !== updatedTitle;
     }
 
-    function checkPrimaryArtists(song) {
-        const primaryArtists = song.primary_artists || [];
-        const customPrimaryArtists = (song.custom_performances || []).find(perf => perf.label === "Primary Artists");
-
-        if (customPrimaryArtists) {
-            const primaryArtistIds = primaryArtists.map(artist => artist.id);
-            const customPrimaryArtistIds = customPrimaryArtists.artists.map(artist => artist.id);
-
-            const isMismatch = JSON.stringify(customPrimaryArtistIds) !== JSON.stringify(primaryArtistIds);
-
-            if (isMismatch) {
-                console.info(`Remaining Primary Artists: ${customPrimaryArtists.artists.map(artist => artist.name)}`, song.url);
-                const secondEditAlbumButton = document.querySelectorAll('.square_button.u-bottom_margin')[1];
-                const square = secondEditAlbumButton.querySelector('.square-indicator');
-                if (square) addBlackCross(square);
-
-
-                const trackRows = document.querySelectorAll('album-tracklist-row');
-                trackRows.forEach(row => {
-                    const link = row.querySelector('a[href]');
-                    if (link && link.href === song.url) {
-                        const container = row.querySelector('.chart_row-number_container');
-                        if (container) {
-                            container.style.backgroundColor = '#ffff64';
-                            container.style.borderRight = '10px solid #9a9a9a';
-                        }
-                    }
-                });
-            }
-            return !isMismatch;
-        }
-        return false;
-    }
-
     function checkLabelRenames(song) {
         const labelRenames = {
-            "Trompeta": "Trumpet",
-            "Gürio": "Güiro"
-        };
-
-        const customPerformances = song.custom_performances || [];
-        const needsUpdate = customPerformances.some(perf => labelRenames[perf.label]);
-
-        if (needsUpdate) {
-            const updatedSong = Object.assign({}, song);
-            updatedSong._updated_custom_performances = customPerformances.map(perf =>
-                labelRenames[perf.label] ? { ...perf, label: labelRenames[perf.label] } : perf
-            );
-            return updatedSong;
-        }
-        return null;
-    }
-
-    function checkPrimarytoGroupMembers(song) {
-        const labelRenames = {
-            "Primary Artists": "Group Members",
+            //"Wrong": "Correct",
         };
 
         const customPerformances = song.custom_performances || [];
@@ -3727,7 +4057,7 @@ chrome.storage.local.get([
 
 
 
-    function addCleanupButton(songs, actionType, label, metadataUpdate) {
+    function addCleanupButtonOld(songs, actionType, label, metadataUpdate) {
         if (songs.length === 0) return;
 
         const albumAdminMenu = document.querySelector('album-admin-menu');
@@ -3917,11 +4247,6 @@ chrome.storage.local.get([
                             .replace(/^\u200B|(?<=[\p{L}\p{N}\p{P}])\u200B|(?=[\p{L}\p{N}\p{P}])\u200B/gu, '');
                     }
 
-                    if (metadataUpdate.primaryArtists) {
-                        updateData.custom_performances = (song.custom_performances || []).filter(
-                            perf => perf.label !== "Primary Artists"
-                        );
-                    }
                     if (metadataUpdate.renameLabels && song._updated_custom_performances) {
                         updateData.custom_performances = song._updated_custom_performances;
                     }
@@ -3949,6 +4274,212 @@ chrome.storage.local.get([
             }, 1000);
         });
         albumAdminMenu.parentNode.insertBefore(actionButton, albumAdminMenu);
+    }
+
+
+    function addCleanupButton(songs, actionType, label, metadataUpdate) {
+        if (songs.length === 0) return;
+
+        console.log(songs, actionType, label, metadataUpdate)
+
+        const { stickyToolbarLeft, smallButton } = getDomElements();
+        if (!stickyToolbarLeft || !smallButton) return;
+
+        const existingButton = [...stickyToolbarLeft.querySelectorAll("button")].find(btn => btn.textContent.trim() === label);
+        if (existingButton) existingButton.remove();
+
+        const cleanupButton = document.createElement("button");
+        cleanupButton.type = "button";
+        cleanupButton.className = smallButton.className;
+        cleanupButton.textContent = label;
+        stickyToolbarLeft.appendChild(cleanupButton);
+
+
+        function showCoverArtPopup(songs, metadataUpdate, delay) {
+            const coverUrlMap = new Map();
+            songs.forEach(song => {
+                const url = song.custom_song_art_image_url;
+                if (!url) return;
+                if (!coverUrlMap.has(url)) {
+                    coverUrlMap.set(url, []);
+                }
+                coverUrlMap.get(url).push(song);
+            });
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.backgroundColor = 'rgba(0,0,0,0.6)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.flexDirection = 'column';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.padding = '2rem';
+
+            const popup = document.createElement('div');
+            popup.style.backgroundColor = '#fff';
+            popup.style.padding = '2.25rem';
+            popup.style.width = '80%';
+            popup.style.maxWidth = '800px';
+            popup.style.height = 'auto';
+            popup.style.maxHeight = '96%';
+            popup.style.overflowY = 'auto';
+
+            const titleContainer = document.createElement('div');
+            titleContainer.style.backgroundColor = '#99a7ee';
+            titleContainer.style.color = '#fff';
+            titleContainer.style.textAlign = 'center';
+            titleContainer.style.marginTop = '-2.25rem';
+            titleContainer.style.marginLeft = '-2.25rem';
+            titleContainer.style.marginRight = '-2.25rem';
+            titleContainer.style.marginBottom = '1.0rem';
+            titleContainer.style.padding = '0.75rem';
+            titleContainer.style.fontWeight = 'bold';
+            titleContainer.style.fontSize = '16px';
+            titleContainer.textContent = 'Artwork Extractor for Genius';
+            popup.insertBefore(titleContainer, popup.firstChild);
+
+            const sectionHeading = document.createElement('div');
+            sectionHeading.textContent = 'Select Cover Art to Remove';
+            sectionHeading.style.fontWeight = 'bold';
+            sectionHeading.style.textAlign = 'center';
+            sectionHeading.style.marginBottom = '1.0rem';
+            popup.appendChild(sectionHeading);
+
+            const coverGrid = document.createElement('div');
+            coverGrid.style.display = 'flex';
+            coverGrid.style.flexWrap = 'wrap';
+            coverGrid.style.justifyContent = 'space-between';
+            coverGrid.style.gap = '0.5rem';
+            coverGrid.style.marginTop = '0.5rem';
+            coverGrid.style.marginBottom = '1rem';
+            popup.appendChild(coverGrid);
+
+            const selectedUrls = new Set();
+
+            for (const [url, songGroup] of coverUrlMap.entries()) {
+                const wrapper = document.createElement('div');
+                wrapper.style.border = '5px solid transparent';
+                wrapper.style.cursor = 'pointer';
+                wrapper.style.width = '49%';
+
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = songGroup[0].title || 'Cover';
+                img.style.objectFit = 'cover';
+
+                const countLabel = document.createElement('div');
+                countLabel.textContent = `${songGroup.length} Track${songGroup.length === 1 ? '' : 's'}`;
+                countLabel.style.fontSize = '0.85rem';
+                countLabel.style.textAlign = 'center';
+
+                wrapper.appendChild(img);
+                wrapper.appendChild(countLabel);
+                coverGrid.appendChild(wrapper);
+
+                wrapper.addEventListener('click', () => {
+                    if (selectedUrls.has(url)) {
+                        selectedUrls.delete(url);
+                        wrapper.style.border = '5px solid transparent';
+                    } else {
+                        selectedUrls.add(url);
+                        wrapper.style.border = '5px solid #99a7ee';
+                    }
+                });
+            }
+
+            const buttonRow = document.createElement('div');
+            buttonRow.style.display = 'flex';
+            buttonRow.style.gap = '0.5rem';
+            buttonRow.style.marginTop = '0.5rem';
+
+            const cancelButton = document.createElement('button');
+            cancelButton.className = smallButton.className;
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => {
+                document.body.removeChild(overlay);
+            });
+
+            const saveButton = document.createElement('button');
+            saveButton.className = smallButton.className;
+            saveButton.type = 'submit';
+            saveButton.textContent = 'Save';
+            saveButton.addEventListener('click', async () => {
+                const affectedSongs = songs.filter(song => selectedUrls.has(song.custom_song_art_image_url));
+
+                affectedSongs.forEach((song, index) => {
+                    setTimeout(async () => {
+                        let updateData = {};
+
+                        if (metadataUpdate.coverArt) {
+                            console.log('Removing cover art for song:', song);
+                            updateData.custom_song_art_image_url = null;
+                        }
+
+                        await updateSongMetadata2(song, updateData);
+                    }, index * delay);
+                });
+
+                document.body.removeChild(overlay);
+
+                cleanupButton.style.display = 'none';
+
+                const albumButtons = document.querySelectorAll('.square_button.u-bottom_margin');
+                albumButtons.forEach((button, index) => {
+                    if (index >= 2) button.remove();
+                });
+
+                const expandText = document.querySelector('span.expand-text');
+                if (expandText) expandText.remove();
+
+                setTimeout(() => {
+                    main();
+                }, 1000);
+
+            });
+
+            buttonRow.appendChild(saveButton);
+            buttonRow.appendChild(cancelButton);
+            popup.appendChild(buttonRow);
+            overlay.appendChild(popup);
+            document.body.appendChild(overlay);
+        }
+
+        cleanupButton.addEventListener('click', async () => {
+            const delay = 50;
+
+            if (actionType === "CoverArt") {
+                showCoverArtPopup(songs, metadataUpdate, delay);
+                return;
+            }
+
+            songs.forEach((song, index) => {
+                setTimeout(async () => {
+                    let updateData = {};
+
+                    if (metadataUpdate.renameLabels && song._updated_custom_performances) {
+                        updateData.custom_performances = song._updated_custom_performances;
+                    }
+
+                    if (metadataUpdate.writerArtists && song._updated_writer_artists) {
+                        updateData.writer_artists = song._updated_writer_artists;
+                    }
+
+                    await updateSongMetadata2(song, updateData);
+                }, index * delay);
+            });
+
+            cleanupButton.style.display = 'none';
+
+            setTimeout(() => {
+                main();
+            }, 1000);
+        });
+        stickyToolbarLeft.appendChild(cleanupButton);
     }
 
 });
