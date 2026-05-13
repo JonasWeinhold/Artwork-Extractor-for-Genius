@@ -2096,7 +2096,7 @@ chrome.storage.local.get([
                     { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
                     { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
                     { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
-                    { label: null, openTag: null, closeTag: null, hoverText: null },
+                    { label: "Parentheses", openTag: "(", closeTag: ")", hoverText: "Parentheses" },
                     {
                         label: "Diacritics",
                         isDropdown: true,
