@@ -12,8 +12,7 @@ chrome.storage.local.get([
     'isGeniusAlbumSongCreditsButton',
     'isGeniusAlbumFollowButton',
     'isGeniusAlbumCleanupButton',
-    'functionOrder',
-    'isGeniusAlbumNewPage'
+    'functionOrder'
 ], function (result) {
     const isGeniusAlbumAlbumPage = result.isGeniusAlbumAlbumPage ?? true;
     const isGeniusAlbumAlbumPageZwsp = result.isGeniusAlbumAlbumPageZwsp ?? true;
@@ -27,7 +26,6 @@ chrome.storage.local.get([
     const isGeniusAlbumSongCreditsButton = result.isGeniusAlbumSongCreditsButton ?? true;
     const isGeniusAlbumFollowButton = result.isGeniusAlbumFollowButton ?? true;
     const isGeniusAlbumCleanupButton = result.isGeniusAlbumCleanupButton ?? true;
-    const isGeniusAlbumNewPage = result.isGeniusAlbumNewPage ?? false;
 
 
     if (result['Services/genius_album.js'] === false) {
@@ -43,7 +41,9 @@ chrome.storage.local.get([
 
     async function main() {
         const isAlbum = /https:\/\/(genius\.com|genius-staging\.com)\/albums\/[^/]+\/[^/]+$/.test(window.location.href);
-        const isAlbumNew = /https:\/\/(genius\.com|genius-staging\.com)\/albums\/[^/]+\/[^/?]+\?react=1$/.test(window.location.href);
+        //const isAlbumNew = /https:\/\/(genius\.com|genius-staging\.com)\/albums\/[^/]+\/[^/?]+\?react=1$/.test(window.location.href);
+        const isAlbumNew = Array.from(document.querySelectorAll("button")).some(btn => btn.textContent.includes("View Old Album Page"));
+
 
         if (isAlbumNew) {
             const userId = getId("currentUser");
@@ -64,19 +64,24 @@ chrome.storage.local.get([
 
             if (isGeniusAlbumUploadCover) uploadAlbumCover(albumId, albumData);
 
+            if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPage(songIds, songDataFunctions);
 
-            const songDataAlbum = await Promise.all(
-                songIds.map(async songId => {
-                    const { song: songData } = await getApiData(songId, "songs");
-                    return songData;
-                })
-            );
-            if (!songDataAlbum) return;
 
-            if (isGeniusAlbumFollowButton) followButtonAlbumPage(songDataAlbum, albumData);
-            if (isGeniusAlbumCleanupButton) cleanupMetadata(songDataAlbum, userData);
-            if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(songDataAlbum, userData);
+            async function songDataFunctions() {
+                const songDataAlbum = await Promise.all(
+                    songIds.map(async songId => {
+                        const { song: songData } = await getApiData(songId, "songs");
+                        return songData;
+                    })
+                );
+                if (!songDataAlbum) return;
 
+                if (isGeniusAlbumFollowButton) followButtonAlbumPage(songDataAlbum, albumData);
+                if (isGeniusAlbumCleanupButton) cleanupMetadata(songDataAlbum, userData);
+                if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(songDataAlbum, userData);
+            }
+
+            await songDataFunctions();
 
 
 
@@ -92,7 +97,7 @@ chrome.storage.local.get([
             if (isGeniusAlbumUploadCover) monitorCover(albumId);
 
             getSongData(document.documentElement.innerHTML).then(json => {
-                if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPage(json);
+                if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPageOld(json);
                 if (isGeniusAlbumFollowButton) followButtonAlbumPageOld(json);
                 if (isGeniusAlbumCleanupButton) cleanupMetadataOld(userId, userRoles, json);
                 if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklistOld(userRoles, json);
@@ -198,23 +203,6 @@ chrome.storage.local.get([
             return;
         }
     });
-
-    if (isGeniusAlbumNewPage) {
-        document.addEventListener('click', function (event) {
-            const link = event.target.closest('a');
-            if (!link) return;
-
-            if ([...link.classList].some(cls => cls.startsWith('OptOutButton__Container-'))) return;
-
-            const href = link.href;
-            if (!href.startsWith('https://genius.com/albums/')) return;
-            if (href.includes('react=1')) return;
-
-            event.preventDefault();
-            const newUrl = href + (href.includes('?') ? '&' : '?') + 'react=1';
-            location.href = newUrl;
-        });
-    }
 
     new MutationObserver(() => {
         document.querySelector('.global_search-search_results')?.addEventListener('click', (event) => {
@@ -681,8 +669,8 @@ chrome.storage.local.get([
         const { stickyToolbarLeft, smallButton } = getDomElements();
         if (!stickyToolbarLeft || !smallButton) return;
 
-        const existingFollowButton = [...stickyToolbarLeft.querySelectorAll("button")].find(btn => ["Follow", "Following", "Loading…"].includes(btn.textContent.trim()));
-        if (existingFollowButton) existingFollowButton.remove();
+        const existingButton = [...stickyToolbarLeft.querySelectorAll("button")].find(btn => ["Follow", "Following", "Loading…"].includes(btn.textContent.trim()));
+        if (existingButton) existingButton.remove();
 
         const followButton = document.createElement("button");
         followButton.type = "button";
@@ -1371,7 +1359,7 @@ chrome.storage.local.get([
     //////////                                METADATA EDITOR                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function songCreditsButtonAlbumPage(songData) {
+    function songCreditsButtonAlbumPageOld(songData) {
         console.log(songData);
         const albumAdminMenu = document.querySelector('album-admin-menu');
 
@@ -3747,6 +3735,2674 @@ chrome.storage.local.get([
                 }
             }
         }
+    }
+
+    function songCreditsButtonAlbumPage(songIds, songDataFunctions) {
+        console.log("Run function songCreditsButtonAlbumPage()");
+
+        const { stickyToolbarLeft, smallButton } = getDomElements();
+        if (!stickyToolbarLeft || !smallButton) return;
+
+        const existingButton = [...stickyToolbarLeft.querySelectorAll("button")].find(btn => ["Song Credits"].includes(btn.textContent.trim()));
+        if (existingButton) existingButton.remove();
+
+        function extractTrackNumbers() {
+            const trackContainers = document.querySelectorAll('a[class^="Track__Container-"]');
+
+            const rawTrackNumbers = [];
+            const trackNumbers = [];
+
+            let currentTrackNumber = 0;
+
+            trackContainers.forEach(container => {
+                const numberElement = container.querySelector('div[class*="Track__Number-"]');
+                const trackNumber = numberElement ? numberElement.textContent.trim() : '';
+
+                rawTrackNumbers.push(trackNumber);
+
+                if (trackNumber && !isNaN(trackNumber)) {
+                    currentTrackNumber = parseInt(trackNumber, 10);
+                } else {
+                    currentTrackNumber += 1;
+                }
+
+                trackNumbers.push(currentTrackNumber);
+            });
+
+            return { rawTrackNumbers, trackNumbers };
+        }
+
+        const creditsButton = document.createElement("button");
+        creditsButton.type = "button";
+        creditsButton.className = smallButton.className;
+        creditsButton.textContent = "Song Credits";
+        stickyToolbarLeft.appendChild(creditsButton);
+
+        let creditsState = {};
+        creditsButton.addEventListener("click", async () => {
+            creditsState = {
+                roleIndex: 0,
+                activeTagsList: undefined,
+                primaryArtistsArray: [],
+                featuredArtistsArray: [],
+                producersArray: [],
+                writersArray: [],
+                youtubeLinks: [],
+                soundcloudLinks: [],
+                primaryTagsArray: [],
+                secondaryTagsArray: [],
+                releaseDateArray: [],
+                recordedArray: [],
+                relationshipArray: [],
+                geniusLinks: [],
+                languageArray: [],
+                additionalCreditsArray: [],
+                additionalRolesArray: [],
+                artistRolesArray: []
+            };
+
+            const { rawTrackNumbers, trackNumbers } = extractTrackNumbers();
+
+            const modal = createModal(songIds, rawTrackNumbers, trackNumbers, creditsState);
+
+            const songDataAlbum = await Promise.all(
+                songIds.map(async songId => {
+                    const { song: songData } = await getApiData(songId, "songs");
+                    return songData;
+                })
+            );
+            if (!songDataAlbum) return;
+
+            modal.saveButton.disabled = false;
+            modal.saveButton.style.backgroundColor = "#24c609";
+            modal.saveButton.style.cursor = "pointer";
+
+            modal.cancelButton.addEventListener("click", () => {
+                modal.overlay.remove();
+                document.body.style.overflow = "";
+            });
+
+
+            modal.saveButton.addEventListener('click', async (event) => {
+                const checkboxStates = {
+                    tracklistIndividual: document.querySelector('#tracklist_individual')?._checked,
+                    overwritePrimaryArtists: document.querySelector('#overwrite_primary_artists')?.checked,
+                    overwriteFeaturedArtists: document.querySelector('#overwrite_featured_artists')?.checked,
+                    overwriteProducers: document.querySelector('#overwrite_producers')?.checked,
+                    overwriteWriters: document.querySelector('#overwrite_writers')?.checked,
+                    overwriteYouTube: document.querySelector('#overwrite_youtube_links')?.checked,
+                    overwriteSoundCloud: document.querySelector('#overwrite_soundcloud_links')?.checked,
+                    overwritePrimaryTag: document.querySelector('#overwrite_primary_tag')?.checked,
+                    overwriteTags: document.querySelector('#overwrite_tags')?.checked,
+                    overwriteReleaseDate: document.querySelector('#overwrite_release_date')?.checked,
+                    overwriteRecorded: document.querySelector('#overwrite_recorded_at')?.checked,
+                    overwriteRelationship: document.querySelector('#overwrite_related_album')?.checked,
+                    removePrimaryArtists: document.querySelector('#remove_primary_artists')?.checked,
+                    removeFeaturedArtists: document.querySelector('#remove_featured_artists')?.checked,
+                    removeProducers: document.querySelector('#remove_producers')?.checked,
+                    removeWriters: document.querySelector('#remove_writers')?.checked,
+                    removeYouTube: document.querySelector('#remove_youtube_links')?.checked,
+                    removeSoundCloud: document.querySelector('#remove_soundcloud_links')?.checked,
+                    removePrimaryTag: document.querySelector('#remove_primary_tag')?.checked,
+                    removeTags: document.querySelector('#remove_tags')?.checked,
+                    removeReleaseDate: document.querySelector('#remove_release_date')?.checked,
+                    removeRecorded: document.querySelector('#remove_recorded_at')?.checked,
+                    removeRelationship: document.querySelector('#remove_related_album')?.checked
+                };
+
+                for (let i = 0; i <= creditsState.roleIndex - 1; i++) {
+                    checkboxStates[`overwriteAdditionalRole${i}`] = document.querySelector(`#overwrite_additional_role_${i}`)?.checked;
+                    checkboxStates[`removeAdditionalRole${i}`] = document.querySelector(`#remove_additional_role_${i}`)?.checked;
+                }
+
+                const mainSongIds = songIds.filter((songId) => {
+                    const checkbox = document.querySelector(`#checkbox_${songId}`);
+                    return checkbox?.checked;
+                });
+                const additionalSongIds = creditsState.additionalCreditsArray.map(index => {
+                    const songs = songIds.filter(songId => {
+                        const checkbox = document.querySelector(`#checkbox_${index}_${songId}`);
+                        return checkbox?.checked;
+                    });
+                    return { index, songIds: songs };
+                });
+
+                const primaryArtistsPayload = creditsState.primaryArtistsArray.map(primary_artists => ({ id: primary_artists.id, name: primary_artists.name }));
+                const featuredArtistsPayload = creditsState.featuredArtistsArray.map(featured_artists => ({ id: featured_artists.id, name: featured_artists.name }));
+                const producersPayload = creditsState.producersArray.map(producer => ({ id: producer.id, name: producer.name }));
+                const writersPayload = creditsState.writersArray.map(writer => ({ id: writer.id, name: writer.name }));
+                const youtubePayload = creditsState.youtubeLinks;
+                //const soundcloudPayload = creditsState.soundcloudLinks;
+                const primaryTagPayload = creditsState.primaryTagsArray[0];
+                const secondaryTagsPayload = creditsState.secondaryTagsArray.map(tag => ({ id: tag.id, name: tag.name }));
+                const releaseDatePayload = creditsState.releaseDateArray[0];
+                const recordedPayload = creditsState.recordedArray;
+                const songRelationshipsPayload = creditsState.geniusLinks.map((songId, index) => ({
+                    type: creditsState.relationshipArray[0],
+                    song_ids: [songId]
+                }));
+                const languagePayload = creditsState.languageArray[0];
+                const additionalCreditsPayload = creditsState.additionalCreditsArray.flatMap(roleIndex => {
+                    const roles = creditsState.additionalRolesArray[roleIndex] || [];
+                    const artists = creditsState.artistRolesArray[roleIndex]?.map(a => ({ id: a.id, name: a.name })) || [];
+                    return roles.filter(r => r?.label && artists.length > 0).map(r => ({ index: roleIndex, label: r.label, artists }));
+                });
+
+                console.log('Existing SongData:', songDataAlbum);
+                console.log('Checkbox States:', checkboxStates);
+                console.log('Primary Artists:', primaryArtistsPayload);
+                console.log('Featured Artists:', featuredArtistsPayload);
+                console.log('Producers:', producersPayload);
+                console.log('Writers:', writersPayload);
+                console.log('YouTube-Links:', youtubePayload);
+                console.log('Primary Tag:', primaryTagPayload);
+                console.log('Secondary Tags:', secondaryTagsPayload);
+                console.log('Release Date:', releaseDatePayload);
+                console.log('Recorded At:', recordedPayload);
+                console.log('Song Relationships:', songRelationshipsPayload);
+                console.log('Language:', languagePayload);
+                console.log('Additional Credits:', additionalCreditsPayload);
+
+                const mainPayload = {};
+                const additionalPayload = {};
+                const finalPayload = {};
+
+                for (let i = 0; i < mainSongIds.length; i++) {
+                    const songId = mainSongIds[i];
+                    const existingSongData = songDataAlbum.find(song => song.id === songId);
+
+                    const payload = await processMainPayload(
+                        songId,
+                        existingSongData,
+                        i + 1,
+                        mainSongIds.length,
+                        checkboxStates,
+                        primaryArtistsPayload,
+                        featuredArtistsPayload,
+                        producersPayload,
+                        writersPayload,
+                        youtubePayload[i],
+                        primaryTagPayload,
+                        secondaryTagsPayload,
+                        releaseDatePayload,
+                        recordedPayload,
+                        songRelationshipsPayload[i],
+                        languagePayload
+                    );
+
+                    if (!mainPayload[songId]) mainPayload[songId] = [];
+                    mainPayload[songId].push(payload);
+                }
+
+                if (checkboxStates.tracklistIndividual) {
+                    for (const entry of additionalSongIds) {
+                        const { index, songIds } = entry;
+
+                        for (let i = 0; i < songIds.length; i++) {
+                            const songId = songIds[i];
+                            const existingSongData = songDataAlbum.find(song => song.id === songId);
+
+                            const payload = await processAdditionalPayload(
+                                songId,
+                                existingSongData,
+                                i + 1,
+                                songIds.length,
+                                checkboxStates,
+                                additionalCreditsPayload.filter(r => r.index === index)
+                            );
+
+                            if (!additionalPayload[songId]) additionalPayload[songId] = [];
+                            additionalPayload[songId].push(payload);
+                        }
+                    }
+                } else {
+                    for (let i = 0; i < mainSongIds.length; i++) {
+                        const songId = mainSongIds[i];
+                        const existingSongData = songDataAlbum.find(song => song.id === songId);
+
+                        const payload = await processAdditionalPayload(
+                            songId,
+                            existingSongData,
+                            i + 1,
+                            mainSongIds.length,
+                            checkboxStates,
+                            additionalCreditsPayload
+                        );
+
+                        if (!additionalPayload[songId]) additionalPayload[songId] = [];
+                        additionalPayload[songId].push(payload);
+                    }
+                }
+
+
+                for (const songId of songIds) {
+                    const merged = { text_format: "html,markdown", song: {} };
+
+                    if (mainPayload[songId]) {
+                        mainPayload[songId].forEach(p => {
+                            Object.assign(merged.song, p.song);
+                        });
+                    }
+
+                    const existing = songDataAlbum.find(s => s.id === Number(songId))?.custom_performances || [];
+                    let finalPerformances = [...existing];
+
+                    if (additionalPayload[songId]) {
+                        additionalPayload[songId].forEach(p => {
+                            p.song.custom_performances?.forEach(role => {
+                                if (role.remove) {
+                                    finalPerformances = finalPerformances.filter(r => r.label !== role.label);
+                                }
+                            });
+                        });
+
+                        additionalPayload[songId].forEach(p => {
+                            p.song.custom_performances?.forEach(role => {
+                                if (role.overwrite) {
+                                    finalPerformances = finalPerformances.filter(r => r.label !== role.label);
+                                    finalPerformances.push({
+                                        label: role.label,
+                                        artists: [...role.artists]
+                                    });
+                                }
+                            });
+                        });
+
+                        additionalPayload[songId].forEach(p => {
+                            p.song.custom_performances?.forEach(role => {
+                                if (!role.overwrite && !role.remove) {
+                                    const existingIndex = finalPerformances.findIndex(r => r.label === role.label);
+
+                                    if (existingIndex === -1) {
+                                        finalPerformances.push({
+                                            label: role.label,
+                                            artists: [...role.artists]
+                                        });
+                                    } else {
+                                        const existingRole = finalPerformances[existingIndex];
+                                        const combinedArtists = [...existingRole.artists, ...role.artists].filter((artist, i, self) => self.findIndex(a => a.id === artist.id) === i);
+                                        finalPerformances[existingIndex].artists = combinedArtists;
+                                    }
+                                }
+                            });
+                        });
+
+                    }
+
+                    const changed = JSON.stringify(finalPerformances) !== JSON.stringify(existing);
+
+                    if (changed) {
+                        merged.song.custom_performances = finalPerformances;
+                    }
+
+                    if (Object.keys(merged.song).length > 0) {
+                        finalPayload[songId] = merged;
+
+                        console.log("Song ID: ", songId);
+                        console.log("1. Main Payload :", mainPayload[songId] || {});
+                        console.log("2. Additional Payload: ", additionalPayload[songId] || {});
+                        console.log("3. Final Payload: ", merged);
+                    }
+                }
+
+
+                async function processMainPayload(
+                    songId,
+                    existingSongData,
+                    currentIndex,
+                    totalCount,
+                    checkboxStates,
+                    primaryArtistsPayload,
+                    featuredArtistsPayload,
+                    producersPayload,
+                    writersPayload,
+                    youtubePayload,
+                    primaryTagPayload,
+                    secondaryTagsPayload,
+                    releaseDatePayload,
+                    recordedPayload,
+                    songRelationshipPayload,
+                    languagePayload
+                ) {
+
+                    let existingId = existingSongData.id;
+                    let existingPrimaryArtists = existingSongData.primary_artists;
+                    let existingFeaturedArtists = existingSongData.featured_artists;
+                    let existingProducers = existingSongData.producer_artists;
+                    let existingWriters = existingSongData.writer_artists;
+                    let existingYoutubeLink = existingSongData.youtube_url;
+                    let existingSoundcloudLink = existingSongData.soundcloud_url;
+                    let existingPrimaryTag = existingSongData.primary_tag;
+                    let existingSecondaryTags = existingSongData.tags;
+                    let existingReleaseDate = existingSongData.release_date_components;
+                    let existingRecorded = existingSongData.recording_location;
+                    let existingSongRelationships = existingSongData.song_relationships;
+                    let existingLanguage = existingSongData.language;
+                    let existingCustomPerformances = existingSongData.custom_performances;
+
+                    console.log(`Existing Credits for Song ID ${existingId}:`, { existingPrimaryArtists, existingFeaturedArtists, existingProducers, existingWriters, existingYoutubeLink, existingSoundcloudLink, existingPrimaryTag, existingSecondaryTags, existingReleaseDate, existingRecorded, existingSongRelationships, existingLanguage, existingCustomPerformances });
+
+                    const songIndex = songIds.indexOf(songId);
+
+                    const payload = {
+                        text_format: "html,markdown",
+                        song: {}
+                    };
+
+
+                    if (primaryArtistsPayload.length != 0 || checkboxStates.overwritePrimaryArtists || checkboxStates.removePrimaryArtists) {
+                        if (checkboxStates.overwritePrimaryArtists && primaryArtistsPayload) {
+                            payload.song.primary_artists = primaryArtistsPayload;
+                        } else if (checkboxStates.removePrimaryArtists && primaryArtistsPayload) {
+                            const remainingArtists = existingPrimaryArtists.filter(existingPrimaryArtist => !primaryArtistsPayload.some(removeArtist => removeArtist.id === existingPrimaryArtist.id));
+                            payload.song.primary_artists = remainingArtists.length > 0 ? remainingArtists : existingPrimaryArtists.slice(0, 1);
+                        } else {
+                            payload.song.primary_artists = [
+                                ...existingPrimaryArtists,
+                                ...primaryArtistsPayload.filter(newPrimaryArtist => !existingPrimaryArtists.some(existingPrimaryArtist => existingPrimaryArtist.id === newPrimaryArtist.id))
+                            ];
+                        }
+                    }
+
+                    if (featuredArtistsPayload.length != 0 || checkboxStates.overwriteFeaturedArtists || checkboxStates.removeFeaturedArtists) {
+                        if (checkboxStates.overwriteFeaturedArtists && featuredArtistsPayload) {
+                            payload.song.featured_artists = featuredArtistsPayload;
+                        } else if (checkboxStates.removeFeaturedArtists && featuredArtistsPayload) {
+                            const isMarkedForDeletion = featuredArtistsPayload.length === 1 && featuredArtistsPayload[0].id === 87999;
+                            if (isMarkedForDeletion) {
+                                payload.song.featured_artists = [];
+                            } else {
+                                payload.song.featured_artists = existingFeaturedArtists.filter(
+                                    existingFeaturedArtist => !featuredArtistsPayload.some(removeFeaturedArtist => removeFeaturedArtist.id === existingFeaturedArtist.id)
+                                );
+                            }
+                        } else {
+                            payload.song.featured_artists = [
+                                ...existingFeaturedArtists,
+                                ...featuredArtistsPayload.filter(
+                                    newFeaturedArtist => !existingFeaturedArtists.some(existingFeaturedArtist => existingFeaturedArtist.id === newFeaturedArtist.id)
+                                )
+                            ];
+                        }
+                    }
+
+                    if (producersPayload.length != 0 || checkboxStates.overwriteProducers || checkboxStates.removeProducers) {
+                        if (checkboxStates.overwriteProducers && producersPayload) {
+                            payload.song.producer_artists = producersPayload;
+                        } else if (checkboxStates.removeProducers && producersPayload) {
+                            const isMarkedForDeletion = producersPayload.length === 1 && producersPayload[0].id === 87999;
+                            if (isMarkedForDeletion) {
+                                payload.song.producer_artists = [];
+                            } else {
+                                payload.song.producer_artists = existingProducers.filter(
+                                    existingProducer => !producersPayload.some(removeProducer => removeProducer.id === existingProducer.id)
+                                );
+                            }
+                        } else {
+                            payload.song.producer_artists = [
+                                ...existingProducers,
+                                ...producersPayload.filter(
+                                    newProducer => !existingProducers.some(existingProducer => existingProducer.id === newProducer.id)
+                                )
+                            ];
+                        }
+                    }
+
+                    if (writersPayload.length != 0 || checkboxStates.overwriteWriters || checkboxStates.removeWriters) {
+                        if (checkboxStates.overwriteWriters && writersPayload) {
+                            payload.song.writer_artists = writersPayload;
+                        } else if (checkboxStates.removeWriters && writersPayload) {
+                            const isMarkedForDeletion = writersPayload.length === 1 && writersPayload[0].id === 87999;
+                            if (isMarkedForDeletion) {
+                                payload.song.writer_artists = [];
+                            } else {
+                                payload.song.writer_artists = existingWriters.filter(
+                                    existingWriter => !writersPayload.some(removeWriter => removeWriter.id === existingWriter.id)
+                                );
+                            }
+                        } else {
+                            payload.song.writer_artists = [
+                                ...existingWriters,
+                                ...writersPayload.filter(
+                                    newWriter => !existingWriters.some(existingWriter => existingWriter.id === newWriter.id)
+                                )
+                            ];
+                        }
+                    }
+
+                    if (youtubePayload || checkboxStates.overwriteYouTube || checkboxStates.removeYouTube) {
+                        if (checkboxStates.overwriteYouTube && youtubePayload) {
+                            payload.song.youtube_url = youtubePayload;
+                        } else if (checkboxStates.removeYouTube && creditsState.youtubeLinks === "Delete") {
+                            payload.song.youtube_url = null;
+                        } else if (!existingYoutubeLink) {
+                            payload.song.youtube_url = youtubePayload;
+                        }
+                    }
+
+                    if (primaryTagPayload || checkboxStates.overwritePrimaryTag || checkboxStates.removePrimaryTag) {
+                        if (checkboxStates.overwritePrimaryTag && primaryTagPayload) {
+                            existingSecondaryTags = existingSecondaryTags.filter(tag => tag.id !== existingPrimaryTag.id);
+                            payload.song.primary_tag_id = primaryTagPayload;
+                        } else if (checkboxStates.removePrimaryTag && primaryTagPayload) {
+                            existingSecondaryTags = existingSecondaryTags.filter(tag => !Object.values(primaryTagIds).includes(tag.id));
+                            payload.song.primary_tag_id = primaryTagPayload;
+                        } else {
+                            payload.song.primary_tag_id = primaryTagPayload;
+                        }
+                    }
+
+                    if (secondaryTagsPayload.length != 0 || checkboxStates.overwriteTags || checkboxStates.removeTags || checkboxStates.overwritePrimaryTag || checkboxStates.removePrimaryTag) {
+                        if (checkboxStates.overwriteTags && secondaryTagsPayload) {
+                            payload.song.tags = secondaryTagsPayload;
+                        } else if (checkboxStates.removeTags && secondaryTagsPayload) {
+                            payload.song.tags = existingSecondaryTags.filter(existingSecondaryTag => !secondaryTagsPayload.some(removeTag => removeTag.id === existingSecondaryTag.id));
+                        } else {
+                            payload.song.tags = [...existingSecondaryTags, ...secondaryTagsPayload.filter(newTag => !existingSecondaryTags.some(existingSecondaryTag => existingSecondaryTag.id === newTag.id))];
+                        }
+                    }
+
+                    if ((releaseDatePayload?.day != null || releaseDatePayload?.month != null || releaseDatePayload?.year != null) || checkboxStates.overwriteReleaseDate || checkboxStates.removeReleaseDate) {
+                        if (checkboxStates.overwriteReleaseDate && (releaseDatePayload?.day != null || releaseDatePayload?.month != null || releaseDatePayload?.year != null)) {
+                            payload.song.release_date_components = {
+                                day: releaseDatePayload?.day || null,
+                                month: releaseDatePayload?.month || null,
+                                year: releaseDatePayload?.year || null
+                            };
+                        } else if (checkboxStates.removeReleaseDate) {
+                            payload.song.release_date_components = {
+                                day: (releaseDatePayload?.day === 31) ? null : existingReleaseDate?.day || null,
+                                month: (releaseDatePayload?.month === 12) ? null : existingReleaseDate?.month || null,
+                                year: (releaseDatePayload?.year === 1900) ? null : existingReleaseDate?.year || null
+                            };
+                        } else {
+                            const hasPayloadDay = releaseDatePayload?.day != null;
+                            const hasPayloadMonth = releaseDatePayload?.month != null;
+                            const hasPayloadYear = releaseDatePayload?.year != null;
+
+                            const hasExistingDay = existingReleaseDate?.day != null;
+                            const hasExistingMonth = existingReleaseDate?.month != null;
+                            const hasExistingYear = existingReleaseDate?.year != null;
+
+                            if (hasExistingYear && hasExistingMonth && hasExistingDay) {
+                                payload.song.release_date_components = {
+                                    day: existingReleaseDate.day,
+                                    month: existingReleaseDate.month,
+                                    year: existingReleaseDate.year
+                                };
+                            } else if (hasExistingYear && hasExistingMonth) {
+                                const sameMonth = releaseDatePayload.month === existingReleaseDate?.month;
+                                const sameYear = releaseDatePayload.year === existingReleaseDate?.year;
+
+                                payload.song.release_date_components = {
+                                    day: (sameMonth && sameYear) ? releaseDatePayload.day || existingReleaseDate?.day || null : existingReleaseDate?.day || null,
+                                    month: existingReleaseDate.month,
+                                    year: existingReleaseDate.year
+                                };
+                            } else if (hasExistingYear) {
+                                const sameYear = releaseDatePayload.year === existingReleaseDate?.year;
+
+                                payload.song.release_date_components = {
+                                    day: sameYear ? releaseDatePayload.day || existingReleaseDate?.day || null : existingReleaseDate?.day || null,
+                                    month: sameYear ? releaseDatePayload.month || existingReleaseDate?.month || null : existingReleaseDate?.month || null,
+                                    year: existingReleaseDate.year
+                                };
+                            } else {
+                                payload.song.release_date_components = {
+                                    day: releaseDatePayload?.day || null,
+                                    month: releaseDatePayload?.month || null,
+                                    year: releaseDatePayload?.year || null
+                                };
+                            }
+                        }
+                    }
+
+                    if (recordedPayload.length != 0 || checkboxStates.overwriteRecorded || checkboxStates.removeRecorded) {
+                        if (checkboxStates.overwriteRecorded && recordedPayload) {
+                            payload.song.recording_location = recordedPayload;
+                        } else if (checkboxStates.removeRecorded && recordedPayload === "Delete") {
+                            payload.song.recording_location = null;
+                        } else if (!existingRecorded) {
+                            payload.song.recording_location = recordedPayload;
+                        }
+                    }
+
+                    if (songRelationshipPayload || checkboxStates.overwriteRelationship || checkboxStates.removeRelationship) {
+                        if (checkboxStates.overwriteRelationship && songRelationshipPayload) {
+                            const existingRelationships = existingSongRelationships.map(rel => ({
+                                type: rel.type,
+                                song_ids: rel.songs?.map(song => song.id) || []
+                            }));
+
+                            payload.song.song_relationships_by_id = existingRelationships.map(rel => ({
+                                type: rel.type,
+                                song_ids: [...rel.song_ids]
+                            }));
+
+                            const newRelationship = {
+                                type: songRelationshipPayload.type,
+                                song_ids: songRelationshipPayload.song_ids
+                            };
+
+                            const relationship = payload.song.song_relationships_by_id.find(rel => rel.type === newRelationship.type);
+                            relationship.song_ids = [...newRelationship.song_ids];
+                        } else if (checkboxStates.removeRelationship && songRelationshipPayload) {
+
+                            const existingRelationships = existingSongRelationships.map(rel => ({
+                                type: rel.type,
+                                song_ids: rel.songs?.map(song => song.id) || []
+                            }));
+
+                            payload.song.song_relationships_by_id = existingRelationships.map(rel => ({
+                                type: rel.type,
+                                song_ids: [...rel.song_ids]
+                            }));
+
+                            const removeRelationship = {
+                                type: songRelationshipPayload.type,
+                                song_ids: songRelationshipPayload.song_ids
+                            };
+
+                            const relationship = payload.song.song_relationships_by_id.find(rel => rel.type === removeRelationship.type);
+
+                            if (removeRelationship.song_ids.includes("Delete")) {
+                                relationship.song_ids = [];
+                            } else {
+                                relationship.song_ids = relationship.song_ids.filter(id => !removeRelationship.song_ids.includes(id));
+                            }
+                        } else {
+                            const existingRelationships = existingSongRelationships.map(rel => ({
+                                type: rel.type,
+                                song_ids: rel.songs?.map(song => song.id) || []
+                            }));
+
+                            payload.song.song_relationships_by_id = existingRelationships.map(rel => ({
+                                type: rel.type,
+                                song_ids: [...rel.song_ids]
+                            }));
+
+                            const newRelationship = {
+                                type: songRelationshipPayload.type,
+                                song_ids: songRelationshipPayload.song_ids
+                            };
+
+                            const relationship = payload.song.song_relationships_by_id.find(rel => rel.type === newRelationship.type);
+                            relationship.song_ids = [...new Set([...relationship.song_ids, ...newRelationship.song_ids])];
+                        }
+
+                    }
+
+                    if (languagePayload) {
+                        payload.song.language = languagePayload;
+                    }
+
+                    return payload;
+                }
+
+                async function processAdditionalPayload(
+                    songId,
+                    existingSongData,
+                    currentIndex,
+                    totalCount,
+                    checkboxStates,
+                    additionalCreditsPayload
+                ) {
+                    const payload = {
+                        text_format: "html,markdown",
+                        song: { custom_performances: [] }
+                    };
+
+                    additionalCreditsPayload.forEach(role => {
+                        const rowIndex = role.index;
+
+                        payload.song.custom_performances.push({
+                            label: role.label,
+                            artists: role.artists.map(a => ({ id: a.id, name: a.name })),
+                            overwrite: checkboxStates[`overwriteAdditionalRole${rowIndex}`],
+                            remove: checkboxStates[`removeAdditionalRole${rowIndex}`]
+                        });
+                    });
+
+                    return payload;
+                }
+
+
+                let totalToSave = songIds.length;
+                let currentIndex = 1;
+
+                for (const songId of songIds) {
+                    const payload = finalPayload[songId];
+                    const song = songDataAlbum.find(s => s.id === Number(songId));
+
+                    modal.status.textContent = "";
+                    modal.status.appendChild(document.createTextNode("Saving Track "));
+
+                    const strong1 = document.createElement("strong");
+                    strong1.textContent = currentIndex;
+                    modal.status.appendChild(strong1);
+
+                    modal.status.appendChild(document.createTextNode(" of "));
+
+                    const strong2 = document.createElement("strong");
+                    strong2.textContent = totalToSave;
+                    modal.status.appendChild(strong2);
+
+                    modal.status.appendChild(document.createTextNode("..."));
+
+                    if (payload) {
+                        await updateSongMetadata(song, payload.song);
+                    }
+
+                    currentIndex++;
+                }
+
+                setTimeout(async () => {
+                    document.body.removeChild(modal.overlay);
+                    document.body.style.overflow = "";
+                    await songDataFunctions();
+                }, 1000);
+
+            });
+        });
+
+
+
+        function createModal(songIds, rawTrackNumbers, trackNumbers, creditsState) {
+            function createForm() {
+                document.body.style.overflow = "hidden";
+
+                const overlay = document.createElement('div');
+                Object.assign(overlay.style, {
+                    position: 'fixed',
+                    inset: '0',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: '1000'
+                });
+
+                const form = document.createElement('form');
+                Object.assign(form.style, {
+                    backgroundColor: '#fff',
+                    width: '80%',
+                    maxWidth: '800px',
+                    height: '93%',
+                    boxSizing: 'border-box',
+                    display: 'flex',
+                    flexDirection: 'column'
+                });
+
+                overlay.appendChild(form);
+                return { overlay, form };
+            }
+
+            function createControls(overlay) {
+                const controls = document.createElement('div');
+                Object.assign(controls.style, {
+                    position: 'absolute',
+                    top: '2.25rem',
+                    left: 'calc(50% + 400px + 0.75rem)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                    pointerEvents: 'auto'
+                });
+
+                function createButtonField({ aria, label, color, svgPath, viewBox }) {
+                    const field = document.createElement('label');
+                    Object.assign(field.style, {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        userSelect: 'none'
+                    });
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.ariaLabel = aria;
+                    Object.assign(btn.style, {
+                        width: '2.25rem',
+                        height: '2.25rem',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: color
+                    });
+
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.setAttribute('viewBox', viewBox);
+                    Object.assign(svg.style, {
+                        width: '0.75rem',
+                        height: '0.75rem'
+                    });
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', svgPath);
+                    path.style.fill = 'white';
+
+                    svg.appendChild(path);
+                    btn.appendChild(svg);
+
+                    const text = document.createElement('div');
+                    Object.assign(text.style, {
+                        marginTop: '9px',
+                        fontSize: '0.75rem',
+                        color: '#fff',
+                        textAlign: 'center'
+                    });
+                    text.textContent = label;
+
+                    field.appendChild(btn);
+                    field.appendChild(text);
+
+                    return { field, btn };
+                }
+
+                const save = createButtonField({
+                    aria: 'Save',
+                    label: 'Save',
+                    color: '#999',
+                    svgPath: 'M8.83 16.2L0 7.97l2.06-2.21 6.62 6.17L19.79 0 22 2.06 8.83 16.2',
+                    viewBox: "0 0 22 16.2"
+                });
+
+                const cancel = createButtonField({
+                    aria: 'Cancel',
+                    label: 'Cancel',
+                    color: '#ff3b30',
+                    svgPath: 'M22 1.39L20.61 0 11 9.62 1.39 0 0 1.39 9.62 11 0 20.61 1.39 22 11 12.38 20.61 22 22 20.61 12.38 11 22 1.39',
+                    viewBox: "0 0 22 22"
+                });
+
+                save.btn.disabled = true;
+                save.btn.style.cursor = "not-allowed";
+
+                controls.appendChild(save.field);
+                controls.appendChild(cancel.field);
+                overlay.appendChild(controls);
+
+                return { controls, saveButton: save.btn, cancelButton: cancel.btn };
+            }
+
+            function createContent(form) {
+                form.style.overflowX = "hidden";
+
+                function createNavbar(form) {
+                    const navbar = document.createElement("div");
+                    Object.assign(navbar.style, {
+                        background: "black",
+                        color: "white",
+                        padding: "0.5rem 1rem",
+                        zIndex: "9",
+                        display: "grid",
+                        gridTemplateColumns: "25px 350px auto 350px 25px",
+                        placeItems: "center"
+                    });
+
+                    function createArrow(pathD) {
+                        const wrapper = document.createElement("div");
+                        Object.assign(wrapper.style, {
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center"
+                        });
+
+                        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                        svg.setAttribute("viewBox", "0 0 24 24");
+
+                        Object.assign(svg.style, {
+                            width: "22px",
+                            height: "22px",
+                            display: "block"
+                        });
+
+                        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        path.setAttribute("d", pathD);
+
+                        Object.assign(path.style, {
+                            fill: "white",
+                            stroke: "white",
+                            strokeLinejoin: "round"
+                        });
+
+                        svg.appendChild(path);
+                        wrapper.appendChild(svg);
+                        return wrapper;
+                    }
+
+                    const leftArrow = createArrow("M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z");
+                    const rightArrow = createArrow("M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z");
+
+                    const divider = document.createElement("div");
+                    Object.assign(divider.style, {
+                        width: "2px",
+                        height: "1.25rem",
+                        background: "white",
+                        opacity: "0.6"
+                    });
+
+                    const tabMain = document.createElement("div");
+                    tabMain.textContent = "Main Credits";
+                    Object.assign(tabMain.style, {
+                        padding: "0.25rem 0.5rem",
+                        cursor: "pointer"
+                    });
+
+                    const tabAdditional = document.createElement("div");
+                    tabAdditional.textContent = "Additional Credits";
+                    Object.assign(tabAdditional.style, {
+                        padding: "0.25rem 0.5rem",
+                        cursor: "pointer"
+                    });
+
+                    navbar.appendChild(leftArrow);
+                    navbar.appendChild(tabMain);
+                    navbar.appendChild(divider);
+                    navbar.appendChild(tabAdditional);
+                    navbar.appendChild(rightArrow);
+
+                    form.appendChild(navbar);
+                    return { leftArrow, rightArrow, tabMain, tabAdditional };
+                }
+
+                function createPages(form) {
+                    const contentWrapper = document.createElement("div");
+                    Object.assign(contentWrapper.style, {
+                        display: "flex",
+                        width: "200%",
+                        transition: "transform 0.25s ease",
+                        overflowY: "hidden"
+                    });
+
+                    const pageStyle = {
+                        width: "50%",
+                        padding: "2.25rem",
+                        boxSizing: "border-box",
+                        overflowY: "auto"
+                    };
+
+                    const page1 = document.createElement("div");
+                    Object.assign(page1.style, pageStyle);
+                    const page2 = document.createElement("div");
+                    Object.assign(page2.style, pageStyle);
+
+                    contentWrapper.appendChild(page1);
+                    contentWrapper.appendChild(page2);
+
+                    form.appendChild(contentWrapper);
+                    return { contentWrapper, page1, page2 };
+                }
+
+                function createStatus(form) {
+                    const status = document.createElement("div");
+                    Object.assign(status.style, {
+                        padding: "1rem 2.25rem",
+                        zIndex: "9",
+                        marginTop: "auto"
+                    });
+
+                    form.appendChild(status);
+                    return { status };
+                }
+
+                function activate(tab) {
+                    const isMain = tab === "main";
+                    contentWrapper.style.transform = isMain ? "translateX(0%)" : "translateX(-50%)";
+                    tabMain.style.borderBottom = isMain ? "2px solid white" : "none";
+                    tabAdditional.style.borderBottom = isMain ? "none" : "2px solid white";
+                    tabMain.style.opacity = isMain ? "1" : "0.6";
+                    tabAdditional.style.opacity = isMain ? "0.6" : "1";
+                    leftArrow.style.opacity = isMain ? "0.4" : "1";
+                    rightArrow.style.opacity = isMain ? "1" : "0.4";
+                }
+
+                const { leftArrow, rightArrow, tabMain, tabAdditional } = createNavbar(form);
+                const { contentWrapper, page1, page2 } = createPages(form);
+                const { status } = createStatus(form);
+
+                tabMain.addEventListener("click", () => activate("main"));
+                tabAdditional.addEventListener("click", () => activate("additional"));
+                leftArrow.addEventListener("click", () => activate("main"));
+                rightArrow.addEventListener("click", () => activate("additional"));
+
+                activate("main");
+
+                return { page1, page2, status };
+            }
+
+            function createTracklist(songIds, trackNumbers, rawTrackNumbers, isPage2) {
+                const tracklistContainer = document.createElement('div');
+                tracklistContainer.className = 'tracklist_container'
+
+                const tracklistLabel = document.createElement('div');
+                tracklistLabel.className = 'text_label';
+                tracklistLabel.textContent = 'Tracklist';
+                Object.assign(tracklistLabel.style, {
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "0.35rem"
+                });
+
+                if (isPage2) {
+                    const individualTracklistButton = document.createElement("div");
+                    individualTracklistButton.id = "tracklist_individual";
+                    individualTracklistButton.textContent = "Individual Tracklist";
+                    Object.assign(individualTracklistButton.style, {
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                        display: "inline-block"
+                    });
+
+                    individualTracklistButton._checked = false;
+
+                    individualTracklistButton.addEventListener("click", () => {
+                        individualTracklistButton._checked = !individualTracklistButton._checked;
+
+                        const isIndividualMode = individualTracklistButton._checked;
+
+                        allTracksButton.style.visibility = isIndividualMode ? "hidden" : "visible";
+                        checkboxContainer.style.display = isIndividualMode ? "none" : "grid";
+
+                        document.querySelectorAll(".miniTracklist").forEach(mini => {
+                            mini.style.display = isIndividualMode ? "block" : "none";
+                        });
+
+                        individualTracklistButton.textContent = isIndividualMode ? "Combined Tracklist" : "Individual Tracklist";
+                    });
+
+                    tracklistLabel.appendChild(individualTracklistButton);
+                }
+
+
+                const allTracksButton = document.createElement('div');
+                allTracksButton.id = 'toggle_all_tracks';
+                allTracksButton.textContent = 'All / None';
+                Object.assign(allTracksButton.style, {
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    display: "inline-block"
+                });
+
+                allTracksButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const checkboxes = tracklistContainer.querySelectorAll('.styled-checkbox');
+                    const allSelected = Array.from(checkboxes).every(checkbox => checkbox.checked);
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = !allSelected;
+                        checkbox.dispatchEvent(new Event("change"));
+                    });
+                });
+
+                tracklistLabel.appendChild(allTracksButton);
+
+                const checkboxContainer = document.createElement('div');
+                Object.assign(checkboxContainer.style, {
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${Math.ceil(trackNumbers.length / Math.ceil(trackNumbers.length / 15))}, auto)`
+                });
+
+                const line = document.createElement('hr');
+                Object.assign(line.style, {
+                    border: "none",
+                    borderTop: "0.5rem solid black"
+                });
+
+                function toRoman(num) {
+                    const romanMap = [['M', 1000], ['CM', 900], ['D', 500], ['CD', 400], ['C', 100], ['XC', 90], ['L', 50], ['XL', 40], ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1],];
+                    let roman = '';
+                    romanMap.forEach(([symbol, value]) => {
+                        while (num >= value) {
+                            roman += symbol;
+                            num -= value;
+                        }
+                    });
+                    return roman;
+                }
+
+                let autoCounter = 1;
+                songIds.forEach((songId, index) => {
+                    const checkboxDiv = document.createElement('div');
+                    Object.assign(checkboxDiv.style, {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                    });
+
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = `checkbox_${songId}`;
+                    checkbox.name = `song_${songId}`;
+
+                    Object.assign(checkbox.style, {
+                        appearance: "none",
+                        border: "1px solid rgb(0,0,0)",
+                        width: "0.85rem",
+                        height: "0.85rem",
+                        backgroundColor: "white",
+                        cursor: "pointer",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center",
+                        backgroundSize: "contain"
+                    });
+
+                    const checkSvg = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
+                    const rawTrackNumber = rawTrackNumbers[index];
+                    checkbox.checked = rawTrackNumber !== "";
+                    checkbox.className = 'styled-checkbox';
+
+                    const updateCheckboxStyle = () => {
+                        if (checkbox.checked) {
+                            checkbox.style.backgroundColor = "rgb(0,0,0)";
+                            checkbox.style.backgroundImage = checkSvg;
+                        } else {
+                            checkbox.style.backgroundColor = "white";
+                            checkbox.style.backgroundImage = "none";
+                        }
+                    };
+
+                    updateCheckboxStyle();
+                    checkbox.addEventListener("change", updateCheckboxStyle);
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `checkbox_${songId}`;
+                    label.textContent = rawTrackNumber !== '' ? `${rawTrackNumber}` : toRoman(autoCounter++);
+                    Object.assign(label.style, {
+                        marginLeft: "0.25rem",
+                        textAlign: songIds.length <= 15 ? "left" : "right",
+                        width: "0.85rem",
+                        display: "inline-block",
+                        cursor: "pointer"
+                    });
+
+                    checkboxDiv.appendChild(checkbox);
+                    checkboxDiv.appendChild(label);
+                    checkboxContainer.appendChild(checkboxDiv);
+                });
+
+                tracklistContainer.appendChild(tracklistLabel);
+                tracklistContainer.appendChild(checkboxContainer);
+                tracklistContainer.appendChild(line);
+
+                return tracklistContainer;
+            }
+
+            function createMiniTracklist(songIds, roleIndex, trackNumbers, rawTrackNumbers) {
+                const tracklistContainer = document.createElement('div');
+                tracklistContainer.className = 'tracklist_container';
+                Object.assign(tracklistContainer.style, {
+                    marginBottom: "0.25rem"
+                });
+
+                const tracklistLabel = document.createElement('div');
+                tracklistLabel.className = 'text_label';
+                tracklistLabel.textContent = 'Tracklist';
+                Object.assign(tracklistLabel.style, {
+                    display: "flex",
+                    justifyContent: "space-between"
+                });
+
+                const allTracksContainer = document.createElement('div');
+                Object.assign(allTracksContainer.style, {
+                    display: "flex",
+                    alignItems: "center"
+                });
+
+                const allTracksButton = document.createElement('div');
+                allTracksButton.textContent = 'All / None';
+                Object.assign(allTracksButton.style, {
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    display: "inline-block"
+                });
+
+                allTracksButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const checkboxes = tracklistContainer.querySelectorAll('.styled-checkbox');
+                    const allSelected = Array.from(checkboxes).every(cb => cb.checked);
+                    checkboxes.forEach(cb => {
+                        cb.checked = !allSelected;
+                        cb.dispatchEvent(new Event("change"));
+                    });
+                });
+
+                allTracksContainer.appendChild(allTracksButton);
+                tracklistLabel.appendChild(allTracksContainer);
+
+                const checkboxContainer = document.createElement('div');
+                Object.assign(checkboxContainer.style, {
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${Math.ceil(trackNumbers.length / Math.ceil(trackNumbers.length / 20))}, auto)`
+                });
+
+                function toRoman(num) {
+                    const romanMap = [
+                        ['M', 1000], ['CM', 900], ['D', 500], ['CD', 400],
+                        ['C', 100], ['XC', 90], ['L', 50], ['XL', 40],
+                        ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1],
+                    ];
+                    let roman = '';
+                    romanMap.forEach(([symbol, value]) => {
+                        while (num >= value) {
+                            roman += symbol;
+                            num -= value;
+                        }
+                    });
+                    return roman;
+                }
+
+                let autoCounter = 1;
+
+                songIds.forEach((songId, index) => {
+                    const checkboxDiv = document.createElement('div');
+                    Object.assign(checkboxDiv.style, {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.85rem",
+                    });
+
+                    const checkbox = document.createElement("input");
+
+                    checkbox.type = "checkbox";
+                    checkbox.id = `checkbox_${roleIndex}_${songId}`;
+                    checkbox.name = `song_${roleIndex}_${songId}`;
+
+                    Object.assign(checkbox.style, {
+                        appearance: "none",
+                        border: "1px solid rgb(0,0,0)",
+                        width: "0.75rem",
+                        height: "0.75rem",
+                        backgroundColor: "white",
+                        cursor: "pointer",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center",
+                        backgroundSize: "contain"
+                    });
+
+                    const checkSvg = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
+
+                    const rawTrackNumber = rawTrackNumbers[index];
+                    checkbox.checked = rawTrackNumber !== "";
+                    checkbox.className = 'styled-checkbox';
+
+
+                    const updateCheckboxStyle = () => {
+                        if (checkbox.checked) {
+                            checkbox.style.backgroundColor = "rgb(0,0,0)";
+                            checkbox.style.backgroundImage = checkSvg;
+                        } else {
+                            checkbox.style.backgroundColor = "white";
+                            checkbox.style.backgroundImage = "none";
+                        }
+                    };
+
+                    updateCheckboxStyle();
+                    checkbox.addEventListener("change", updateCheckboxStyle);
+
+                    const label = document.createElement('label');
+                    label.htmlFor = checkbox.id;
+                    label.textContent = rawTrackNumber !== '' ? `${rawTrackNumber}` : toRoman(autoCounter++);
+                    Object.assign(label.style, {
+                        marginLeft: "0.15rem",
+                        width: "0.5rem",
+                        display: "inline-block",
+                        cursor: "pointer"
+                    });
+
+                    checkboxDiv.appendChild(checkbox);
+                    checkboxDiv.appendChild(label);
+                    checkboxContainer.appendChild(checkboxDiv);
+                });
+
+                tracklistContainer.appendChild(tracklistLabel);
+                tracklistContainer.appendChild(checkboxContainer);
+
+                return tracklistContainer;
+            }
+
+            function createCheckboxContainer(overwriteCheckboxId, removeCheckboxId, parentLabel) {
+                const overwriteContainer = document.createElement('div');
+                overwriteContainer.className = 'overwrite-container';
+                overwriteContainer.style.display = 'flex';
+                overwriteContainer.style.alignItems = 'center';
+
+                function styleCheckbox(checkbox) {
+                    Object.assign(checkbox.style, {
+                        appearance: "none",
+                        border: "1px solid rgb(0,0,0)",
+                        width: "0.85rem",
+                        height: "0.85rem",
+                        backgroundColor: "white",
+                        cursor: "pointer",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center",
+                        backgroundSize: "contain",
+                        marginLeft: "0.6rem"
+                    });
+                }
+
+                const checkSvg = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
+
+                function updateCheckboxStyle(checkbox) {
+                    if (checkbox.checked) {
+                        checkbox.style.backgroundColor = "rgb(0,0,0)";
+                        checkbox.style.backgroundImage = checkSvg;
+                    } else {
+                        checkbox.style.backgroundColor = "white";
+                        checkbox.style.backgroundImage = "none";
+                    }
+                }
+
+                const overwriteCheckbox = document.createElement('input');
+                overwriteCheckbox.type = 'checkbox';
+                overwriteCheckbox.id = overwriteCheckboxId;
+                styleCheckbox(overwriteCheckbox);
+
+                const removeCheckbox = document.createElement('input');
+                removeCheckbox.type = 'checkbox';
+                removeCheckbox.id = removeCheckboxId;
+                styleCheckbox(removeCheckbox);
+
+                const overwriteLabel = document.createElement('label');
+                overwriteLabel.htmlFor = overwriteCheckboxId;
+                overwriteLabel.textContent = "OVERWRITE";
+                Object.assign(overwriteLabel.style, {
+                    marginLeft: "0.35rem",
+                    cursor: "pointer",
+                    fontSize: "0.65rem",
+                    fontFamily: `Programme, "Programme Pan", Arial, sans-serif`,
+                    letterSpacing: "0.5px",
+                    color: "black"
+                });
+
+                const removeLabel = document.createElement('label');
+                removeLabel.htmlFor = removeCheckboxId;
+                removeLabel.textContent = "REMOVE";
+                Object.assign(removeLabel.style, {
+                    marginLeft: "0.35rem",
+                    cursor: "pointer",
+                    fontSize: "0.65rem",
+                    fontFamily: `Programme, "Programme Pan", Arial, sans-serif`,
+                    letterSpacing: "0.5px",
+                    color: "black"
+                });
+
+                function toggleCheckbox(checkedBox, otherBox) {
+                    if (checkedBox.checked) {
+                        otherBox.checked = false;
+                    }
+                    updateCheckboxStyle(checkedBox);
+                    updateCheckboxStyle(otherBox);
+                    updateLabelColors();
+                }
+
+                function updateLabelColors() {
+                    if (overwriteCheckbox.checked) {
+                        overwriteLabel.style.color = "red";
+                        removeLabel.style.color = "black";
+                    } else if (removeCheckbox.checked) {
+                        removeLabel.style.color = "red";
+                        overwriteLabel.style.color = "black";
+                    } else {
+                        overwriteLabel.style.color = "black";
+                        removeLabel.style.color = "black";
+                    }
+                }
+
+                overwriteCheckbox.addEventListener('change', () => toggleCheckbox(overwriteCheckbox, removeCheckbox));
+                removeCheckbox.addEventListener('change', () => toggleCheckbox(removeCheckbox, overwriteCheckbox));
+
+                updateCheckboxStyle(overwriteCheckbox);
+                updateCheckboxStyle(removeCheckbox);
+                updateLabelColors();
+
+                overwriteContainer.appendChild(overwriteCheckbox);
+                overwriteContainer.appendChild(overwriteLabel);
+                overwriteContainer.appendChild(removeCheckbox);
+                overwriteContainer.appendChild(removeLabel);
+                parentLabel.appendChild(overwriteContainer);
+            }
+
+            function createRemoveContainer(removeButtonId, parentLabel) {
+                const removeContainer = document.createElement('div');
+                removeContainer.className = 'remove-container';
+                Object.assign(removeContainer.style, {
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer'
+                });
+
+                const removeButton = document.createElement("span");
+                removeButton.id = removeButtonId;
+
+                Object.assign(removeButton.style, {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    width: "fit-content"
+                });
+
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("viewBox", "0 0 22 22");
+                svg.style.width = "0.75rem";
+                svg.style.height = "0.75rem";
+
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute(
+                    "d",
+                    "M22 1.39L20.61 0 11 9.62 1.39 0 0 1.39 9.62 11 0 20.61 1.39 22 11 12.38 20.61 22 22 20.61 12.38 11 22 1.39"
+                );
+                path.style.fill = "black";
+
+                svg.appendChild(path);
+                removeButton.appendChild(svg);
+
+                removeButton.addEventListener("click", () => {
+                    const inner = removeButton.closest("[data-index]");
+                    const outer = inner?.parentElement?.closest("[data-index]");
+                    const target = outer || inner;
+                    if (!target) return;
+
+                    const idx = parseInt(target.getAttribute("data-index"), 10);
+                    const pos = creditsState.additionalCreditsArray.indexOf(idx);
+                    if (pos !== -1) creditsState.additionalCreditsArray.splice(pos, 1);
+                    target.remove();
+                });
+
+
+                removeContainer.appendChild(removeButton);
+                parentLabel.appendChild(removeContainer);
+            }
+
+            function createRow(...fields) {
+                const row = document.createElement("div");
+
+                Object.assign(row.style, {
+                    display: "flex",
+                    gap: "1.5rem",
+                    width: "100%",
+                    margin: "1.75rem 0rem"
+                });
+
+                const count = fields.length;
+                let widths = [];
+
+                if (count === 1) {
+                    widths = ["50%", "50%"];
+
+                    const dummy = document.createElement("div");
+                    Object.assign(dummy.style, {
+                        width: "100%",
+                        height: "100%"
+                    });
+
+                    fields.push({ inputContainer: dummy });
+                }
+
+                if (count === 2) {
+                    widths = ["50%", "50%"];
+                }
+
+                if (count === 3) {
+                    widths = ["27.5%", "45%", "27.5%"];
+                }
+
+                fields.forEach((field, i) => {
+                    field.inputContainer.style.width = widths[i];
+                    row.appendChild(field.inputContainer);
+                });
+
+                return row;
+            }
+
+            function createInputSelectField(labelText, placeholderText) {
+                const optionSets = {
+                    "Primary Tag": [
+                        { label: "Rap", value: 1434 },
+                        { label: "Pop", value: 16 },
+                        { label: "R&B", value: 352 },
+                        { label: "Rock", value: 567 },
+                        { label: "Country", value: 413 },
+                        { label: "Electronic", value: 606 },
+                        { label: "Non-Music", value: 1452 }
+                    ],
+                    "Song Relationship": [
+                        { label: "Samples", value: "samples" },
+                        { label: "Interpolates", value: "interpolates" },
+                        { label: "Cover Of", value: "cover_of" },
+                        { label: "Remix Of", value: "remix_of" },
+                        { label: "Live Version Of", value: "live_version_of" },
+                        { label: "Translation Of", value: "translation_of" }
+                    ],
+                    "Language": [
+                        { label: "bosanski", value: "bs" },
+                        { label: "crnogorski", value: "cnr" },
+                        { label: "Deutsch", value: "de" },
+                        { label: "Österreichisches Deutsch", value: "de-at" },
+                        { label: "English", value: "en" },
+                        { label: "Español", value: "es" },
+                        { label: "Français", value: "fr" },
+                        { label: "Schweizerdeutsch", value: "gsw" },
+                        { label: "hrvatski", value: "hr" },
+                        { label: "Italiano", value: "it" },
+                        { label: "Kölsch", value: "ksh" },
+                        { label: "Македонски", value: "mk" },
+                        { label: "Nederlands", value: "nl" },
+                        { label: "Norsk", value: "no" },
+                        { label: "Polski", value: "pl" },
+                        { label: "Português", value: "pt" },
+                        { label: "Русский (Russian)", value: "ru" },
+                        { label: "srpski", value: "sr" },
+                        { label: "Svenska", value: "sv" },
+                        { label: "Türkçe", value: "tr" },
+                        { label: "o‘zbekcha", value: "uz" },
+                        { label: "Tiếng Việt", value: "vi" },
+                        { label: "简体中文 (Simplified Chinese)", value: "zh" },
+                        { label: "繁體中文 (Traditional Chinese)", value: "zh-Hant" }
+                    ]
+                };
+
+                const inputContainer = document.createElement('div');
+                Object.assign(inputContainer.style, {
+                    display: "flex",
+                    flexDirection: "column",
+                    width: "100%"
+                });
+
+                const label = document.createElement('div');
+                label.textContent = labelText;
+                Object.assign(label.style, {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    fontWeight: "600",
+                    marginBottom: "0.35rem"
+                });
+
+                if (placeholderText === "Primary Tag") {
+                    createCheckboxContainer("overwrite_primary_tag", "remove_primary_tag", label);
+                } else if (placeholderText === "Release Date") {
+                    createCheckboxContainer("overwrite_release_date", "remove_release_date", label);
+                }
+
+                inputContainer.appendChild(label);
+
+                function createClearButton(select, field) {
+                    const btn = document.createElement("span");
+                    Object.assign(btn.style, {
+                        display: "flex",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        padding: "8px",
+                        flexShrink: "0"
+                    });
+
+                    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                    svg.setAttribute("viewBox", "0 0 22 22");
+                    svg.style.width = "0.75rem";
+                    svg.style.height = "0.75rem";
+
+                    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    path.setAttribute(
+                        "d",
+                        "M22 1.39L20.61 0 11 9.62 1.39 0 0 1.39 9.62 11 0 20.61 1.39 22 11 12.38 20.61 22 22 20.61 12.38 11 22 1.39"
+                    );
+
+                    svg.appendChild(path);
+                    btn.appendChild(svg);
+
+                    btn.addEventListener("click", () => {
+                        select.value = "";
+
+                        if (placeholderText === "Primary Tag") creditsState.primaryTagsArray = [];
+                        if (placeholderText === "Song Relationship") creditsState.relationshipArray = [];
+                        if (placeholderText === "Language") creditsState.languageArray = [];
+                        if (placeholderText === "Release Date") {
+                            if (field === "month") creditsState.releaseDateArray[0].month = null;
+                            if (field === "day") creditsState.releaseDateArray[0].day = null;
+                            if (field === "year") creditsState.releaseDateArray[0].year = null;
+                        }
+
+                    });
+
+                    return btn;
+                }
+
+                function createSelect(placeholder) {
+                    const select = document.createElement("select");
+
+                    Object.assign(select.style, {
+                        appearance: "none",
+                        background: "inherit",
+                        margin: "0px 2px",
+                        padding: "8px",
+                        color: "rgb(0, 0, 0)",
+                        fontSize: "0.85rem",
+                        fontFamily: `Programme, "Programme Pan", Arial, sans-serif`,
+                        fontWeight: "100",
+                        overflowY: "auto",
+                        resize: "vertical",
+                        flexGrow: "1",
+                        minWidth: "0",
+                        boxSizing: "border-box",
+                        border: "none",
+                        outline: "none"
+                    });
+
+                    const ph = document.createElement("option");
+                    ph.value = "";
+                    ph.disabled = true;
+                    ph.selected = true;
+                    ph.textContent = placeholder;
+                    select.appendChild(ph);
+
+                    return select;
+                }
+
+                if (placeholderText === "Release Date") {
+                    const wrapperRelease = document.createElement("div");
+                    Object.assign(wrapperRelease.style, {
+                        display: "flex",
+                        justifyContent: "space-between"
+                    });
+
+                    const wrapperStyle = {
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "0.35rem",
+                        alignItems: "center",
+                        minHeight: "42px",
+                        border: "1px solid",
+                        position: "relative",
+                        padding: "4px"
+                    };
+
+                    const wrapperMonth = document.createElement("div");
+                    const wrapperDay = document.createElement("div");
+                    const wrapperYear = document.createElement("div");
+
+                    Object.assign(wrapperMonth.style, wrapperStyle);
+                    Object.assign(wrapperDay.style, wrapperStyle);
+                    Object.assign(wrapperYear.style, wrapperStyle);
+
+                    const monthSelect = createSelect("Month");
+                    [
+                        "January", "February", "March", "April", "May", "June",
+                        "July", "August", "September", "October", "November", "December"
+                    ].forEach((name, i) => {
+                        const opt = document.createElement("option");
+                        opt.value = i + 1;
+                        opt.textContent = name;
+                        monthSelect.appendChild(opt);
+                    });
+
+                    const daySelect = createSelect("Day");
+
+                    const yearSelect = createSelect("Year");
+                    const currentYear = new Date().getFullYear();
+                    for (let y = currentYear + 1; y >= 1900; y--) {
+                        const opt = document.createElement("option");
+                        opt.value = y;
+                        opt.textContent = y;
+                        yearSelect.appendChild(opt);
+                    }
+
+                    const updateDays = () => {
+                        const m = parseInt(monthSelect.value, 10);
+                        const d = parseInt(daySelect.value, 10);
+                        const y = parseInt(yearSelect.value, 10);
+
+                        const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+                        const isLeap = y =>
+                            (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+
+                        if (m === 2 && isLeap(y)) daysInMonth[1] = 29;
+
+                        const max = m ? daysInMonth[m - 1] : 31;
+
+                        daySelect.replaceChildren();
+
+                        const ph = document.createElement("option");
+                        ph.value = "";
+                        ph.disabled = true;
+                        ph.selected = true;
+                        ph.textContent = "Day";
+                        daySelect.appendChild(ph);
+
+                        for (let i = 1; i <= max; i++) {
+                            const opt = document.createElement("option");
+                            opt.value = i;
+                            opt.textContent = i;
+                            if (i === d) opt.selected = true;
+                            daySelect.appendChild(opt);
+                        }
+
+                        if (d > max) daySelect.value = "";
+                    };
+
+                    function updateReleaseDateArray() {
+                        creditsState.releaseDateArray = [{
+                            month: monthSelect.value ? parseInt(monthSelect.value, 10) : null,
+                            day: daySelect.value ? parseInt(daySelect.value, 10) : null,
+                            year: yearSelect.value ? parseInt(yearSelect.value, 10) : null
+                        }];
+                    }
+
+                    monthSelect.addEventListener("change", () => {
+                        updateDays();
+                        updateReleaseDateArray();
+                    });
+
+                    daySelect.addEventListener("change", () => {
+                        updateDays();
+                        updateReleaseDateArray();
+                    });
+
+                    yearSelect.addEventListener("change", () => {
+                        updateDays();
+                        updateReleaseDateArray();
+                    });
+
+                    updateDays();
+                    updateReleaseDateArray();
+
+                    wrapperMonth.appendChild(monthSelect);
+                    wrapperMonth.appendChild(createClearButton(monthSelect, "month"));
+
+                    wrapperDay.appendChild(daySelect);
+                    wrapperDay.appendChild(createClearButton(daySelect, "day"));
+
+                    wrapperYear.appendChild(yearSelect);
+                    wrapperYear.appendChild(createClearButton(yearSelect, "year"));
+
+                    wrapperRelease.appendChild(wrapperMonth);
+                    wrapperRelease.appendChild(wrapperDay);
+                    wrapperRelease.appendChild(wrapperYear);
+
+                    inputContainer.appendChild(wrapperRelease);
+
+                    return { inputContainer, monthSelect, daySelect, yearSelect };
+                }
+
+                const wrapper = document.createElement("div");
+                Object.assign(wrapper.style, {
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid",
+                    padding: "4px",
+                    minHeight: "2rem",
+                    gap: "0.35rem"
+                });
+
+                const select = createSelect(placeholderText);
+
+                const optionsArray = optionSets[placeholderText] || [];
+
+                optionsArray.forEach(entry => {
+                    const opt = document.createElement("option");
+                    opt.value = entry.value;
+                    opt.textContent = entry.label;
+                    select.appendChild(opt);
+                });
+
+                if (placeholderText === "Primary Tag") {
+                    select.addEventListener("change", () => {
+                        creditsState.primaryTagsArray = [select.value];
+                    });
+                }
+
+                if (placeholderText === "Song Relationship") {
+                    select.addEventListener("change", () => {
+                        creditsState.relationshipArray = [select.value];
+                    });
+                }
+
+                if (placeholderText === "Language") {
+                    select.addEventListener("change", () => {
+                        creditsState.languageArray = [select.value];
+                    });
+                }
+
+                wrapper.appendChild(select);
+                wrapper.appendChild(createClearButton(select));
+                inputContainer.appendChild(wrapper);
+
+                return { inputContainer, select };
+            }
+
+            function createInputTextField(labelText, name, placeholder) {
+                const inputContainer = document.createElement('div');
+                Object.assign(inputContainer.style, {
+                    display: "flex",
+                    flexDirection: "column",
+                    width: "100%"
+                });
+
+                const label = document.createElement('div');
+                label.textContent = labelText;
+                Object.assign(label.style, {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontWeight: "600",
+                    marginBottom: "0.35rem"
+                });
+
+                if (name === 'youtube_links' || name === 'soundcloud_links' || name === 'related_album' || name === 'recorded_at') {
+                    createCheckboxContainer(`overwrite_${name}`, `remove_${name}`, label);
+                }
+
+                const wrapper = document.createElement("div");
+                Object.assign(wrapper.style, {
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "0.35rem",
+                    minHeight: "2rem",
+                    border: "1px solid",
+                    padding: "4px",
+                    alignItems: "center",
+                    boxSizing: "border-box"
+                });
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = name;
+                input.placeholder = placeholder;
+                Object.assign(input.style, {
+                    appearance: "none",
+                    background: "inherit",
+                    margin: "0px 2px",
+                    padding: "8px",
+                    color: "rgb(0, 0, 0)",
+                    fontSize: "0.85rem",
+                    fontFamily: `Programme, "Programme Pan", Arial, sans-serif`,
+                    fontWeight: "100",
+                    overflowY: "auto",
+                    resize: "vertical",
+                    display: "block",
+                    width: "100%",
+                    boxSizing: "border-box"
+                });
+
+                const feedbackLabel = document.createElement('div');
+                Object.assign(feedbackLabel.style, {
+                    paddingLeft: '8px',
+                    fontSize: '0.75rem',
+                    color: '#333',
+                    display: 'none'
+                });
+
+                let cachedPlaylistLink = null;
+                let cachedSongIds = null;
+                let cachedAlbumTitle = null;
+
+                input.addEventListener('input', async () => {
+                    const link = input.value.trim();
+                    const [playlistLink, playlistTracks] = link.split(' ');
+                    feedbackLabel.style.display = 'block';
+
+                    const checkedSongIds = songIds.filter((songId) => {
+                        const checkbox = document.querySelector(`#checkbox_${songId}`);
+                        return checkbox?.checked;
+                    });
+
+                    if (name === 'youtube_links') {
+                        try {
+                            if (playlistLink === "Delete") {
+                                creditsState.youtubeLinks = "Delete";
+                                feedbackLabel.style.color = '#FF1414';
+                                feedbackLabel.textContent = 'Warning: Delete all YouTube links';
+                            } else {
+                                const playlistData = await getPlaylistVideos(playlistLink);
+                                if (typeof playlistData === 'string') {
+                                    feedbackLabel.style.color = '#FF1414';
+                                    feedbackLabel.textContent = `Error: ${playlistData}`;
+                                } else {
+                                    const totalTracks = playlistData.videoLinks.length;
+                                    const selectedTracks = playlistTracks ? parsePlaylistTracks(playlistTracks, totalTracks) : [...Array(totalTracks).keys()];
+                                    const filteredLinks = selectedTracks.map(index => playlistData.videoLinks[index]);
+
+                                    const playlistLength = filteredLinks.length;
+                                    const songCount = checkedSongIds.length;
+                                    const trackLabel = playlistData.playlistLength === 1 ? "Track" : "Tracks";
+                                    const linkLabel = playlistData.playlistLength === 1 ? "link" : "links";
+                                    const songLabel = songCount === 1 ? "song" : "songs";
+
+                                    if (playlistLength === songCount) {
+                                        feedbackLabel.style.color = '#007A33';
+                                        feedbackLabel.textContent = "";
+
+                                        const strong = document.createElement("strong");
+                                        strong.textContent = "Playlist:";
+
+                                        const text = document.createTextNode(` ${playlistData.playlistTitle} [${playlistLength} Tracks]`);
+
+                                        feedbackLabel.appendChild(strong);
+                                        feedbackLabel.appendChild(text);
+
+                                        creditsState.youtubeLinks = filteredLinks;
+                                    } else {
+                                        feedbackLabel.style.color = '#FF1414';
+                                        feedbackLabel.textContent = "";
+
+                                        const strong1 = document.createElement("strong");
+                                        strong1.textContent = "Playlist:";
+                                        feedbackLabel.appendChild(strong1);
+
+                                        const text1 = document.createTextNode(` ${playlistData.playlistTitle} [${playlistLength} ${trackLabel}]`);
+                                        feedbackLabel.appendChild(text1);
+                                        feedbackLabel.appendChild(document.createElement("br"));
+
+                                        const strong2 = document.createElement("strong");
+                                        const warnSpan = document.createElement("span");
+                                        warnSpan.style.backgroundColor = "#FFEB3B";
+                                        warnSpan.style.color = "#333";
+                                        warnSpan.style.padding = "2px 0px";
+                                        warnSpan.textContent = "Warning:";
+                                        strong2.appendChild(warnSpan);
+                                        feedbackLabel.appendChild(strong2);
+
+                                        const warnText = document.createElement("span");
+                                        warnText.style.color = "#333";
+                                        warnText.textContent = ` The playlist has ${playlistLength} ${linkLabel}, but the album has ${songCount} ${songLabel}.`;
+                                        feedbackLabel.appendChild(warnText);
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            feedbackLabel.style.color = '#FF1414';
+                            feedbackLabel.textContent = `Error: ${error.message}`;
+                        }
+                    } else if (name === 'soundcloud_links') {
+                        feedbackLabel.style.color = '#FF1414';
+                        feedbackLabel.textContent = "Error: SoundCloud links are not supported";
+                    } else if (name === 'related_album') {
+                        try {
+                            if (playlistLink === "Delete") {
+                                creditsState.geniusLinks = Array(checkedSongIds.length).fill("Delete");
+                                feedbackLabel.style.color = '#FF1414';
+                                feedbackLabel.textContent = 'Warning: Delete all related songs';
+                            } else {
+                                if (!playlistLink.startsWith("https://genius.com/albums")) {
+                                    feedbackLabel.style.color = '#FF1414';
+                                    feedbackLabel.textContent = "Error: Invalid playlist link";
+                                    return;
+                                }
+                                if (playlistLink !== cachedPlaylistLink || !cachedSongIds) {
+                                    const html = await (await fetch(playlistLink)).text();
+                                    const albumTitleRegex = /\\\"nameWithArtist\\\":\\\"(.*?)\\\",\\"name\\\":\\\"(.*?)\\\"/;
+                                    cachedAlbumTitle = (html.match(albumTitleRegex) || [])[2];
+                                    const songIdRegex = /\{\\\"tracklist\\\":\[(.*?)\]/;
+                                    let match = html.match(songIdRegex);
+                                    cachedSongIds = [];
+                                    if (match && match[1]) {
+                                        cachedSongIds = match[1].split(',').map(id => Number(id.trim())).filter(id => !isNaN(id));
+                                    }
+                                    cachedPlaylistLink = playlistLink;
+                                }
+                                const totalTracks = cachedSongIds.length;
+                                const selectedTracks = playlistTracks ? parsePlaylistTracks(playlistTracks, totalTracks) : [...Array(totalTracks).keys()];
+                                const filteredSongIds = selectedTracks.map(index => cachedSongIds[index]);
+
+                                const playlistLength = filteredSongIds.length;
+                                const songCount = checkedSongIds.length;
+
+                                const trackLabel = playlistLength === 1 ? "Track" : "Tracks";
+                                const linkLabel = playlistLength === 1 ? "link" : "links";
+                                const songLabel = songCount === 1 ? "song" : "songs";
+
+                                if (playlistLength === songCount) {
+                                    feedbackLabel.style.color = '#007A33';
+                                    feedbackLabel.textContent = "";
+
+                                    const strong = document.createElement("strong");
+                                    strong.textContent = "Playlist:";
+                                    feedbackLabel.appendChild(strong);
+
+                                    const text = document.createTextNode(` ${cachedAlbumTitle} [${playlistLength} ${trackLabel}]`);
+                                    feedbackLabel.appendChild(text);
+
+                                    creditsState.geniusLinks = filteredSongIds;
+                                } else {
+                                    feedbackLabel.style.color = '#FF1414';
+                                    feedbackLabel.textContent = "";
+
+                                    const strong1 = document.createElement("strong");
+                                    strong1.textContent = "Playlist:";
+                                    feedbackLabel.appendChild(strong1);
+
+                                    const text1 = document.createTextNode(` ${cachedAlbumTitle} [${playlistLength} ${trackLabel}]`);
+                                    feedbackLabel.appendChild(text1);
+
+                                    feedbackLabel.appendChild(document.createElement("br"));
+
+                                    const strong2 = document.createElement("strong");
+                                    const warnSpan = document.createElement("span");
+                                    warnSpan.style.backgroundColor = "#FFEB3B";
+                                    warnSpan.style.color = "#333";
+                                    warnSpan.style.padding = "2px 0px";
+                                    warnSpan.textContent = "Warning:";
+                                    strong2.appendChild(warnSpan);
+                                    feedbackLabel.appendChild(strong2);
+
+                                    const warnText = document.createElement("span");
+                                    warnText.style.color = "#333";
+                                    warnText.textContent = ` The playlist has ${playlistLength} ${linkLabel}, but the album only has ${songCount} ${songLabel}.`; feedbackLabel.appendChild(warnText);
+                                }
+                            }
+                        } catch (error) {
+                            feedbackLabel.style.color = '#FF1414';
+                            feedbackLabel.textContent = `Error: ${error.message}`;
+                        }
+                    } else if (name === 'recorded_at') {
+                        if (link === "Delete") {
+                            creditsState.recordedArray = "Delete";
+                            feedbackLabel.style.color = '#FF1414';
+                            feedbackLabel.textContent = 'Warning: Delete all Recording Locations';
+                        } else {
+                            creditsState.recordedArray = link;
+                            feedbackLabel.textContent = '';
+                            feedbackLabel.style.display = 'none';
+                        }
+                    }
+                });
+
+
+                function parsePlaylistTracks(input, totalTracks) {
+                    const selectedTracks = new Set();
+                    let isInverted = false;
+
+                    if (input.startsWith('!')) {
+                        isInverted = true;
+                        input = input.slice(1);
+                    }
+
+                    input.split(',').forEach(range => {
+                        const [start, end] = range.split('-').map(Number);
+                        if (!end) {
+                            selectedTracks.add(start - 1);
+                        } else {
+                            for (let i = start - 1; i < end; i++) {
+                                selectedTracks.add(i);
+                            }
+                        }
+                    });
+
+                    if (isInverted) {
+                        return [...Array(totalTracks).keys()].filter(i => !selectedTracks.has(i));
+                    } else {
+                        return [...selectedTracks].sort((a, b) => a - b);
+                    }
+                }
+
+                async function getPlaylistVideos(playlistLink) {
+                    const possibleLinks = ["https://www.youtube.com/playlist", "https://youtube.com/playlist", "https://music.youtube.com/playlist"];
+                    if (!possibleLinks.some((link) => playlistLink.startsWith(link))) {
+                        return "Invalid playlist link";
+                    }
+
+                    const playlistId = new URL(playlistLink).searchParams.get("list");
+                    const key = window.secrets.GOOGLE_API_KEY;
+
+                    const metadataResponse = await fetch(`https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${key}`);
+                    if (!metadataResponse.ok) {
+                        return "Failed to fetch playlist metadata";
+                    }
+
+                    const metadataData = (await metadataResponse.json()).items[0].snippet;
+
+                    let videosData;
+                    let videoLinks = [];
+                    let nextPageToken = '';
+
+                    do {
+                        const videosResponse = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&pageToken=${nextPageToken}&playlistId=${playlistId}&key=${key}`);
+                        if (!videosResponse.ok) {
+                            return "Failed to fetch playlist videos";
+                        }
+
+                        videosData = await videosResponse.json();
+                        videoLinks.push(...videosData.items.map(item => `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`));
+                        nextPageToken = videosData.nextPageToken;
+                    } while (nextPageToken);
+
+
+                    return {
+                        artistName: metadataData.channelTitle,
+                        playlistTitle: metadataData.title.startsWith("Album - ")
+                            ? metadataData.title.substring("Album - ".length)
+                            : metadataData.title,
+                        playlistLength: videoLinks.length,
+                        videoLinks
+                    };
+                }
+
+                wrapper.appendChild(input);
+
+                inputContainer.appendChild(label);
+                inputContainer.appendChild(wrapper);
+                inputContainer.appendChild(feedbackLabel);
+
+                return { inputContainer };
+            }
+
+            function createInputTagField(labelText, name, type) {
+                const inputContainer = document.createElement('div');
+                Object.assign(inputContainer.style, {
+                    display: "flex",
+                    flexDirection: "column",
+                    width: "100%"
+                });
+
+                const label = document.createElement('div');
+                label.textContent = labelText;
+                Object.assign(label.style, {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    fontWeight: "600",
+                    marginBottom: "0.35rem"
+                });
+
+                if (name === 'primary_artists' || name === 'featured_artists' || name === 'tags' || name === 'writers' || name === 'producers' || name.startsWith("additional_role_")) {
+                    createCheckboxContainer(`overwrite_${name}`, `remove_${name}`, label);
+                } else if (name.startsWith("artist_role_")) {
+                    createRemoveContainer(`remove_${name}`, label);
+                }
+
+                const wrapper = document.createElement("div");
+                Object.assign(wrapper.style, {
+                    display: "flex",
+                    flexWrap: "wrap",
+                    minHeight: "2rem",
+                    cursor: "text",
+                    border: "1px solid",
+                    padding: "4px"
+                });
+
+                const tagsList = document.createElement("div");
+                Object.assign(tagsList.style, {
+                    display: "contents"
+                });
+
+                const inputField = document.createElement('input');
+                inputField.type = 'text';
+                inputField.placeholder = `Add ${labelText}`;
+                Object.assign(inputField.style, {
+                    appearance: "none",
+                    background: "inherit",
+                    margin: "0px 2px",
+                    padding: "8px",
+                    color: "rgb(0, 0, 0)",
+                    fontSize: "0.85rem",
+                    fontFamily: `Programme, "Programme Pan", Arial, sans-serif`,
+                    fontWeight: "100",
+                    overflowY: "auto",
+                    resize: "vertical",
+                    display: "block",
+                    width: "100%",
+                    boxSizing: "border-box"
+                });
+
+                function addTag(text) {
+                    const tag = document.createElement("div");
+                    Object.assign(tag.style, {
+                        display: "flex",
+                        alignItems: "center",
+                        background: "#eee",
+                        padding: "0.15rem 0.35rem",
+                        borderRadius: "3px",
+                        fontSize: "0.85rem"
+                    });
+
+                    const span = document.createElement("span");
+                    span.textContent = text;
+
+                    const remove = document.createElement("div");
+                    remove.textContent = "×";
+                    Object.assign(remove.style, {
+                        marginLeft: "0.35rem",
+                        cursor: "pointer",
+                        fontWeight: "bold"
+                    });
+
+                    remove.addEventListener("click", () => tag.remove());
+
+                    tag.appendChild(span);
+                    tag.appendChild(remove);
+                    tagsList.appendChild(tag);
+                }
+
+                inputField.addEventListener("keydown", (e) => {
+                    if (e.key === "Backspace" && inputField.value === "") {
+                        const lastTag = tagsList.lastElementChild;
+                        if (!lastTag) return;
+
+                        tagsList.removeChild(lastTag);
+
+                        const tagId = Number(lastTag.getAttribute("data-id"));
+                        let arrayToUpdate;
+
+                        const match = name.match(/_(\d+)$/);
+                        const fieldIndex = match ? parseInt(match[1], 10) : null;
+
+                        if (name.startsWith('additional_role_') && fieldIndex !== null) {
+                            arrayToUpdate = creditsState.additionalRolesArray[fieldIndex];
+                        } else if (name.startsWith('artist_role_') && fieldIndex !== null) {
+                            arrayToUpdate = creditsState.artistRolesArray[fieldIndex];
+                        } else if (name === 'primary_artists') {
+                            arrayToUpdate = creditsState.primaryArtistsArray;
+                        } else if (name === 'featured_artists') {
+                            arrayToUpdate = creditsState.featuredArtistsArray;
+                        } else if (name === 'tags') {
+                            arrayToUpdate = creditsState.secondaryTagsArray;
+                        } else if (name === 'writers') {
+                            arrayToUpdate = creditsState.writersArray;
+                        } else if (name === 'producers') {
+                            arrayToUpdate = creditsState.producersArray;
+                        }
+
+                        if (arrayToUpdate) {
+                            const tagIndex = arrayToUpdate.findIndex(tag => tag.id === tagId);
+                            if (tagIndex !== -1) {
+                                arrayToUpdate.splice(tagIndex, 1);
+                            }
+                        }
+                    }
+                });
+
+
+                inputField.addEventListener("input", async () => {
+                    const query = inputField.value.trim();
+                    const existing = wrapper.querySelector(".autocomplete");
+                    if (existing) existing.remove();
+
+                    if (query.length < 2) return;
+
+                    const suggestions = await fetchSuggestions(type, query);
+                    displaySuggestions(suggestions, wrapper, inputField, name, type, tagsList);
+                });
+
+                wrapper.appendChild(tagsList);
+                wrapper.appendChild(inputField);
+
+                inputContainer.appendChild(label);
+                inputContainer.appendChild(wrapper);
+
+                return { inputContainer, tagsList };
+            }
+
+            function displaySuggestions(suggestions, container, inputField, name, type, tagsList) {
+                const existingSuggestions = container.querySelector('.autocomplete');
+                if (existingSuggestions) existingSuggestions.remove();
+
+                if (suggestions.length === 0) return;
+
+                const autocompleteDiv = document.createElement('div');
+                autocompleteDiv.className = 'autocomplete';
+
+                Object.assign(container.style, {
+                    position: "relative"
+                });
+
+                Object.assign(autocompleteDiv.style, {
+                    position: "absolute",
+                    top: "102%",
+                    left: "0",
+                    width: "100%",
+                    background: "white",
+                    border: "1px solid #ccc",
+                    zIndex: "9999",
+                    boxSizing: "border-box"
+                });
+
+                const suggestionList = document.createElement('ul');
+                suggestionList.className = 'suggestion-list';
+
+                let mouseMoved = false;
+                let selectedIndex = 0;
+
+                function highlight(item) {
+                    item.style.backgroundColor = "rgb(233, 233, 233)";
+                }
+
+                function unhighlight(item) {
+                    item.style.backgroundColor = "transparent";
+                }
+
+                suggestions.forEach((item, index) => {
+                    const suggestionItem = document.createElement('li');
+                    suggestionItem.className = 'suggestion-item';
+
+                    Object.assign(suggestionItem.style, {
+                        padding: "0rem 0.5rem",
+                        margin: "0px 2px",
+                        cursor: "pointer"
+                    });
+
+                    const text = document.createElement('span');
+                    text.textContent = item.name || item.label;
+                    suggestionItem.appendChild(text);
+
+                    const valueToAdd = type === 'custom_performance_roles' ? { id: item.id, label: item.label } : { id: item.id, name: item.name };
+
+                    suggestionItem.addEventListener('click', () => {
+                        if (!valueToAdd) return;
+
+                        let arrayToUpdate;
+
+                        const match = name.match(/_(\d+)$/);
+                        const fieldIndex = match ? parseInt(match[1], 10) : null;
+
+                        if (name === 'tags') {
+                            arrayToUpdate = creditsState.secondaryTagsArray;
+                        } else if (name === 'primary_artists') {
+                            arrayToUpdate = creditsState.primaryArtistsArray;
+                        } else if (name === 'featured_artists') {
+                            arrayToUpdate = creditsState.featuredArtistsArray;
+                        } else if (name === 'producers') {
+                            arrayToUpdate = creditsState.producersArray;
+                        } else if (name === 'writers') {
+                            arrayToUpdate = creditsState.writersArray;
+                        } else if (name.startsWith('additional_role_') && fieldIndex !== null) {
+                            if (!creditsState.additionalRolesArray[fieldIndex]) creditsState.additionalRolesArray[fieldIndex] = [];
+                            arrayToUpdate = creditsState.additionalRolesArray[fieldIndex];
+                        } else if (name.startsWith('artist_role_') && fieldIndex !== null) {
+                            if (!creditsState.artistRolesArray[fieldIndex]) creditsState.artistRolesArray[fieldIndex] = [];
+                            arrayToUpdate = creditsState.artistRolesArray[fieldIndex];
+                        }
+
+                        if (arrayToUpdate && !arrayToUpdate.some(x => x.id === valueToAdd.id)) {
+                            arrayToUpdate.push(valueToAdd);
+                        }
+
+                        addTag(tagsList, valueToAdd, name);
+
+                        inputField.value = '';
+                        inputField.focus();
+                        autocompleteDiv.remove();
+                        document.removeEventListener('keydown', keyboardListener);
+                    });
+
+                    suggestionItem.addEventListener('mouseenter', () => {
+                        if (!mouseMoved) return;
+                        suggestionList.querySelectorAll('.suggestion-item').forEach(i => unhighlight(i));
+                        highlight(suggestionItem);
+                        selectedIndex = index;
+                    });
+
+                    suggestionList.appendChild(suggestionItem);
+
+                    if (index === 0) {
+                        highlight(suggestionItem);
+                        selectedIndex = 0;
+                    }
+                });
+
+                suggestionList.addEventListener('mousemove', () => {
+                    mouseMoved = true;
+                });
+
+                autocompleteDiv.appendChild(suggestionList);
+                container.appendChild(autocompleteDiv);
+
+                let keyboardListener;
+
+                setupKeyboardNavigation();
+
+                document.addEventListener('mousedown', (event) => {
+                    if (!autocompleteDiv.contains(event.target) && event.target !== inputField) {
+                        autocompleteDiv.remove();
+                        document.removeEventListener('keydown', keyboardListener);
+                    }
+                });
+
+                function setupKeyboardNavigation() {
+                    if (keyboardListener) {
+                        document.removeEventListener('keydown', keyboardListener);
+                    }
+
+                    keyboardListener = (event) => {
+                        const items = document.querySelectorAll('.suggestion-item');
+                        if (!items.length) return;
+
+                        if (event.key === 'ArrowDown') {
+                            mouseMoved = false;
+                            selectedIndex = (selectedIndex + 1) % items.length;
+                            items.forEach(i => unhighlight(i));
+                            highlight(items[selectedIndex]);
+                            event.preventDefault();
+                        } else if (event.key === 'ArrowUp') {
+                            mouseMoved = false;
+                            selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                            items.forEach(i => unhighlight(i));
+                            highlight(items[selectedIndex]);
+                            event.preventDefault();
+                        } else if (event.key === 'Enter') {
+                            event.preventDefault();
+                            const selectedItem = items[selectedIndex];
+                            if (selectedItem) {
+                                selectedItem.click();
+                                autocompleteDiv?.remove();
+                                selectedIndex = 0
+                            }
+                        }
+                    };
+
+                    document.addEventListener('keydown', keyboardListener);
+                }
+            }
+
+            function addTag(tagsList, tagObject, name) {
+                const existingTags = Array.from(tagsList.querySelectorAll('.tag-item'));
+                const isDuplicate = existingTags.some(tag => tag.getAttribute('data-id') === String(tagObject.id));
+                if (isDuplicate) return;
+
+                const tagItem = document.createElement('li');
+                tagItem.className = 'tag-item';
+                tagItem.setAttribute('data-id', tagObject.id);
+                tagItem.setAttribute('data-name', tagObject.name || tagObject.label);
+
+                Object.assign(tagItem.style, {
+                    backgroundColor: "rgb(233, 233, 233)",
+                    borderRadius: "0px",
+                    display: "flex",
+                    alignItems: "center",
+                    margin: "2px",
+                    minWidth: "0px",
+                    border: "1px solid rgb(0, 0, 0)",
+                    padding: "0.125rem 0.5rem",
+                    gap: "0.35rem",
+                    fontSize: "0.85rem",
+                    fontWeight: "100"
+                });
+
+                const tagText = document.createElement('span');
+                tagText.textContent = tagObject.name || tagObject.label;
+
+                const removeButton = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                removeButton.setAttribute("viewBox", "0 0 22 22");
+                removeButton.style.width = "0.5rem";
+                removeButton.style.height = "0.5rem";
+                removeButton.style.cursor = "pointer";
+
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", "M22 1.39L20.61 0 11 9.62 1.39 0 0 1.39 9.62 11 0 20.61 1.39 22 11 12.38 20.61 22 22 20.61 12.38 11 22 1.39");
+                path.style.fill = "black";
+
+                removeButton.appendChild(path);
+
+                removeButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    tagsList.removeChild(tagItem);
+
+                    let arrayToUpdate;
+
+                    const match = name.match(/_(\d+)$/);
+                    const fieldIndex = match ? parseInt(match[1], 10) : null;
+
+                    if (name.startsWith('additional_role_') && fieldIndex !== null) {
+                        arrayToUpdate = creditsState.additionalRolesArray[fieldIndex];
+                    } else if (name.startsWith('artist_role_') && fieldIndex !== null) {
+                        arrayToUpdate = creditsState.artistRolesArray[fieldIndex];
+                    } else if (name === 'primary_artists') {
+                        arrayToUpdate = creditsState.primaryArtistsArray;
+                    } else if (name === 'featured_artists') {
+                        arrayToUpdate = creditsState.featuredArtistsArray;
+                    } else if (name === 'tags') {
+                        arrayToUpdate = creditsState.secondaryTagsArray;
+                    } else if (name === 'writers') {
+                        arrayToUpdate = creditsState.writersArray;
+                    } else if (name === 'producers') {
+                        arrayToUpdate = creditsState.producersArray;
+                    }
+
+                    if (arrayToUpdate) {
+                        const tagIndex = arrayToUpdate.findIndex(tag => tag.id === tagObject.id);
+                        if (tagIndex !== -1) {
+                            arrayToUpdate.splice(tagIndex, 1);
+                        }
+                    }
+                });
+
+                tagItem.appendChild(tagText);
+                tagItem.appendChild(removeButton);
+                tagsList.appendChild(tagItem);
+            }
+
+            function createAdditionalCreditsField() {
+                const additionalContainer = document.createElement('div');
+                Object.assign(additionalContainer.style, {
+                    display: "flex",
+                    flexDirection: "column",
+                    width: "100%",
+                    margin: "1.75rem 0rem"
+                });
+
+                const subSectionCreditsContainer = document.createElement('div');
+                Object.assign(subSectionCreditsContainer.style, {
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1.25rem"
+                });
+
+                additionalContainer.appendChild(subSectionCreditsContainer);
+
+                const initialSubSectionCredits = createAdditionalRoles();
+                subSectionCreditsContainer.appendChild(initialSubSectionCredits);
+
+                const addCreditsButton = document.createElement('span');
+                addCreditsButton.textContent = '+ Add Additional Credits';
+
+                Object.assign(addCreditsButton.style, {
+                    display: "flex",
+                    borderRadius: "1.25rem",
+                    padding: "0.5rem 1.25rem",
+                    border: "1px solid rgb(0, 0, 0)",
+                    fontFamily: `Programme, "Programme Pan", Arial, sans-serif`,
+                    fontSize: "0.85rem",
+                    fontWeight: "100",
+                    color: "rgb(0, 0, 0)",
+                    cursor: "pointer",
+                    margin: "1.25rem 0rem 140px 0px",
+                    alignSelf: "flex-start"
+                });
+
+                addCreditsButton.addEventListener('click', () => {
+                    const newSubSectionCredits = createAdditionalRoles();
+                    subSectionCreditsContainer.appendChild(newSubSectionCredits);
+                    newSubSectionCredits.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+
+                additionalContainer.appendChild(addCreditsButton);
+
+                return additionalContainer;
+            }
+
+            function createAdditionalRoles() {
+                const subSection = document.createElement('div');
+                subSection.setAttribute('data-index', creditsState.roleIndex);
+
+                const tracklist = createMiniTracklist(songIds, creditsState.roleIndex, trackNumbers, rawTrackNumbers);
+                tracklist.classList.add("miniTracklist");
+                const toggleButton = document.querySelector("#tracklist_individual");
+                const isIndividualMode = toggleButton ? toggleButton._checked : false;
+                tracklist.style.display = isIndividualMode ? "block" : "none";
+                subSection.appendChild(tracklist);
+
+                const row = document.createElement("div");
+                Object.assign(row.style, {
+                    display: "flex",
+                    gap: "1.5rem",
+                    width: "100%"
+                });
+                subSection.appendChild(row);
+
+                const { inputContainer: additionalRoleDiv, tagsList: additionalRoleTagsList } =
+                    createInputTagField(
+                        'Additional role',
+                        `additional_role_${creditsState.roleIndex}`,
+                        'custom_performance_roles'
+                    );
+
+                additionalRoleDiv.setAttribute('data-index', creditsState.roleIndex);
+                row.appendChild(additionalRoleDiv);
+
+                const additionalRoleInputField = [...additionalRoleDiv.querySelectorAll('input')].pop();
+                additionalRoleInputField.addEventListener('focus', () => {
+                    creditsState.activeTagsList = additionalRoleTagsList;
+                });
+
+                const { inputContainer: artistRoleDiv, tagsList: artistRoleTagsList } =
+                    createInputTagField(
+                        'Artists in this role',
+                        `artist_role_${creditsState.roleIndex}`,
+                        'artists'
+                    );
+
+                artistRoleDiv.setAttribute('data-index', creditsState.roleIndex);
+                row.appendChild(artistRoleDiv);
+
+                const artistRoleInputField = artistRoleDiv.querySelector('input');
+                artistRoleInputField.addEventListener('focus', () => {
+                    creditsState.activeTagsList = artistRoleTagsList;
+                });
+
+                creditsState.additionalCreditsArray.push(creditsState.roleIndex);
+                creditsState.roleIndex++;
+                return subSection;
+            }
+
+
+            function syncTracklists(listA, listB) {
+                const boxesA = listA.querySelectorAll(".styled-checkbox");
+                const boxesB = listB.querySelectorAll(".styled-checkbox");
+
+                let isSyncing = false;
+
+                boxesA.forEach((boxA, i) => {
+                    const boxB = boxesB[i];
+
+                    boxA.addEventListener("change", () => {
+                        if (isSyncing) return;
+                        isSyncing = true;
+
+                        boxB.checked = boxA.checked;
+                        boxB.dispatchEvent(new Event("change"));
+
+                        isSyncing = false;
+                    });
+
+                    boxB.addEventListener("change", () => {
+                        if (isSyncing) return;
+                        isSyncing = true;
+
+                        boxA.checked = boxB.checked;
+                        boxA.dispatchEvent(new Event("change"));
+
+                        isSyncing = false;
+                    });
+                });
+            }
+
+            function observeFormWidth(form, controls) {
+                const apply = () => {
+                    if (window.innerWidth >= 1526) {
+                        form.style.maxWidth = "900px";
+                        controls.style.left = "calc(50% + 450px + 0.75rem)";
+
+                    } else {
+                        form.style.maxWidth = "800px";
+                        controls.style.left = "calc(50% + 400px + 0.75rem)";
+
+                    }
+                };
+
+                apply();
+
+                window.addEventListener("resize", apply);
+
+                const observer = new MutationObserver(apply);
+                observer.observe(form, {
+                    attributes: true,
+                    attributeFilter: ["style"]
+                });
+
+                return { stop: () => observer.disconnect() };
+            }
+
+
+            function createMainCredits(page1, trackNumbers, rawTrackNumbers) {
+                const tracklist1 = createTracklist(songIds, trackNumbers, rawTrackNumbers, false);
+
+                const primaryArtistField = createInputTagField("Primary Artists", "primary_artists", "artists");
+                const featuredArtistField = createInputTagField("Featured Artists", "featured_artists", "artists");
+                const producerField = createInputTagField("Producers", "producers", "artists");
+                const writerField = createInputTagField("Writers", "writers", "artists");
+                const youtubeField = createInputTextField('YouTube URL', 'youtube_links', 'YouTube Playlist URL');
+                const soundcloudField = createInputTextField('SoundCloud URL', 'soundcloud_links', 'SoundCloud Playlist URL');
+                const primaryTagField = createInputSelectField("Primary Tag", "Primary Tag");
+                const secondaryTagField = createInputTagField('Tags', 'tags', 'tags');
+                const releaseDateField = createInputSelectField("Release Date", "Release Date");
+                const recordedAtField = createInputTextField('Recorded At', 'recorded_at', 'Add Recording Location');
+                const songRelationshipField = createInputSelectField("Song Relationship", "Song Relationship");
+                const relatedAlbumField = createInputTextField('Related album', 'related_album', 'Genius Album URL');
+                const languageField = createInputSelectField("Language", "Language");
+
+                const row1 = createRow(primaryArtistField, featuredArtistField);
+                const row2 = createRow(producerField, writerField);
+                const row3 = createRow(youtubeField);
+                const row4 = createRow(primaryTagField, secondaryTagField);
+                const row5 = createRow(releaseDateField, recordedAtField);
+                const row6 = createRow(songRelationshipField, relatedAlbumField, languageField);
+
+                page1.appendChild(tracklist1);
+                page1.appendChild(row1);
+                page1.appendChild(row2);
+                page1.appendChild(row3);
+                page1.appendChild(row4);
+                page1.appendChild(row5);
+                page1.appendChild(row6);
+
+                return tracklist1
+            }
+
+            function createAdditionalCredits(page2, trackNumbers, rawTrackNumbers) {
+                const tracklist2 = createTracklist(songIds, trackNumbers, rawTrackNumbers, true);
+
+                const additionalCreditField = createAdditionalCreditsField();
+
+                page2.appendChild(tracklist2);
+                page2.appendChild(additionalCreditField);
+
+                return tracklist2
+            }
+
+
+
+
+            const { overlay, form } = createForm();
+            const { controls, saveButton, cancelButton } = createControls(overlay);
+            const { page1, page2, status } = createContent(form);
+
+            const tracklist1 = createMainCredits(page1, trackNumbers, rawTrackNumbers);
+            const tracklist2 = createAdditionalCredits(page2, trackNumbers, rawTrackNumbers);
+
+            syncTracklists(tracklist1, tracklist2);
+
+            observeFormWidth(form, controls);
+
+            document.body.appendChild(overlay);
+
+            return { overlay, form, saveButton, cancelButton, status };
+        }
+
     }
 
 
