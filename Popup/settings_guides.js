@@ -448,7 +448,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Lade die gespeicherten Einstellungen
     chrome.storage.local.get([
         'isGeniusSongSongPage', 'isGeniusSongSongPageZwsp', 'isGeniusSongSongPageInfo', 'isGeniusSongSongId', 'isGeniusSongCheckIndex', 'isGeniusSongFollowButton', 'isGeniusSongShellyButton', 'isGeniusSongCleanupMetadataButton', 'isGeniusSongLanguageButton', 'isGeniusSongCleanupButton', 'isGeniusSongSectionsButtons', 'isGeniusSongExpandSectionsButtons', 'isGeniusSongAnnotationsButtons', 'isGeniusSongFilterActivity', 'isGeniusSongFilterNotifications', 'isGeniusSongSaveFilters', 'isGeniusSongFilterFirehose','isGeniusSongCopyCover', 'isGeniusSongAppleMusicPlayer', 'isGeniusSongYouTubePlayer', 'isGeniusSongSoundCloudPlayer', 'isGeniusSongSpotifyPlayer', 'isGeniusSongLyricEditor', 'isGeniusSongRenameButtons',
         'isGeniusAlbumAlbumPage', 'isGeniusAlbumAlbumPageZwsp', 'isGeniusAlbumAlbumPageInfo', 'isGeniusAlbumAlbumId', 'isGeniusAlbumAlbumPageLyrics', 'isGeniusAlbumExpandTracklist', 'isGeniusAlbumEditTracklist', 'isGeniusAlbumUploadCover', 'isGeniusAlbumRenameButtons', 'isGeniusAlbumSongCreditsButton', 'isGeniusAlbumFollowButton', 'isGeniusAlbumCleanupButton',
@@ -584,7 +583,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isYouTubeMusicSaveImage').checked = result.isYouTubeMusicSaveImage !== undefined ? result.isYouTubeMusicSaveImage : false;
     });
 
-    // Event Listener für die Schieberegler
     document.getElementById("saveMetadataButton").addEventListener("click", saveOrder);
     document.getElementById('isGeniusSongSongPage').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongSongPageZwsp').addEventListener('change', saveSettings);

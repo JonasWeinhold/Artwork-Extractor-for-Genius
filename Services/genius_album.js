@@ -3988,49 +3988,73 @@ chrome.storage.local.get([
                     let finalPerformances = [...existing];
 
                     if (additionalPayload[songId]) {
-                        additionalPayload[songId].forEach(p => {
-                            p.song.custom_performances?.forEach(role => {
-                                if (role.remove) {
-                                    finalPerformances = finalPerformances.filter(r => r.label !== role.label);
-                                }
-                            });
-                        });
 
-                        additionalPayload[songId].forEach(p => {
-                            p.song.custom_performances?.forEach(role => {
-                                if (role.overwrite) {
-                                    finalPerformances = finalPerformances.filter(r => r.label !== role.label);
-                                    finalPerformances.push({
-                                        label: role.label,
-                                        artists: [...role.artists]
-                                    });
-                                }
-                            });
-                        });
+                        const rolesFlat = additionalPayload[songId].flatMap(p => p.song.custom_performances || []);
 
-                        additionalPayload[songId].forEach(p => {
-                            p.song.custom_performances?.forEach(role => {
-                                if (!role.overwrite && !role.remove) {
-                                    const existingIndex = finalPerformances.findIndex(r => r.label === role.label);
+                        // 1) REMOVE
+                        rolesFlat.forEach(role => {
+                            if (role.remove) {
+                                const idx = finalPerformances.findIndex(r => r.label === role.label);
+                                if (idx !== -1) {
+                                    const existingRole = finalPerformances[idx];
+                                    const filteredArtists = existingRole.artists.filter(artist => !role.artists.some(rem => rem.id === artist.id));
+                                    const shouldDelete = filteredArtists.length === 0 || role.artists.some(a => a.id === 87999);
 
-                                    if (existingIndex === -1) {
-                                        finalPerformances.push({
-                                            label: role.label,
-                                            artists: [...role.artists]
-                                        });
+                                    if (shouldDelete) {
+                                        finalPerformances.splice(idx, 1);
                                     } else {
-                                        const existingRole = finalPerformances[existingIndex];
-                                        const combinedArtists = [...existingRole.artists, ...role.artists].filter((artist, i, self) => self.findIndex(a => a.id === artist.id) === i);
-                                        finalPerformances[existingIndex].artists = combinedArtists;
+                                        finalPerformances[idx] = {
+                                            label: role.label,
+                                            artists: filteredArtists
+                                        };
                                     }
                                 }
-                            });
+                            }
                         });
 
+                        // 2) OVERWRITE
+                        rolesFlat.forEach(role => {
+                            if (role.overwrite) {
+                                const idx = finalPerformances.findIndex(r => r.label === role.label);
+
+                                const newRole = {
+                                    label: role.label,
+                                    artists: role.artists.map(({ id, name }) => ({ id, name }))
+                                };
+
+                                if (idx !== -1) {
+                                    finalPerformances[idx] = newRole;
+                                } else {
+                                    finalPerformances.push(newRole);
+                                }
+                            }
+                        });
+
+                        // 3) ADD
+                        rolesFlat.forEach(role => {
+                            if (!role.overwrite && !role.remove) {
+                                const idx = finalPerformances.findIndex(r => r.label === role.label);
+
+                                if (idx !== -1) {
+                                    const existingRole = finalPerformances[idx];
+                                    const combinedArtists = [...existingRole.artists, ...role.artists].filter((artist, i, self) => self.findIndex(a => a.id === artist.id) === i);
+
+                                    finalPerformances[idx] = {
+                                        label: role.label,
+                                        artists: combinedArtists
+                                    };
+
+                                } else {
+                                    finalPerformances.push({
+                                        label: role.label,
+                                        artists: role.artists.map(({ id, name }) => ({ id, name }))
+                                    });
+                                }
+                            }
+                        });
                     }
 
                     const changed = JSON.stringify(finalPerformances) !== JSON.stringify(existing);
-
                     if (changed) {
                         merged.song.custom_performances = finalPerformances;
                     }
@@ -4044,6 +4068,7 @@ chrome.storage.local.get([
                         console.log("3. Final Payload: ", merged);
                     }
                 }
+
 
 
                 async function processMainPayload(
@@ -4395,12 +4420,13 @@ chrome.storage.local.get([
 
                     currentIndex++;
                 }
+                status.textContent = "Done! Closing modal...";
 
                 setTimeout(async () => {
                     document.body.removeChild(modal.overlay);
                     document.body.style.overflow = "";
                     await songDataFunctions();
-                }, 1000);
+                }, 250);
 
             });
         });
