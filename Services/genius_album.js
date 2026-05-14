@@ -3990,19 +3990,46 @@ chrome.storage.local.get([
                     if (additionalPayload[songId]) {
                         additionalPayload[songId].forEach(p => {
                             p.song.custom_performances?.forEach(role => {
-                                if (role.remove) {
-                                    finalPerformances = finalPerformances.filter(r => r.label !== role.label);
+                                if (!role.remove) return;
+
+                                const label = role.label;
+                                const artists = role.artists;
+                                const existingIndex = finalPerformances.findIndex(r => r.label === label);
+
+                                if (existingIndex !== -1) {
+                                    const existingRole = finalPerformances[existingIndex];
+                                    const filteredArtists = existingRole.artists.filter(artist => !artists.some(toRemove => toRemove.id === artist.id));
+                                    const removeAll = artists.some(a => a.id === 87999);
+
+                                    if (filteredArtists.length === 0 || removeAll) {
+                                        finalPerformances.splice(existingIndex, 1);
+                                    } else {
+                                        finalPerformances[existingIndex] = {
+                                            label,
+                                            artists: filteredArtists
+                                        };
+                                    }
                                 }
                             });
                         });
 
                         additionalPayload[songId].forEach(p => {
                             p.song.custom_performances?.forEach(role => {
-                                if (role.overwrite) {
-                                    finalPerformances = finalPerformances.filter(r => r.label !== role.label);
+                                if (!role.overwrite) return;
+
+                                const label = role.label;
+                                const artists = role.artists;
+                                const existingIndex = finalPerformances.findIndex(r => r.label === label);
+
+                                if (existingIndex !== -1) {
+                                    finalPerformances[existingIndex] = {
+                                        label,
+                                        artists: artists.map(a => ({ id: a.id, name: a.name }))
+                                    };
+                                } else {
                                     finalPerformances.push({
-                                        label: role.label,
-                                        artists: [...role.artists]
+                                        label,
+                                        artists: artists.map(a => ({ id: a.id, name: a.name }))
                                     });
                                 }
                             });
@@ -4010,23 +4037,34 @@ chrome.storage.local.get([
 
                         additionalPayload[songId].forEach(p => {
                             p.song.custom_performances?.forEach(role => {
-                                if (!role.overwrite && !role.remove) {
-                                    const existingIndex = finalPerformances.findIndex(r => r.label === role.label);
+                                if (role.overwrite || role.remove) return;
 
-                                    if (existingIndex === -1) {
-                                        finalPerformances.push({
-                                            label: role.label,
-                                            artists: [...role.artists]
-                                        });
-                                    } else {
-                                        const existingRole = finalPerformances[existingIndex];
-                                        const combinedArtists = [...existingRole.artists, ...role.artists].filter((artist, i, self) => self.findIndex(a => a.id === artist.id) === i);
-                                        finalPerformances[existingIndex].artists = combinedArtists;
-                                    }
+                                const label = role.label;
+                                const artists = role.artists;
+                                const existingIndex = finalPerformances.findIndex(r => r.label === label);
+
+                                if (existingIndex === -1) {
+                                    finalPerformances.push({
+                                        label,
+                                        artists: artists.map(a => ({ id: a.id, name: a.name }))
+                                    });
+                                } else {
+                                    const existingRole = finalPerformances[existingIndex];
+
+                                    const combinedArtists = [
+                                        ...existingRole.artists,
+                                        ...artists
+                                    ].filter((artist, i, self) =>
+                                        self.findIndex(a => a.id === artist.id) === i
+                                    );
+
+                                    finalPerformances[existingIndex] = {
+                                        label,
+                                        artists: combinedArtists
+                                    };
                                 }
                             });
                         });
-
                     }
 
                     const changed = JSON.stringify(finalPerformances) !== JSON.stringify(existing);
@@ -4395,12 +4433,13 @@ chrome.storage.local.get([
 
                     currentIndex++;
                 }
+                status.textContent = "Done! Closing modal...";
 
                 setTimeout(async () => {
                     document.body.removeChild(modal.overlay);
                     document.body.style.overflow = "";
                     await songDataFunctions();
-                }, 1000);
+                }, 250);
 
             });
         });

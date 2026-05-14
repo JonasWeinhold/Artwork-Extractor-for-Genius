@@ -759,6 +759,7 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
         "String Arranger": "Strings Arranger",
         "Editing Engineer": "Audio Editor",
         "Vocal Recording Engineer": "Vocal Engineer",
+        "Programming": "Programmer",
     };
 
 
