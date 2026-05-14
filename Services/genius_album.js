@@ -3988,87 +3988,73 @@ chrome.storage.local.get([
                     let finalPerformances = [...existing];
 
                     if (additionalPayload[songId]) {
-                        additionalPayload[songId].forEach(p => {
-                            p.song.custom_performances?.forEach(role => {
-                                if (!role.remove) return;
 
-                                const label = role.label;
-                                const artists = role.artists;
-                                const existingIndex = finalPerformances.findIndex(r => r.label === label);
+                        const rolesFlat = additionalPayload[songId].flatMap(p => p.song.custom_performances || []);
 
-                                if (existingIndex !== -1) {
-                                    const existingRole = finalPerformances[existingIndex];
-                                    const filteredArtists = existingRole.artists.filter(artist => !artists.some(toRemove => toRemove.id === artist.id));
-                                    const removeAll = artists.some(a => a.id === 87999);
+                        // 1) REMOVE
+                        rolesFlat.forEach(role => {
+                            if (role.remove) {
+                                const idx = finalPerformances.findIndex(r => r.label === role.label);
+                                if (idx !== -1) {
+                                    const existingRole = finalPerformances[idx];
+                                    const filteredArtists = existingRole.artists.filter(artist => !role.artists.some(rem => rem.id === artist.id));
+                                    const shouldDelete = filteredArtists.length === 0 || role.artists.some(a => a.id === 87999);
 
-                                    if (filteredArtists.length === 0 || removeAll) {
-                                        finalPerformances.splice(existingIndex, 1);
+                                    if (shouldDelete) {
+                                        finalPerformances.splice(idx, 1);
                                     } else {
-                                        finalPerformances[existingIndex] = {
-                                            label,
+                                        finalPerformances[idx] = {
+                                            label: role.label,
                                             artists: filteredArtists
                                         };
                                     }
                                 }
-                            });
+                            }
                         });
 
-                        additionalPayload[songId].forEach(p => {
-                            p.song.custom_performances?.forEach(role => {
-                                if (!role.overwrite) return;
+                        // 2) OVERWRITE
+                        rolesFlat.forEach(role => {
+                            if (role.overwrite) {
+                                const idx = finalPerformances.findIndex(r => r.label === role.label);
 
-                                const label = role.label;
-                                const artists = role.artists;
-                                const existingIndex = finalPerformances.findIndex(r => r.label === label);
+                                const newRole = {
+                                    label: role.label,
+                                    artists: role.artists.map(({ id, name }) => ({ id, name }))
+                                };
 
-                                if (existingIndex !== -1) {
-                                    finalPerformances[existingIndex] = {
-                                        label,
-                                        artists: artists.map(a => ({ id: a.id, name: a.name }))
-                                    };
+                                if (idx !== -1) {
+                                    finalPerformances[idx] = newRole;
                                 } else {
-                                    finalPerformances.push({
-                                        label,
-                                        artists: artists.map(a => ({ id: a.id, name: a.name }))
-                                    });
+                                    finalPerformances.push(newRole);
                                 }
-                            });
+                            }
                         });
 
-                        additionalPayload[songId].forEach(p => {
-                            p.song.custom_performances?.forEach(role => {
-                                if (role.overwrite || role.remove) return;
+                        // 3) ADD
+                        rolesFlat.forEach(role => {
+                            if (!role.overwrite && !role.remove) {
+                                const idx = finalPerformances.findIndex(r => r.label === role.label);
 
-                                const label = role.label;
-                                const artists = role.artists;
-                                const existingIndex = finalPerformances.findIndex(r => r.label === label);
+                                if (idx !== -1) {
+                                    const existingRole = finalPerformances[idx];
+                                    const combinedArtists = [...existingRole.artists, ...role.artists].filter((artist, i, self) => self.findIndex(a => a.id === artist.id) === i);
 
-                                if (existingIndex === -1) {
-                                    finalPerformances.push({
-                                        label,
-                                        artists: artists.map(a => ({ id: a.id, name: a.name }))
-                                    });
-                                } else {
-                                    const existingRole = finalPerformances[existingIndex];
-
-                                    const combinedArtists = [
-                                        ...existingRole.artists,
-                                        ...artists
-                                    ].filter((artist, i, self) =>
-                                        self.findIndex(a => a.id === artist.id) === i
-                                    );
-
-                                    finalPerformances[existingIndex] = {
-                                        label,
+                                    finalPerformances[idx] = {
+                                        label: role.label,
                                         artists: combinedArtists
                                     };
+
+                                } else {
+                                    finalPerformances.push({
+                                        label: role.label,
+                                        artists: role.artists.map(({ id, name }) => ({ id, name }))
+                                    });
                                 }
-                            });
+                            }
                         });
                     }
 
                     const changed = JSON.stringify(finalPerformances) !== JSON.stringify(existing);
-
                     if (changed) {
                         merged.song.custom_performances = finalPerformances;
                     }
@@ -4082,6 +4068,7 @@ chrome.storage.local.get([
                         console.log("3. Final Payload: ", merged);
                     }
                 }
+
 
 
                 async function processMainPayload(
