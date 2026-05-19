@@ -58,7 +58,7 @@ chrome.storage.local.get([
 
             if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
             if (isGeniusAlbumAlbumPageInfo) showCoverInfo(albumData);
-            //if (isGeniusAlbumAlbumPage) checkAlbumCover(albumData)
+            if (isGeniusAlbumAlbumPage) checkAlbumCover(albumData);
 
             if (isGeniusAlbumEditTracklist) addUnreleasedCheckbox();
 
@@ -181,9 +181,9 @@ chrome.storage.local.get([
         const CoverArtAnnotationNavigationContainer = document.querySelector('div[class^="CoverArtAnnotationNavigation__Container-"]');
         const stickyToolbarLeft = document.querySelector('div[class^="StickyToolbar__Left-"]');
         const smallButton = stickyToolbarLeft?.querySelector('button[class*="SmallButton__Container-"]');
+        const editmetadatabutonSmallbutton = [...(stickyToolbarLeft?.querySelectorAll('button[class*="SmallButton__Container-"]') || [])].find(btn => btn.textContent.trim() === "Edit Metadata") || null;
 
-
-        return { metadatastatsContainer, labelwithiconLabel, stackedCoverArts, CoverArtAnnotationNavigationContainer, stickyToolbarLeft, smallButton };
+        return { metadatastatsContainer, labelwithiconLabel, stackedCoverArts, CoverArtAnnotationNavigationContainer, stickyToolbarLeft, smallButton, editmetadatabutonSmallbutton };
     }
 
 
@@ -427,32 +427,55 @@ chrome.storage.local.get([
         const { editmetadatabutonSmallbutton } = getDomElements();
         if (!editmetadatabutonSmallbutton) return;
 
-        const metaTag = document.querySelector('meta[property="og:image"]');
-        if (metaTag) {
-            const coverImageUrl = metaTag.getAttribute('content');
-            const editAlbumButton = document.querySelectorAll('.square_button.u-bottom_margin');
-            if (editAlbumButton.length > 1) {
-                const secondEditAlbumButton = editAlbumButton[1];
-                let color, borderColor;
-                if (coverImageUrl.endsWith("1000x1000x1.png")) {
-                    color = '#99f2a5'; // Green
-                    borderColor = '#66bfa3';
-                } else if (coverImageUrl.startsWith("http://assets.genius.com/images/sharing_fallback.png")) {
-                    if (document.head.innerHTML.match(/&quot;cover_art_url&quot;:&quot;http:\/\/assets.genius.com/) ||
-                        document.head.innerHTML.match(/&quot;cover_art_url&quot;:&quot;https:\/\/assets.genius.com/)) {
-                        color = '#dddddd'; // Grey
-                        borderColor = '#aaaaaa';
-                    } else {
-                        color = '#ffff64'; // Yellow 
-                        borderColor = '#cccc00';
-                    }
-                } else {
-                    color = '#fa7878'; // Red 
-                    borderColor = '#a74d4d';
-                }
-                addColoredSquare(secondEditAlbumButton, color, borderColor);
-                if (isGeniusAlbumAlbumPageZwsp) checkAlbumTitleForZeroWidthSpace();
+        let color, borderColor;
+
+        const coverArt = albumData.cover_art_url;
+
+
+        if (coverArt) {
+            if (coverArt.startsWith("https://images.genius.com") && coverArt.endsWith("1000x1000x1.png")) {
+                color = '#99f2a5'; // Green
+                borderColor = '#66bfa3';
+            } else if ((coverArt.startsWith("http://images.genius.com") || coverArt.startsWith("http://images.rapgenius.com") || coverArt.startsWith("https://images.rapgenius.com")) && coverArt.endsWith("1000x1000x1.png")) {
+                color = '#7689e8'; // Blue
+                borderColor = '#4a5e9d';
+            } else if (coverArt.startsWith("https://assets.genius.com/images/default_cover_image.png")) {
+                color = '#dddddd'; // Grey
+                borderColor = '#aaaaaa';
+            } else if (coverArt.startsWith("https://filepicker-images-rapgenius.s3.amazonaws.com/filepicker-images-rapgenius/") || coverArt.endsWith("1000x1000bb.png") || coverArt.endsWith("10000x10000bb.png") || coverArt.endsWith("1000x1000.png") || coverArt.endsWith("1000x1000-000000-80-0-0.png")) {
+                color = '#ffff64'; // Yellow
+                borderColor = '#cccc00';
+            } else {
+                color = '#fa7878'; // Red
+                borderColor = '#a74d4d';
             }
+        }
+
+        addColoredCircle(editmetadatabutonSmallbutton, color, borderColor);
+        //if (isGeniusAlbumAlbumPageZwsp) checkAlbumTitleForZeroWidthSpace();
+    }
+
+    function addColoredCircle(button, color, borderColor) {
+        const existingCircle = button.querySelector('.circle-indicator');
+        if (existingCircle) {
+            existingCircle.style.backgroundColor = color;
+            existingCircle.style.borderColor = borderColor;
+        } else {
+            const circle = document.createElement('span');
+            circle.className = 'circle-indicator';
+            circle.style.cssText = `
+                font-variant: JIS04;
+                height: 16px;
+                width: 28px;
+                display: inline-block;
+                margin-right: 0.375rem;
+                margin-left: calc(-0.375rem);
+                padding: 0px 0.25rem;
+                background-color: ${color};
+                border: 1px solid ${borderColor};
+                border-radius: 1.25rem;
+            `;
+            button.prepend(circle);
         }
     }
 
@@ -543,7 +566,7 @@ chrome.storage.local.get([
         }
     }
 
-    function checkAlbumTitleForZeroWidthSpace() {
+    function checkAlbumTitleForZeroWidthSpaceOld() {
         const titleElement = document.querySelector('.header_with_cover_art-primary_info-title');
         if (titleElement) {
             const titleText = titleElement.textContent.trim();
@@ -617,7 +640,7 @@ chrome.storage.local.get([
                     borderColor = '#a74d4d';
                 }
                 addColoredSquare(secondEditAlbumButton, color, borderColor);
-                if (isGeniusAlbumAlbumPageZwsp) checkAlbumTitleForZeroWidthSpace();
+                if (isGeniusAlbumAlbumPageZwsp) checkAlbumTitleForZeroWidthSpaceOld();
             }
         }
     }
@@ -1529,7 +1552,7 @@ chrome.storage.local.get([
               form.appendChild(statusDisplay);
               form.appendChild(saveButton);
               form.appendChild(cancelButton);
-  */
+    */
 
             const order = result.functionOrder || {
                 song_relationship: 1,
@@ -6543,6 +6566,11 @@ chrome.storage.local.get([
             box.style.borderRadius = '1.25rem';
             box.style.backgroundColor = color;
             box.style.marginLeft = 'auto';
+            box.style.position = 'relative';
+
+            if (song.pending_lyrics_edits_count > 0) {
+                box.style.boxShadow = '2px 2px 0.225rem 0px #000';
+            }
 
             const wrapper = document.createElement("div");
             wrapper.style.marginLeft = "0.5rem";

@@ -1186,7 +1186,7 @@ chrome.storage.local.get([
                     'bs': `[Tekst pjesme „${songTitle}”${featuringText}]`,
                     'ca': `[Lletra de "${songTitle}"${featuringText}]`,
                     'cs': `[Text skladby „${songTitle}“${featuringText}]`,
-                    'da': `[Tekst til „${songTitle}“${featuringText}]`,
+                    'da': `[Tekst til "${songTitle}"${featuringText}]`,
                     'de': `[Songtext zu „${songTitle}“${featuringText}]`,
                     'es': `[Letra de "${songTitle}"${featuringText}]`,
                     'et': `[${songTitle} laulusõnad${featuringText}]`,
@@ -1227,7 +1227,7 @@ chrome.storage.local.get([
                     'cs': `<b>[Lyrics from [Snippet]()]</b>`,
                     'da': `<b>[Tekst fra [snippet]()]</b>`,
                     'de': `<b>[Lyrics von [Snippet](), vollständige Lyrics bei Release]</b>`,
-                    'en': `<b>Lyrics from [Snippet]()</b>`,
+                    'en': `<b>[Lyrics from [Snippet]()]</b>`,
                     'nl': `<b>[Songtekst van [Fragment]()]</b>`,
                     'pl': `<b>[Tekst piosenki pochodzi z [Snippet]()]</b>`,
                     'sk': `<b>[Lyrics from [Snippet]()]</b>`,
@@ -2699,7 +2699,7 @@ chrome.storage.local.get([
                     { key: "other__locked", label: "Locked / Unlocked", regex: /.*? (locked|unlocked)/i, color: "#9a9a9a", svg: ICONS.svgLocked },
                     { key: "other__hid", label: "Hid / Unhid", regex: /.*? (hid|unhid)/i, color: "#9a9a9a", svg: ICONS.svgHid },
                     { key: "other__followed", label: "Followed", regex: /.*? followed/i, color: "#9a9a9a", svg: ICONS.svgFollowed },
-                    { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on)/i, color: "#9a9a9a", svg: ICONS.svgPyonged },
+                    { key: "other__pyonged", label: "Pyonged", regex: /.*? pyonged($| an annotation on| the song bio on)/i, color: "#9a9a9a", svg: ICONS.svgPyonged },
                     { key: "other__pageviews", label: "Pageviews", regex: /.*pageviews\)\s*$/i, color: "#0ecb27", svg: ICONS.svgPageviews },
                 ],
 
@@ -2775,7 +2775,40 @@ chrome.storage.local.get([
         }
 
 
-        function filterItems(items, filters, userText) {
+        /* function filterItems(items, filters, userText) {
+             let username = userText?.trim().toLowerCase();
+ 
+             if (username && profilePath) {
+                 const normalizedProfilePath = profilePath.replace(/^\//, "").trim().toLowerCase();
+                 if (username === normalizedProfilePath) username = "you";
+             }
+ 
+             const escapedUsername = username ? username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : null;
+             const usernameRegex = escapedUsername ? new RegExp(escapedUsername, "i") : null;
+ 
+             items.forEach(item => {
+                 let visible = true;
+ 
+                 //const span = item.querySelector('div[class^="LineItem__MessageContent-"] span');
+                 const span = item.querySelector('div[class^="LineItem__MessageContent-"]')?.querySelector(':scope > span > span');
+                 if (!span) return;
+ 
+                 const clone = span.cloneNode(true);
+                 clone.querySelectorAll("em").forEach(el => el.remove());
+                 const text = clone.innerText.trim().toLowerCase().replace(/\s+/g, " ");
+ 
+                 const match = ALL_SUBFILTERS.find(subfilter => subfilter.regex.test(text));
+                 if (match && (filters[match.key] ?? true) === false) visible = false;
+                 if (visible && usernameRegex && !usernameRegex.test(text)) visible = false;
+ //                item.style.display = visible ? "" : "none";
+                item.style.visibility = visible ? "visible" : "hidden";
+ 
+ 
+             });
+         }*/
+
+
+        async function filterItems(items, filters, userText) {
             let username = userText?.trim().toLowerCase();
 
             if (username && profilePath) {
@@ -2786,10 +2819,11 @@ chrome.storage.local.get([
             const escapedUsername = username ? username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : null;
             const usernameRegex = escapedUsername ? new RegExp(escapedUsername, "i") : null;
 
+            const toHide = [];
+
             items.forEach(item => {
                 let visible = true;
 
-                //const span = item.querySelector('div[class^="LineItem__MessageContent-"] span');
                 const span = item.querySelector('div[class^="LineItem__MessageContent-"]')?.querySelector(':scope > span > span');
                 if (!span) return;
 
@@ -2800,9 +2834,29 @@ chrome.storage.local.get([
                 const match = ALL_SUBFILTERS.find(subfilter => subfilter.regex.test(text));
                 if (match && (filters[match.key] ?? true) === false) visible = false;
                 if (visible && usernameRegex && !usernameRegex.test(text)) visible = false;
-                item.style.display = visible ? "" : "none";
+
+                if (!visible) {
+                    item.style.visibility = "hidden";
+                    toHide.push(item);
+                } else {
+                    item.style.visibility = "visible";
+                    item.style.display = "";
+                }
+            });
+
+            await new Promise(r => setTimeout(r, 50));
+            window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: "smooth"
+            });
+
+            await new Promise(r => setTimeout(r, 100));
+            toHide.forEach(item => {
+                item.style.visibility = "";
+                item.style.display = "none";
             });
         }
+
 
         function getActivityModal() {
             return document.querySelector('[class^="Modal-desktop__Contents"]');
