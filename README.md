@@ -15,12 +15,20 @@
 <div align="center">
   <a href="#card_file_box-changelog"><img alt="Last version released" src="https://img.shields.io/github/v/release/JonasWeinhold/Artwork-Extractor-for-Genius?logo=semver&color=blue" /></a>
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/commits/main"><img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/JonasWeinhold/Artwork-Extractor-for-Genius?color=blueviolet&logo=clarifai" /></a>
+  <a href="LICENSE">
+    <img alt="license: GPL v3" src="https://img.shields.io/badge/license-GPLv3-blue.svg?logo=gnu&logoColor=white" /></a>  
 </div>
 <div align="center">
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/JonasWeinhold/Artwork-Extractor-for-Genius?color=red&logo=stackedit" /></a>
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/JonasWeinhold/Artwork-Extractor-for-Genius?style=flat&color=%23ffe937&logo=github" /></a>
   <a href="https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/JonasWeinhold/Artwork-Extractor-for-Genius?color=forestgreen&logo=target" /></a>
   <a href="#card_file_box-changelog"><img alt="GitHub repository size" src="https://img.shields.io/github/languages/code-size/JonasWeinhold/Artwork-Extractor-for-Genius?color=blue&logo=frontify" /></a>
+</div>
+<div align="center">
+  <a href="https://chromewebstore.google.com/detail/artwork-extractor-for-gen/oifdmdbfhcamieniopjddpohkbbmoaeb">
+    <img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome%20Web%20Store-Install-blue?logo=googlechrome" /></a>
+  <a href="https://addons.mozilla.org/en-us/firefox/addon/artwork-extractor-for-genius/">
+    <img alt="Mozilla Add-on" src="https://img.shields.io/badge/Firefox%20Add--on-Install-orange?logo=firefoxbrowser" /></a>
 </div>
 &#xa0;
 
