@@ -1,14 +1,15 @@
 <div align="center" id="top">
   <img src="https://addons.mozilla.org/user-media/addon_icons/2896/2896871-64.png?modified=27941528" alt="AEG Logo" width="64px" />
-  <h2>:link: Artwork Extractor for Genius :yellow_square:</h2>
+  <h2>🔗 Artwork Extractor for Genius 🟨</h2>
+  <p><b>One-click cover art extraction for 12 music platforms — built for the Genius community.</b></p>
 </div>
 
 <div align="center">
-  <a href="#memo-description">Description</a> &#xa0; | &#xa0;
-  <a href="#rocket-installation">Installation</a> &#xa0; | &#xa0;
-  <a href="#open_book-usage--general-information">Usage & General Information</a> &#xa0; | &#xa0;
-  <a href="#bug-troubleshooting">Troubleshooting</a> &#xa0; | &#xa0;
-  <a href="#card_file_box-project-roadmap">Project Roadmap</a>
+  <a href="#-description">Description</a> &#xa0; | &#xa0;
+  <a href="#-installation">Installation</a> &#xa0; | &#xa0;
+  <a href="#-usage--general-information">Usage & General Information</a> &#xa0; | &#xa0;
+  <a href="#-troubleshooting">Troubleshooting</a> &#xa0; | &#xa0;
+  <a href="#-project-roadmap">Project Roadmap</a>
 </div>
 &#xa0;
 
@@ -32,15 +33,17 @@
 </div>
 &#xa0;
 
-## :memo: Description
+## 📝 Description
 
 A browser extension that adds “Copy Cover” / “Save Cover” helpers on Genius and popular music platforms.  
 It's primarily built to quickly grab cover artwork URLs (and optionally convert/host/download them) while working with [genius.com](https://genius.com).  
 **Compatible with Chrome, Firefox, Edge, and all other Chromium web browsers!**
 
-### :musical_note: Features
+<!-- TODO: Add a demo GIF here showing the Copy Cover button in action (e.g. on a Spotify album page). Tools: LICEcap, ShareX, or ScreenToGif. -->
 
-- Adds UI buttons on supported sites (see below) to copy an artwork URL to your clipboard, or download the image.
+### 🎵 Features
+
+- Adds UI buttons on supported sites (see below) with four output modes: **Copy URL** · **Download file** · **Convert to PNG** · **Host image** (ImgBB / ImageKit / Genius S3)
   - Genius: `genius.com` (+ `genius-staging.com`)
   - Apple Music: `*.apple.com`
   - Spotify: `*.spotify.com`
@@ -56,7 +59,7 @@ It's primarily built to quickly grab cover artwork URLs (and optionally convert/
 - Adds a settings page with lots of per-site toggles (copy cover, copy tracklist, popups, conversions, hosting options, etc.).
 - On Genius pages, it can also add various editing/utility helpers (song/album/artist tools).
 
-## :rocket: Installation
+## 🚀 Installation
 
 Either install the extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/artwork-extractor-for-gen/oifdmdbfhcamieniopjddpohkbbmoaeb) or the [Mozilla Add-ons site](https://addons.mozilla.org/de/firefox/addon/artwork-extractor-for-genius/).  
 If you want to install it manually (for local build or development), follow these instructions:
@@ -81,7 +84,13 @@ This extension supports multiple “outputs” when you click Copy/Save:
 
 If you enable ImgBB hosting, you must provide an ImgBB API key:
 
-- Set it in the settings page (stored in `chrome.storage.local`).
+- Set it in the settings page (stored in browser cache).
+
+#### ImageKit
+
+If you enable ImageKit hosting, provide your ImageKit private key:
+
+- Set `IMAGEKIT_PRIVATE_KEY` in the settings page (stored in browser cache).
 
 #### Genius / Filestack (Genius S3)
 
@@ -100,13 +109,17 @@ For local development, you will need to populate them.
 
 > Keep your credentials private. Don't commit real keys.
 
-## :open_book: Usage & General Information
+## 📖 Usage & General Information
+
+> **Note:** Most supported sites are single-page applications (SPAs). If injected buttons don't appear, **reload the tab** after enabling the site in the popup.
 
 1. Navigate to a supported site (e.g. Spotify album page, Genius song page).
 2. Click the extension icon to open the popup.
 3. Ensure the site you're on is **enabled** (icon should not look “inactive”).
-4. Reload the tab (some sites are single-page apps; reload helps scripts attach).
+4. Reload the tab (some sites are single-page applications; reload helps scripts attach).
 5. Use the injected buttons (e.g. **Copy Cover** / **Save Cover**).
+
+**Dark mode:** Click the extension popup header to toggle dark/light mode. The preference is saved per-browser.
 
 ### 📝 Development notes
 
@@ -117,7 +130,7 @@ Key files:
 - [Popup/popup.html](Popup/popup.html): popup UI
 - [Popup/popup.js](Popup/popup.js): per-site enable/disable toggles
 - [Popup/settings_guides.html](Popup/settings_guides.html): settings UI
-- [Popup/settings_guides.js](Popup/settings_guides.js): settings logic (stored in `chrome.storage.local`)
+- [Popup/settings_guides.js](Popup/settings_guides.js): settings logic (stored in browser cache)
 - [Services/streaming_utils.js](Services/streaming_utils.js): shared image processing (convert/download/upload/copy)
 - [Services/secrets.js](Services/secrets.js): API key placeholders + local storage wiring
 
@@ -129,7 +142,7 @@ Typical workflow:
 4. Reload the target website tab.
 5. Add new work, and document your core code to make it easily understandable by all.
 
-## :bug: Troubleshooting
+## 🐛 Troubleshooting
 
 ### Buttons don't appear
 
@@ -157,7 +170,19 @@ Typical workflow:
 
 If the issue persists, [**open an issue**](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/issues) with details about your web browser and the page URL.
 
-## :card_file_box: Project Roadmap
+## 🤝 Contributing
+
+Contributions are welcome! To add support for a new streaming service:
+
+1. Create `Services/[new_site].js` following the pattern of an existing service (e.g. `Services/deezer.js`).
+2. Register the content script in `manifest.json` under `content_scripts` and `host_permissions`.
+3. Add the site to all four maps in `Popup/popup.js`: `files`, `displayNames`, `icons`, `urls`.
+4. Drop a matching icon PNG into `Popup/`.
+5. Document any site-specific behaviour in the code.
+
+For bugs or feature ideas, [open an issue](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/issues) first. PRs that add a new site or fix a bug are always appreciated.
+
+## 🗃️ Project Roadmap
 
 Find detailed versioning in the [CHANGELOG.md](https://github.com/JonasWeinhold/Artwork-Extractor-for-Genius/blob/main/CHANGELOG.md) file.
 
