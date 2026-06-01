@@ -497,7 +497,7 @@ chrome.storage.local.get([
             if (!confirm(message)) return;
 
             const payload = {
-                text_format: "html,markdown",
+                text_format: "html,markdown,preview",
                 react: true,
                 client_timestamps: {
                     updated_by_human_at: songData.updated_by_human_at,
@@ -952,17 +952,7 @@ chrome.storage.local.get([
         };
 
         let observer = new MutationObserver(() => {
-            const annotationContainer = [...document.querySelectorAll("div")]
-                .find(div => [...div.classList].some(c => c.startsWith("BaseAnnotation-desktop__Container")));
-
-            if (!annotationContainer) return;
-
-            const form = annotationContainer.querySelector("form.AnnotationEditForm-desktop__Form-sc-a3bdbf7b-0");
-            if (!form) return;
-
-            if (!form.querySelector("#lyricsStyleButtonsContainer")) {
-                injectButtons(form);
-            }
+            document.querySelectorAll('form[class*="AnnotationEditForm-desktop__Form"]').forEach(injectButtons);
         });
 
         observer.observe(document.body, {
@@ -971,7 +961,9 @@ chrome.storage.local.get([
         });
 
         function injectButtons(form) {
-            const styleDiv = createGridContainer("lyricsStyleButtonsContainer");
+            if (form.querySelector("#lyricsStyleButtonsContainer")) return;
+
+            const styleDiv = createGridContainer("lyricsStyleButtonsContainer", "0rem");
 
             const styleButtons = [
                 { label: "Heading 1", openTag: "#", closeTag: "", hoverText: "Heading 1" },
@@ -2713,7 +2705,8 @@ chrome.storage.local.get([
                 annotations: [
                     { key: "annotations__annotation", label: "Annotations", regex: /.*?\s(?:created an annotation on|edited an annotation on|proposed an edit to an annotation on|accepted an annotation on|merged\s.*?'?s?\sannotation edit on|deleted an annotation on|rejected an annotation on|rejected\s.*?'?s?\sannotation edit on|marked (?:an|the .*?) annotation on|replied to an annotation on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
                     { key: "annotations__bio", label: "Song bios", regex: /.*?\s(?:created a song bio on|edited the song bio on|proposed an edit to the song bio on|accepted the song bio on|rejected the song bio on|marked the song bio on)/i, color: "#9a9a9a", svg: ICONS.svgCreated },
-                    { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|rejected a suggestion|mentioned\s.*? in a suggestion on)/i, color: "#9a9a9a", svg: ICONS.svgSuggested },
+                    { key: "annotations__suggestion", label: "Suggestions", regex: /.*?\s(?:added a suggestion to an annotation on|added a suggestion to the song bio on|added a suggestion to$|integrated\s.*?'?s?\ssuggestion|archived\s.*?'?s?\ssuggestion|accepted\s.*?'?s?\ssuggestion|rejected a suggestion|mentioned\s.*? in a suggestion on)/i, color: "#9a9a9a", svg: ICONS.svgSuggested, },
+
                 ],
 
                 lyrics: [

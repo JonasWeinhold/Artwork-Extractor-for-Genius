@@ -65,6 +65,7 @@ chrome.storage.local.get([
             if (isGeniusAlbumUploadCover) uploadAlbumCover(albumId, albumData);
 
             if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPage(songIds, songDataFunctions);
+            //if (isGeniusAlbumCleanupButton) cleanupAlbumType(albumData);
 
 
             async function songDataFunctions() {
@@ -180,10 +181,11 @@ chrome.storage.local.get([
         const stackedCoverArts = document.querySelector('div[class^="StackedCoverArts__Container-"]');
         const CoverArtAnnotationNavigationContainer = document.querySelector('div[class^="CoverArtAnnotationNavigation__Container-"]');
         const stickyToolbarLeft = document.querySelector('div[class^="StickyToolbar__Left-"]');
-        const smallButton = stickyToolbarLeft?.querySelector('button[class*="SmallButton__Container-"]');
+        const stickyToolbarRight = document.querySelector('div[class^="StickyToolbar__Right-"]');
+        const smallButton = stickyToolbarLeft?.querySelector('button[class*="SmallButton__Container-"]') || stickyToolbarRight?.querySelector('button[class*="SmallButton__Container-"]');
         const editmetadatabutonSmallbutton = [...(stickyToolbarLeft?.querySelectorAll('button[class*="SmallButton__Container-"]') || [])].find(btn => btn.textContent.trim() === "Edit Metadata") || null;
 
-        return { metadatastatsContainer, labelwithiconLabel, stackedCoverArts, CoverArtAnnotationNavigationContainer, stickyToolbarLeft, smallButton, editmetadatabutonSmallbutton };
+        return { metadatastatsContainer, labelwithiconLabel, stackedCoverArts, CoverArtAnnotationNavigationContainer, stickyToolbarLeft, stickyToolbarRight, smallButton, editmetadatabutonSmallbutton };
     }
 
 
@@ -787,11 +789,34 @@ chrome.storage.local.get([
             checkbox.addEventListener("change", () => {
                 updateCheckboxStyle();
 
-                const trackCheckboxes = tracklist.querySelectorAll('label[class^="EditableTrack__CheckboxLabel-sc-"] input[type="checkbox"]');
+                /*const trackCheckboxes = tracklist.querySelectorAll('label[class^="EditableTrack__CheckboxLabel-sc-"] input[type="checkbox"]');
                 trackCheckboxes.forEach(cb => {
                     cb.checked = checkbox.checked;
                     cb.dispatchEvent(new Event("change", { bubbles: true }));
+                });*/
+
+                const unreleasedCheckboxes = Array.from(
+                    tracklist.querySelectorAll('label[class^="EditableTrack__CheckboxLabel-sc-"]')
+                )
+                    .filter(label => {
+                        const span = label.querySelector('span');
+                        return span && span.textContent.trim().toLowerCase() === "unreleased";
+                    })
+                    .map(label => label.querySelector('input[type="checkbox"]'));
+
+                unreleasedCheckboxes.forEach(cb => {
+                    if (cb.checked !== checkbox.checked) {
+                        ["pointerdown", "mousedown", "mouseup", "click"].forEach(type => {
+                            cb.dispatchEvent(new MouseEvent(type, {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window
+                            }));
+                        });
+                    }
                 });
+
+
             });
 
             const text = document.createElement("span");
@@ -1193,6 +1218,7 @@ chrome.storage.local.get([
             checkboxLabel.style.fontSize = "0.75rem";
             checkboxLabel.style.fontWeight = "100";
             checkboxLabel.style.lineHeight = "1.1";
+            checkboxLabel.style.overflowWrap = "normal";
 
             checkboxLabel.appendChild(document.createTextNode("OVER-"));
             checkboxLabel.appendChild(document.createElement("br"));
@@ -4864,7 +4890,8 @@ chrome.storage.local.get([
                         textAlign: songIds.length <= 15 ? "left" : "right",
                         width: "0.85rem",
                         display: "inline-block",
-                        cursor: "pointer"
+                        cursor: "pointer",
+                        overflowWrap: "normal"
                     });
 
                     checkboxDiv.appendChild(checkbox);
@@ -7191,5 +7218,79 @@ chrome.storage.local.get([
         });
         stickyToolbarLeft.appendChild(cleanupButton);
     }
+
+
+
+
+    function cleanupAlbumType(albumData) {
+        const cleanupTypes = [
+            "EP",
+            "Single",
+            "Doppelsingle",
+            "Compilation",
+            "Soundtrack",
+            "Live Album",
+            "DJ Mix"
+        ];
+
+        const typeMap = {
+            "EP": "ep",
+            "Single": "single",
+            "Doppelsingle": "single",
+            "Compilation": "compilation",
+            "Soundtrack": "soundtrack",
+            "Live Album": "live",
+            "DJ Mix": "dj_mix"
+        };
+
+        const matchedType = cleanupTypes.find(type =>
+            albumData.name.endsWith(` (${type})`) ||
+            albumData.name.endsWith(` [${type}]`) ||
+            albumData.name.endsWith(` - ${type}`)
+        );
+        if (!matchedType) return;
+
+        const typeAlreadyCorrect = albumData.album_type === typeMap[matchedType];
+        const label = typeAlreadyCorrect ? "Fix Album Name" : "Fix Album Type & Name";
+
+        const { stickyToolbarLeft, smallButton } = getDomElements();
+        if (!stickyToolbarLeft || !smallButton) return;
+
+        const existingButton = [...stickyToolbarLeft.querySelectorAll("button")].find(btn => btn.textContent.trim() === label);
+        if (existingButton) existingButton.remove();
+
+        const cleanupButton = document.createElement("button");
+        cleanupButton.type = "button";
+        cleanupButton.className = smallButton.className;
+        cleanupButton.textContent = label;
+
+        stickyToolbarLeft.appendChild(cleanupButton);
+
+        cleanupButton.addEventListener("click", async () => {
+            const apiAlbumType = typeMap[matchedType];
+
+            let cleanedName = albumData.name
+                .replace(` (${matchedType})`, "")
+                .replace(` - ${matchedType}`, "")
+                .replace(` [${matchedType}]`, "")
+                .trim();
+
+            const payload = typeAlreadyCorrect
+                ? {
+                    text_format: "html,markdown",
+                    name: cleanedName
+                }
+                : {
+                    text_format: "html,markdown",
+                    album_type: apiType,
+                    name: cleanedName
+                };
+
+            await updateAlbumMetadata(albumData, payload);
+
+            cleanupButton.style.display = "none";
+        });
+    }
+
 
 });
