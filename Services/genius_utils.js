@@ -1,3 +1,37 @@
+function getScripts(type) {
+    const scripts = document.body.querySelectorAll("script:not([src])");
+
+    const regexMap = {
+        preloaded: /window\.__PRELOADED_STATE__\s*=\s*JSON\.parse\('(.+?)'\)/s,
+        appConfig: /window\.__APP_CONFIG__\s*=\s*JSON\.parse\('(.+?)'\)/s,
+        iqByEventType: /window\.__IQ_BY_EVENT_TYPE__\s*=\s*JSON\.parse\('(.+?)'\)/s
+    };
+
+    const regex = regexMap[type];
+    if (!regex) return null;
+
+    const parse = (raw) => {
+        if (!raw) return null;
+        const cleaned = raw
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\')
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\t/g, '\t')
+            .replace(/\\(?!["\\/bfnrtu])/g, "")
+            .replace(/[\u0000-\u001F]+/g, "");
+        return JSON.parse(cleaned);
+    };
+
+    for (const script of scripts) {
+        const text = script.textContent;
+        const match = text.match(regex);
+        if (match) return parse(match[1]);
+    }
+
+    return null;
+}
+
 function getId(type) {
     console.log(`Run getId(${type})`);
     const html = document.documentElement.innerHTML;
@@ -16,16 +50,12 @@ function getSongIds() {
     for (const script of scripts) {
         const text = script.textContent;
 
-        //const preloadedMatch = text.match(/window\.__PRELOADED_STATE__\s*=\s*JSON\.parse\('(.+?)'\)/s);
         const preloadedMatch = text.match(/window\.__PRELOADED_STATE__\s*=\s*JSON\.parse\('((?:\\'|[^'])*)'\);/s);
-
         if (!preloadedMatch) continue;
 
         const jsonString = preloadedMatch[1];
-        //const albumAppearances = jsonString.match(/\\"albumAppearances\\":\{([\s\S]*?)\}\}/)?.[1];
-        //const songIds = [...albumAppearances.matchAll(/\\"song\\":(\d+),/g)].map(m => Number(m[1]));
-        const tracklist = jsonString.match(/:\{\\\"tracklist\\\":\[(.*?)\]/);
-        const songIds = tracklist[1].split(',').map(n => Number(n.trim()));
+        const albumAppearances = JSON.parse("{" + jsonString.match(/\\"albumAppearances\\":\{([\s\S]*?)\}(?=,\\"[a-zA-Z])/)[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\') + "}");
+        const songIds = Object.values(albumAppearances).sort((a, b) => a.trackNumber - b.trackNumber).map(entry => entry.song);
 
         return songIds;
     }
@@ -51,7 +81,7 @@ async function followId(id, type, action) {
             'Content-Type': 'application/json',
             'Cookie': document.cookie,
             'X-CSRF-Token': getCsrfToken(),
-            'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+            'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
         },
         body: JSON.stringify({})
     });
@@ -71,7 +101,7 @@ async function updateSongMetadata(song, payload) {
                 'Content-Type': 'application/json',
                 'Cookie': document.cookie,
                 'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+                'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
             },
             body: JSON.stringify({ song: payload })
         });
@@ -93,7 +123,7 @@ async function updateAlbumMetadata(album, payload) {
                 "Content-Type": "application/json",
                 "Cookie": document.cookie,
                 "X-CSRF-Token": getCsrfToken(),
-                "User-Agent": "ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)"
+                "User-Agent": "ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)"
             },
             body: JSON.stringify({ album: payload })
         });
@@ -119,7 +149,7 @@ async function updateSongLyrics(song, payload) {
                 'Content-Type': 'application/json',
                 'Cookie': document.cookie,
                 'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+                'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
             },
             body: JSON.stringify(payload)
         });
@@ -147,7 +177,7 @@ async function updateSongMetadata2(song, updates) {
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
                 }
             });
 
@@ -163,7 +193,7 @@ async function updateSongMetadata2(song, updates) {
                 'Content-Type': 'application/json',
                 'Cookie': document.cookie,
                 'X-CSRF-Token': getCsrfToken(),
-                'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+                'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
             },
             body: JSON.stringify({ song: updates })
         });
@@ -180,7 +210,7 @@ async function updateSongMetadata2(song, updates) {
                     'Content-Type': 'application/json',
                     'Cookie': document.cookie,
                     'X-CSRF-Token': getCsrfToken(),
-                    'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+                    'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
                 }
             });
 
@@ -203,7 +233,7 @@ async function toggleFollowSong(songId, action) {
             'Content-Type': 'application/json',
             'Cookie': document.cookie,
             'X-CSRF-Token': getCsrfToken(),
-            'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+            'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
         },
         body: JSON.stringify({})
     });
@@ -225,7 +255,7 @@ async function sendCoverArts(imageUrl, albumId) {
                 "Content-Type": "application/json",
                 "Cookie": document.cookie,
                 "X-CSRF-Token": getCsrfToken(),
-                "User-Agent": "ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)"
+                "User-Agent": "ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)"
             },
             body: JSON.stringify(payload)
         });
@@ -250,7 +280,7 @@ async function deleteCoverArts(coverId) {
                 "Content-Type": "application/json",
                 "Cookie": document.cookie,
                 "X-CSRF-Token": getCsrfToken(),
-                "User-Agent": "ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)"
+                "User-Agent": "ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)"
             },
         });
 
@@ -289,7 +319,7 @@ async function moveCoverArts(position, coverId, coverArts) {
                 "Content-Type": "application/json",
                 "Cookie": document.cookie,
                 "X-CSRF-Token": getCsrfToken(),
-                "User-Agent": "ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)"
+                "User-Agent": "ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)"
             },
             body: JSON.stringify(payload)
         });
@@ -313,7 +343,7 @@ async function sendUpdateRequest(songId, payload) {
             'Content-Type': 'application/json',
             'Cookie': document.cookie,
             'X-CSRF-Token': getCsrfToken(),
-            'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+            'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
         },
         body: JSON.stringify(payload)
     });
@@ -333,7 +363,7 @@ async function fetchSuggestions(type, query) {
             'Content-Type': 'application/json',
             'Cookie': document.cookie,
             'X-CSRF-Token': getCsrfToken(),
-            'User-Agent': 'ArtworkExtractorForGenius/0.7.1 (Artwork Extractor for Genius)'
+            'User-Agent': 'ArtworkExtractorForGenius/0.7.2 (Artwork Extractor for Genius)'
         }
     });
 

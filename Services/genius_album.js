@@ -46,29 +46,43 @@ chrome.storage.local.get([
 
 
         if (isAlbumNew) {
+
+            if (isGeniusAlbumEditTracklist) addTracklistCheckboxes();
+            if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
+
+
+
             const userId = getId("currentUser");
             const albumId = getId("album");
             const songIds = getSongIds();
+
             const { user: userData } = await getApiData(userId, "users");
             const { album: albumData } = await getApiData(albumId, "albums");
+
             if (!userId || !albumId || !userData || !albumData) return;
+
+            console.log("• User ID:", userId);
+            console.log("• Album ID:", albumId);
+            console.log("• Song IDs:", songIds);
+            console.log("• User Data:", userData);
+            console.log("• Album Data:", albumData);
 
 
             if (isGeniusAlbumAlbumId) showAlbumIdButton(albumId);
 
-            if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
             if (isGeniusAlbumAlbumPageInfo) showCoverInfo(albumData);
             if (isGeniusAlbumAlbumPage) checkAlbumCover(albumData);
 
-            if (isGeniusAlbumEditTracklist) addUnreleasedCheckbox();
 
             if (isGeniusAlbumUploadCover) uploadAlbumCover(albumId, albumData);
 
-            if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPage(songIds, songDataFunctions);
+            if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPage(songIds);
             //if (isGeniusAlbumCleanupButton) cleanupAlbumType(albumData);
 
 
-            async function songDataFunctions() {
+      
+
+            /*async function songDataFunctions() {
                 const songDataAlbum = await Promise.all(
                     songIds.map(async songId => {
                         const { song: songData } = await getApiData(songId, "songs");
@@ -80,9 +94,9 @@ chrome.storage.local.get([
                 if (isGeniusAlbumFollowButton) followButtonAlbumPage(songDataAlbum, albumData);
                 if (isGeniusAlbumCleanupButton) cleanupMetadata(songDataAlbum, userData);
                 if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(songDataAlbum, userData);
-            }
+            }*/
 
-            await songDataFunctions();
+            //await songDataFunctions();
 
 
 
@@ -742,8 +756,8 @@ chrome.storage.local.get([
     //////////                                TRACKLIST BUTTON                                //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function addUnreleasedCheckbox() {
-        console.log("Run function addUnreleasedCheckbox()");
+    function addTracklistCheckboxes() {
+        console.log("Run function addTracklistCheckboxes()");
 
         const observer = new MutationObserver(() => {
             const tracklist = document.querySelector('[data-testid="album-edit-tracklist"]');
@@ -752,80 +766,93 @@ chrome.storage.local.get([
             const header = tracklist.querySelector('div[class^="SectionHeader-sc-"]');
             if (!header) return;
 
-            if (header.querySelector('.unreleased-checkbox-wrapper')) return;
+            if (tracklist.querySelector('.checkbox-container')) return;
 
-            const wrapper = document.createElement("label");
-            wrapper.className = "unreleased-checkbox-wrapper";
-            wrapper.style.display = "flex";
-            wrapper.style.alignItems = "center";
-            wrapper.style.gap = "0.35rem";
-            wrapper.style.cursor = "pointer";
-            wrapper.style.color = "#000000a8";
+            const containerDiv = document.createElement("div");
+            containerDiv.className = "checkbox-container";
+            containerDiv.style.display = "flex";
+            containerDiv.style.alignItems = "center";
+            containerDiv.style.justifyContent = "flex-end";
+            containerDiv.style.gap = "1rem";
+            containerDiv.style.marginTop = "-0.375rem";
+            containerDiv.style.marginBottom = "0.75rem";
 
-            const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
 
-            Object.assign(checkbox.style, {
-                appearance: "none",
-                border: "1px solid rgb(0,0,0)",
-                width: "0.75rem",
-                height: "0.75rem",
-                backgroundColor: "white",
-                cursor: "pointer"
-            });
+            const createToggle = (labelText) => {
+                const wrapper = document.createElement("label");
+                wrapper.style.display = "flex";
+                wrapper.style.alignItems = "center";
+                wrapper.style.gap = "0.35rem";
+                wrapper.style.cursor = "pointer";
 
-            const checkSvg = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
 
-            const updateCheckboxStyle = () => {
-                if (checkbox.checked) {
-                    checkbox.style.backgroundColor = "rgb(0,0,0)";
-                    checkbox.style.backgroundImage = checkSvg;
-                } else {
-                    checkbox.style.backgroundColor = "white";
-                    checkbox.style.backgroundImage = "none";
-                }
-            };
-
-            checkbox.addEventListener("change", () => {
-                updateCheckboxStyle();
-
-                /*const trackCheckboxes = tracklist.querySelectorAll('label[class^="EditableTrack__CheckboxLabel-sc-"] input[type="checkbox"]');
-                trackCheckboxes.forEach(cb => {
-                    cb.checked = checkbox.checked;
-                    cb.dispatchEvent(new Event("change", { bubbles: true }));
-                });*/
-
-                const unreleasedCheckboxes = Array.from(
-                    tracklist.querySelectorAll('label[class^="EditableTrack__CheckboxLabel-sc-"]')
-                )
-                    .filter(label => {
-                        const span = label.querySelector('span');
-                        return span && span.textContent.trim().toLowerCase() === "unreleased";
-                    })
-                    .map(label => label.querySelector('input[type="checkbox"]'));
-
-                unreleasedCheckboxes.forEach(cb => {
-                    if (cb.checked !== checkbox.checked) {
-                        ["pointerdown", "mousedown", "mouseup", "click"].forEach(type => {
-                            cb.dispatchEvent(new MouseEvent(type, {
-                                bubbles: true,
-                                cancelable: true,
-                                view: window
-                            }));
-                        });
-                    }
+                Object.assign(checkbox.style, {
+                    appearance: "none",
+                    border: "1px solid rgb(0,0,0)",
+                    width: "0.75rem",
+                    height: "0.75rem",
+                    backgroundColor: "white",
+                    cursor: "pointer"
                 });
 
+                const checkSvg = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
 
-            });
+                const updateCheckboxStyle = () => {
+                    if (checkbox.checked) {
+                        checkbox.style.backgroundColor = "rgb(0,0,0)";
+                        checkbox.style.backgroundImage = checkSvg;
+                    } else {
+                        checkbox.style.backgroundColor = "white";
+                        checkbox.style.backgroundImage = "none";
+                    }
+                };
 
-            const text = document.createElement("span");
-            text.textContent = "UNRELEASED";
-            text.style.fontSize = "0.75rem";
+                checkbox.addEventListener("change", () => {
+                    updateCheckboxStyle();
 
-            wrapper.appendChild(checkbox);
-            wrapper.appendChild(text);
-            header.appendChild(wrapper);
+                    const targetCheckboxes = Array.from(
+                        tracklist.querySelectorAll('label[class^="FilledTrack__CheckboxLabel-sc-"]')
+                    )
+                        .filter(label => {
+                            const span = label.querySelector('span');
+                            return span && span.textContent.trim() === labelText;
+                        })
+                        .map(label => label.querySelector('input[type="checkbox"]'));
+                    console.log(targetCheckboxes);
+
+                    targetCheckboxes.forEach(cb => {
+                        if (cb.checked !== checkbox.checked) {
+                            ["pointerdown", "mousedown", "mouseup", "click"].forEach(type => {
+                                cb.dispatchEvent(new MouseEvent(type, {
+                                    bubbles: true,
+                                    cancelable: true,
+                                    view: window
+                                }));
+                            });
+                        }
+                    });
+                });
+
+                const text = document.createElement("span");
+                text.textContent = labelText;
+                text.style.fontSize = "0.75rem";
+                text.style.fontWeight = "100";
+
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(text);
+
+                return wrapper;
+            };
+
+            const hideToggle = createToggle("Hide");
+            const unreleasedToggle = createToggle("Unreleased");
+
+            containerDiv.appendChild(hideToggle);
+            containerDiv.appendChild(unreleasedToggle);
+
+            header.insertAdjacentElement("afterend", containerDiv);
         });
 
         observer.observe(document.body, {
@@ -833,6 +860,7 @@ chrome.storage.local.get([
             subtree: true
         });
     }
+
 
 
     function expandAllTracksInTracklist() {
@@ -3786,7 +3814,7 @@ chrome.storage.local.get([
         }
     }
 
-    function songCreditsButtonAlbumPage(songIds, songDataFunctions) {
+    function songCreditsButtonAlbumPage(songIds) {
         console.log("Run function songCreditsButtonAlbumPage()");
 
         const { stickyToolbarLeft, smallButton } = getDomElements();
@@ -3854,13 +3882,13 @@ chrome.storage.local.get([
 
             const modal = createModal(songIds, rawTrackNumbers, trackNumbers, creditsState);
 
-            const songDataAlbum = await Promise.all(
+            /*const songDataAlbum = await Promise.all(
                 songIds.map(async songId => {
                     const { song: songData } = await getApiData(songId, "songs");
                     return songData;
                 })
             );
-            if (!songDataAlbum) return;
+            if (!songDataAlbum) return;*/
 
             modal.saveButton.disabled = false;
             modal.saveButton.style.backgroundColor = "#24c609";
@@ -3915,6 +3943,45 @@ chrome.storage.local.get([
                     });
                     return { index, songIds: songs };
                 });
+
+                const allSongIds = checkboxStates.tracklistIndividual ? [...new Set([...mainSongIds, ...additionalSongIds.flatMap(e => e.songIds)])] : [...new Set(mainSongIds)];
+
+                /*const songDataAlbum = await Promise.all(
+                    allSongIds.map(async songId => {
+                        const { song: songData } = await getApiData(songId, "songs");
+                        return songData;
+                    })
+                );*/
+
+                async function fetchSongData(ids) {
+                    const songs = 25;
+                    const delay = 500;
+                    const results = [];
+
+                    for (let i = 0; i < ids.length; i += songs) {
+                        const batch = ids.slice(i, i + songs);
+
+                        const batchResults = await Promise.all(
+                            batch.map(async songId => {
+                                const { song: songData } = await getApiData(songId, "songs");
+                                return songData;
+                            })
+                        );
+
+                        results.push(...batchResults);
+
+                        if (i + songs < ids.length) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        }
+                    }
+
+                    return results;
+                }
+
+                const songDataAlbum = await fetchSongData(allSongIds);
+
+
+                if (!songDataAlbum) return;
 
                 const primaryArtistsPayload = creditsState.primaryArtistsArray.map(primary_artists => ({ id: primary_artists.id, name: primary_artists.name }));
                 const featuredArtistsPayload = creditsState.featuredArtistsArray.map(featured_artists => ({ id: featured_artists.id, name: featured_artists.name }));
@@ -4441,8 +4508,8 @@ chrome.storage.local.get([
                 }
 
 
-                let totalToSave = songIds.length;
-                let currentIndex = 1;
+                /* let totalToSave = songIds.length;
+                 let currentIndex = 1;
 
                 for (const songId of songIds) {
                     const payload = finalPayload[songId];
@@ -4468,14 +4535,68 @@ chrome.storage.local.get([
                     }
 
                     currentIndex++;
-                }
-                status.textContent = "Done! Closing modal...";
+                }*/
 
-                setTimeout(async () => {
+
+                const totalToSave = songIds.length;
+                let displayIndex = 1;
+                const concurrency = 3;
+
+                async function processSong(songId) {
+                    const payload = finalPayload[songId];
+                    const song = songDataAlbum.find(s => s.id === Number(songId));
+
+                    if (payload) {
+                        await updateSongMetadata(song, payload.song);
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                }
+
+                function updateStatus(index) {
+                    modal.status.textContent = "";
+                    modal.status.appendChild(document.createTextNode("Saving Track "));
+
+                    const strong1 = document.createElement("strong");
+                    strong1.textContent = index;
+                    modal.status.appendChild(strong1);
+
+                    modal.status.appendChild(document.createTextNode(" of "));
+
+                    const strong2 = document.createElement("strong");
+                    strong2.textContent = totalToSave;
+                    modal.status.appendChild(strong2);
+
+                    modal.status.appendChild(document.createTextNode("..."));
+                }
+
+                async function runInParallel() {
+                    const queue = [...songIds];
+                    const workers = [];
+
+                    for (let w = 0; w < concurrency; w++) {
+                        workers.push((async function worker() {
+                            while (queue.length > 0) {
+                                const songId = queue.shift();
+
+                                await processSong(songId);
+                                updateStatus(displayIndex++);
+                            }
+                        })());
+                    }
+
+                    await Promise.all(workers);
+                }
+
+                await runInParallel();
+
+                modal.status.textContent = "Done!";
+
+                setTimeout(() => {
                     document.body.removeChild(modal.overlay);
                     document.body.style.overflow = "";
-                    await songDataFunctions();
                 }, 250);
+
 
             });
         });
@@ -4955,11 +5076,7 @@ chrome.storage.local.get([
                 });
 
                 function toRoman(num) {
-                    const romanMap = [
-                        ['M', 1000], ['CM', 900], ['D', 500], ['CD', 400],
-                        ['C', 100], ['XC', 90], ['L', 50], ['XL', 40],
-                        ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1],
-                    ];
+                    const romanMap = [['M', 1000], ['CM', 900], ['D', 500], ['CD', 400], ['C', 100], ['XC', 90], ['L', 50], ['XL', 40], ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1],];
                     let roman = '';
                     romanMap.forEach(([symbol, value]) => {
                         while (num >= value) {
@@ -6461,8 +6578,6 @@ chrome.storage.local.get([
             }
 
 
-
-
             const { overlay, form } = createForm();
             const { controls, saveButton, cancelButton } = createControls(overlay);
             const { page1, page2, status } = createContent(form);
@@ -6665,6 +6780,10 @@ chrome.storage.local.get([
         }
     }
 
+
+
+
+
     function cleanupMetadata(songData, userData) {
         console.log("Run function cleanupMetadata()");
 
@@ -6715,6 +6834,7 @@ chrome.storage.local.get([
             addCleanupButton(songsWithDuplicateCoverArt, "CoverArt", "Remove Cover Art", { coverArt: true });
         }
     }
+
 
 
     function checkZeroWidthSpaces(song) {
@@ -6791,8 +6911,7 @@ chrome.storage.local.get([
         return false;
     }
 
-
-
+ 
 
     function addCleanupButtonOld(songs, actionType, label, metadataUpdate) {
         if (songs.length === 0) return;
@@ -7206,7 +7325,8 @@ chrome.storage.local.get([
                         updateData.writer_artists = song._updated_writer_artists;
                     }
 
-                    await updateSongMetadata2(song, updateData);
+                    console.log("Updating song with data:", song.id, updateData);
+                    await updateSongMetadata(song, updateData);
                 }, index * delay);
             });
 
@@ -7219,7 +7339,7 @@ chrome.storage.local.get([
         stickyToolbarLeft.appendChild(cleanupButton);
     }
 
-
+    
 
 
     function cleanupAlbumType(albumData) {
