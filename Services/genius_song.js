@@ -84,6 +84,7 @@ chrome.storage.local.get([
         const songId = getId("song");
         const { song: songData } = await getApiData(songId, "songs");
         if (!userId || !songId || !songData) return;
+        console.log(`- User ID: ${userId}\n- Song ID: ${songId}`);
 
 
         if (isGeniusSongSongId) showSongIdButton(songId);
