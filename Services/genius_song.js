@@ -59,13 +59,14 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    main();
-
+    queueMicrotask(main);
+    
     async function main() {
         const isFirehose = window.location.href === 'https://genius.com/firehose';
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
 
         const profilePath = getProfilePathFromDocument();
+        console.log(`Profile Path: ${profilePath}`);
 
         if (isFirehose) {
             if (isGeniusSongFilterFirehose) filterFirehose();
@@ -144,6 +145,13 @@ chrome.storage.local.get([
             soundcloudplayerIframecontainer: document.querySelector('div[class*="SoundCloudPlayer-desktop__IframeContainer-"]'),
             soundcloudplayerIframe: document.querySelector('iframe[class^="SoundCloudPlayer-desktop__Iframe-"]'),
         };
+    }
+
+    function getProfilePathFromDocument() {
+        const profileMatch = document.documentElement.innerHTML.match(/\\"profile_path\\":\\"([^"]+)\\"/);
+        const profilePath = profileMatch?.[1] ?? null;
+        if (profilePath) chrome.storage.local.set({ profilePath });
+        return profilePath;
     }
 
     document.addEventListener('click', function (event) {
