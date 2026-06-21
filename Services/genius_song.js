@@ -59,7 +59,7 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    queueMicrotask(main);
+    main();
 
     async function main() {
         const isFirehose = window.location.href === 'https://genius.com/firehose';
@@ -144,13 +144,6 @@ chrome.storage.local.get([
             soundcloudplayerIframecontainer: document.querySelector('div[class*="SoundCloudPlayer-desktop__IframeContainer-"]'),
             soundcloudplayerIframe: document.querySelector('iframe[class^="SoundCloudPlayer-desktop__Iframe-"]'),
         };
-    }
-
-    function getProfilePathFromDocument() {
-        const profileMatch = document.documentElement.innerHTML.match(/\\"profile_path\\":\\"([^"]+)\\"/);
-        const profilePath = profileMatch?.[1] ?? null;
-        if (profilePath) chrome.storage.local.set({ profilePath });
-        return profilePath;
     }
 
     document.addEventListener('click', function (event) {
@@ -1222,7 +1215,7 @@ chrome.storage.local.get([
                     'de': `<b>[Lyrics von [Snippet](), vollständige Lyrics bei Release]</b>`,
                     'en': `<b>[Lyrics from [Snippet]()]</b>`,
                     'nl': `<b>[Songtekst van [Fragment]()]</b>`,
-                    'pl': `<b>[Tekst piosenki pochodzi z [Snippet]()]</b>`,
+                    'pl': `<b>[Tekst piosenki pochodzi ze [Snippetu]()]</b>`,
                     'sk': `<b>[Lyrics from [Snippet]()]</b>`,
                     'tr': `<b>[[Kesit]() şarkı sözleri, resmî sözler yayımlanınca güncellenecektir]</b>`,
                 }
@@ -1830,6 +1823,7 @@ chrome.storage.local.get([
                         { displayText: "Przedrefren", fullText: "Przedrefren", hoverText: "Pre-Chorus" },
                         { displayText: "Refren", fullText: "Refren", hoverText: "Chorus" },
                         { displayText: "Zarefren", fullText: "Zarefren", hoverText: "Post-Chorus" },
+                        { displayText: "Przyśpiewka", fullText: "Przyśpiewka", hoverText: "Bridge" },
                         { displayText: "Przejście", fullText: "Przejście", hoverText: "Bridge" },
                         { displayText: "Interludium", fullText: "Interludium", hoverText: "Interlude" },
                         { displayText: "Przerwa instr.", fullText: "Przerwa instrumentalna", hoverText: "Instrumental Break" },
