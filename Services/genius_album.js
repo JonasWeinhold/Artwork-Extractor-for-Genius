@@ -3919,9 +3919,55 @@ chrome.storage.local.get([
                 artistRolesArray: []
             };
 
+            const optionSets = {
+                "Primary Tag": [
+                    { label: "Rap", value: 1434 },
+                    { label: "Pop", value: 16 },
+                    { label: "R&B", value: 352 },
+                    { label: "Rock", value: 567 },
+                    { label: "Country", value: 413 },
+                    { label: "Electronic", value: 606 },
+                    { label: "Non-Music", value: 1452 }
+                ],
+                "Song Relationship": [
+                    { label: "Samples", value: "samples" },
+                    { label: "Interpolates", value: "interpolates" },
+                    { label: "Cover Of", value: "cover_of" },
+                    { label: "Remix Of", value: "remix_of" },
+                    { label: "Live Version Of", value: "live_version_of" },
+                    { label: "Translation Of", value: "translation_of" }
+                ],
+                "Language": [
+                    { label: "bosanski", value: "bs" },
+                    { label: "crnogorski", value: "cnr" },
+                    { label: "Deutsch", value: "de" },
+                    { label: "Österreichisches Deutsch", value: "de-at" },
+                    { label: "English", value: "en" },
+                    { label: "Español", value: "es" },
+                    { label: "Français", value: "fr" },
+                    { label: "Schweizerdeutsch", value: "gsw" },
+                    { label: "hrvatski", value: "hr" },
+                    { label: "Italiano", value: "it" },
+                    { label: "Kölsch", value: "ksh" },
+                    { label: "Македонски", value: "mk" },
+                    { label: "Nederlands", value: "nl" },
+                    { label: "Norsk", value: "no" },
+                    { label: "Polski", value: "pl" },
+                    { label: "Português", value: "pt" },
+                    { label: "Русский (Russian)", value: "ru" },
+                    { label: "srpski", value: "sr" },
+                    { label: "Svenska", value: "sv" },
+                    { label: "Türkçe", value: "tr" },
+                    { label: "o‘zbekcha", value: "uz" },
+                    { label: "Tiếng Việt", value: "vi" },
+                    { label: "简体中文 (Simplified Chinese)", value: "zh" },
+                    { label: "繁體中文 (Traditional Chinese)", value: "zh-Hant" }
+                ]
+            };
+
             const { rawTrackNumbers, trackNumbers } = extractTrackNumbers();
 
-            const modal = createModal(songIds, rawTrackNumbers, trackNumbers, creditsState);
+            const modal = createModal(songIds, rawTrackNumbers, trackNumbers, creditsState, optionSets);
 
             /*const songDataAlbum = await Promise.all(
                 songIds.map(async songId => {
@@ -3942,6 +3988,8 @@ chrome.storage.local.get([
 
 
             modal.saveButton.addEventListener('click', async (event) => {
+                modal.status.textContent = "Loading...";
+
                 const checkboxStates = {
                     tracklistIndividual: document.querySelector('#tracklist_individual')?._checked,
                     overwritePrimaryArtists: document.querySelector('#overwrite_primary_artists')?.checked,
@@ -4363,11 +4411,12 @@ chrome.storage.local.get([
                     }
 
                     if (primaryTagPayload || checkboxStates.overwritePrimaryTag || checkboxStates.removePrimaryTag) {
+                        const primaryTagIds = optionSets["Primary Tag"].map(o => String(o.value));
                         if (checkboxStates.overwritePrimaryTag && primaryTagPayload) {
                             existingSecondaryTags = existingSecondaryTags.filter(tag => tag.id !== existingPrimaryTag.id);
                             payload.song.primary_tag_id = primaryTagPayload;
                         } else if (checkboxStates.removePrimaryTag && primaryTagPayload) {
-                            existingSecondaryTags = existingSecondaryTags.filter(tag => !Object.values(primaryTagIds).includes(tag.id));
+                            existingSecondaryTags = existingSecondaryTags.filter(tag => !primaryTagIds.includes(String(tag.id)) || String(tag.id) === primaryTagPayload);
                             payload.song.primary_tag_id = primaryTagPayload;
                         } else {
                             payload.song.primary_tag_id = primaryTagPayload;
@@ -4619,7 +4668,6 @@ chrome.storage.local.get([
                         workers.push((async function worker() {
                             while (queue.length > 0) {
                                 const songId = queue.shift();
-                                modal.status.textContent = "Loading...";
                                 await processSong(songId);
                                 updateStatus(displayIndex++);
                             }
@@ -4644,7 +4692,7 @@ chrome.storage.local.get([
 
 
 
-        function createModal(songIds, rawTrackNumbers, trackNumbers, creditsState) {
+        function createModal(songIds, rawTrackNumbers, trackNumbers, creditsState, optionSets) {
             function createForm() {
                 document.body.style.overflow = "hidden";
 
@@ -5395,52 +5443,6 @@ chrome.storage.local.get([
             }
 
             function createInputSelectField(labelText, placeholderText) {
-                const optionSets = {
-                    "Primary Tag": [
-                        { label: "Rap", value: 1434 },
-                        { label: "Pop", value: 16 },
-                        { label: "R&B", value: 352 },
-                        { label: "Rock", value: 567 },
-                        { label: "Country", value: 413 },
-                        { label: "Electronic", value: 606 },
-                        { label: "Non-Music", value: 1452 }
-                    ],
-                    "Song Relationship": [
-                        { label: "Samples", value: "samples" },
-                        { label: "Interpolates", value: "interpolates" },
-                        { label: "Cover Of", value: "cover_of" },
-                        { label: "Remix Of", value: "remix_of" },
-                        { label: "Live Version Of", value: "live_version_of" },
-                        { label: "Translation Of", value: "translation_of" }
-                    ],
-                    "Language": [
-                        { label: "bosanski", value: "bs" },
-                        { label: "crnogorski", value: "cnr" },
-                        { label: "Deutsch", value: "de" },
-                        { label: "Österreichisches Deutsch", value: "de-at" },
-                        { label: "English", value: "en" },
-                        { label: "Español", value: "es" },
-                        { label: "Français", value: "fr" },
-                        { label: "Schweizerdeutsch", value: "gsw" },
-                        { label: "hrvatski", value: "hr" },
-                        { label: "Italiano", value: "it" },
-                        { label: "Kölsch", value: "ksh" },
-                        { label: "Македонски", value: "mk" },
-                        { label: "Nederlands", value: "nl" },
-                        { label: "Norsk", value: "no" },
-                        { label: "Polski", value: "pl" },
-                        { label: "Português", value: "pt" },
-                        { label: "Русский (Russian)", value: "ru" },
-                        { label: "srpski", value: "sr" },
-                        { label: "Svenska", value: "sv" },
-                        { label: "Türkçe", value: "tr" },
-                        { label: "o‘zbekcha", value: "uz" },
-                        { label: "Tiếng Việt", value: "vi" },
-                        { label: "简体中文 (Simplified Chinese)", value: "zh" },
-                        { label: "繁體中文 (Traditional Chinese)", value: "zh-Hant" }
-                    ]
-                };
-
                 const inputContainer = document.createElement('div');
                 Object.assign(inputContainer.style, {
                     display: "flex",
