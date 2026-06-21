@@ -44,14 +44,7 @@ chrome.storage.local.get([
             });
         });
 
-        const userIdPromise = new Promise(resolve => {
-            chrome.storage.local.get("userId", ({ userId }) => {
-                resolve(userId ?? null);
-            });
-        });
-
         const profilePath = await profilePathPromise;
-        const userId = await userIdPromise;
 
         const isAllAlbums = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/albums$/.test(window.location.href);
         const isAllSongs = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/songs$/.test(window.location.href);
@@ -92,6 +85,9 @@ chrome.storage.local.get([
 
             if (isGeniusArtistSpreadsheetButton) getSpreadsheet(artistId, "artist");
         } else if (isUser) {
+            const userId = document.documentElement.innerHTML.match(/var CURRENT_USER = JSON.parse\('{\\"id\\":(\d+)/)?.[1];
+            if (!userId) return;
+
             if (isGeniusArtistRecords) showRecords();
             if (isGeniusArtistSpreadsheetButton) getSpreadsheet(userId, "user");
         } else {

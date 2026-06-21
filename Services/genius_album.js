@@ -37,6 +37,8 @@ chrome.storage.local.get([
     //////////                                  MAIN PROGRAM                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    let geniusStarted = false;
+
     main();
 
     async function main() {
@@ -46,11 +48,7 @@ chrome.storage.local.get([
 
 
         if (isAlbumNew) {
-
-            if (isGeniusAlbumEditTracklist) addTracklistCheckboxes();
             if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
-
-
 
             const userId = getId("currentUser");
             const albumId = getId("album");
@@ -73,14 +71,14 @@ chrome.storage.local.get([
             if (isGeniusAlbumAlbumPageInfo) showCoverInfo(albumData);
             if (isGeniusAlbumAlbumPage) checkAlbumCover(albumData);
 
-
             if (isGeniusAlbumUploadCover) uploadAlbumCover(albumId, albumData);
+
+            if (isGeniusAlbumEditTracklist) addTracklistCheckboxes(userData);
+
 
             if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPage(songIds);
             //if (isGeniusAlbumCleanupButton) cleanupAlbumType(albumData);
 
-
-      
 
             /*async function songDataFunctions() {
                 const songDataAlbum = await Promise.all(
@@ -96,7 +94,49 @@ chrome.storage.local.get([
                 if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(songDataAlbum, userData);
             }*/
 
-            //await songDataFunctions();
+            async function songDataFunctions() {
+                const songsPerBatch = 25;
+                const delay = 500;
+                const songDataAlbum = [];
+
+                for (let i = 0; i < songIds.length; i += songsPerBatch) {
+                    const batch = songIds.slice(i, i + songsPerBatch);
+
+                    const batchResults = await Promise.all(
+                        batch.map(async songId => {
+                            const { song: songData } = await getApiData(songId, "songs");
+                            return songData;
+                        })
+                    );
+
+                    songDataAlbum.push(...batchResults);
+
+                    if (i + songsPerBatch < songIds.length) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+
+                if (!songDataAlbum.length) return;
+
+                if (isGeniusAlbumFollowButton) followButtonAlbumPage(songDataAlbum, albumData);
+                if (isGeniusAlbumCleanupButton) cleanupMetadata(songDataAlbum, userData);
+                if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(songDataAlbum, userData);
+            }
+
+
+            chrome.runtime.sendMessage({ type: "IS_ACTIVE_TAB" }, (isActive) => {
+                if (isActive && !geniusStarted) {
+                    geniusStarted = true;
+                    songDataFunctions();
+                }
+            });
+
+            chrome.runtime.onMessage.addListener((msg) => {
+                if (msg.type === "TAB_ACTIVATED" && !geniusStarted) {
+                    geniusStarted = true;
+                    songDataFunctions();
+                }
+            });
 
 
 
@@ -756,7 +796,7 @@ chrome.storage.local.get([
     //////////                                TRACKLIST BUTTON                                //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function addTracklistCheckboxes() {
+    function addTracklistCheckboxes(userData) {
         console.log("Run function addTracklistCheckboxes()");
 
         const observer = new MutationObserver(() => {
@@ -849,7 +889,8 @@ chrome.storage.local.get([
             const hideToggle = createToggle("Hide");
             const unreleasedToggle = createToggle("Unreleased");
 
-            containerDiv.appendChild(hideToggle);
+            const hasHidePermission = userData?.roles_for_display.includes("transcriber") || userData?.roles_for_display.includes("editor");
+            if (hasHidePermission) containerDiv.appendChild(hideToggle);
             containerDiv.appendChild(unreleasedToggle);
 
             header.insertAdjacentElement("afterend", containerDiv);
@@ -4578,7 +4619,7 @@ chrome.storage.local.get([
                         workers.push((async function worker() {
                             while (queue.length > 0) {
                                 const songId = queue.shift();
-
+                                modal.status.textContent = "Loading...";
                                 await processSong(songId);
                                 updateStatus(displayIndex++);
                             }
@@ -5829,13 +5870,19 @@ chrome.storage.local.get([
                                 }
                                 if (playlistLink !== cachedPlaylistLink || !cachedSongIds) {
                                     const html = await (await fetch(playlistLink)).text();
-                                    const albumTitleRegex = /\\\"nameWithArtist\\\":\\\"(.*?)\\\",\\"name\\\":\\\"(.*?)\\\"/;
-                                    cachedAlbumTitle = (html.match(albumTitleRegex) || [])[2];
-                                    const songIdRegex = /\{\\\"tracklist\\\":\[(.*?)\]/;
-                                    let match = html.match(songIdRegex);
+                                    console.log(html);
+
+                                    cachedAlbumTitle = (html.match(/\\\"nameWithArtist\\\":\\\"(.*?)\\\",\\"name\\\":\\\"(.*?)\\\"/) || [])[2];
                                     cachedSongIds = [];
-                                    if (match && match[1]) {
-                                        cachedSongIds = match[1].split(',').map(id => Number(id.trim())).filter(id => !isNaN(id));
+                                    const appearancesMatch = html.match(/\\"albumAppearances\\":\{([\s\S]*?)\}(?=,\\"[a-zA-Z])/);
+
+                                    if (appearancesMatch) {
+                                        const cleaned = appearancesMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                                        const albumAppearances = JSON.parse("{" + cleaned + "}");
+
+                                        cachedSongIds = Object.values(albumAppearances)
+                                            .sort((a, b) => a.trackNumber - b.trackNumber)
+                                            .map(entry => entry.song);
                                     }
                                     cachedPlaylistLink = playlistLink;
                                 }
@@ -6911,7 +6958,7 @@ chrome.storage.local.get([
         return false;
     }
 
- 
+
 
     function addCleanupButtonOld(songs, actionType, label, metadataUpdate) {
         if (songs.length === 0) return;
@@ -7339,7 +7386,7 @@ chrome.storage.local.get([
         stickyToolbarLeft.appendChild(cleanupButton);
     }
 
-    
+
 
 
     function cleanupAlbumType(albumData) {
