@@ -96,7 +96,7 @@ chrome.storage.local.get([
 
             async function songDataFunctions() {
                 const songsPerBatch = 25;
-                const delay = 500;
+                const delay = 750;
                 const songDataAlbum = [];
 
                 for (let i = 0; i < songIds.length; i += songsPerBatch) {
@@ -1318,6 +1318,8 @@ chrome.storage.local.get([
         }
 
         function createRow(modal) {
+            if (modal.querySelector('[data-ui="album-cover-ui"]')) return;
+
             const artworkSection = modal.querySelectorAll('section[class^="ScrollableTabsSection__Container-"]')?.[1];
             if (!artworkSection) return;
 
