@@ -60,7 +60,7 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     queueMicrotask(main);
-    
+
     async function main() {
         const isFirehose = window.location.href === 'https://genius.com/firehose';
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
@@ -1187,7 +1187,7 @@ chrome.storage.local.get([
                     'eu': `["${songTitle}" abestiaren letra${featuringText}]`,
                     'fr': `[Paroles de "${songTitle}"${featuringText}]`,
                     'gl': `[Letra de "${songTitle}"${featuringText}]`,
-                    'hu': `[„[${songTitle}]” dalszöveg${featuringText}]`,
+                    'hu': `[„${songTitle}” dalszöveg${featuringText}]`,
                     'is': `[Söngtextar fyrir "${songTitle}"${featuringText}]`,
                     'it': `[Testo di "${songTitle}"${featuringText}]`,
                     'la': `[Lyricis "${songTitle}"${featuringText}]`,
@@ -1211,6 +1211,7 @@ chrome.storage.local.get([
                 },
                 Translation: {
                     'de': `[Deutscher Songtext zu „${songTitle}“${featuringText}]`,
+                    'hu': `[„${songTitle}” magyarul]`,
                     'nl': `[Songtekst van "${songTitle}"${featuringText} (Vertaling)]`,
                     'no': `[Tekst til ${primaryArtists} – «${songTitle}»${featuringText} (Oversettelse)]`,
                     'sq': `[Teksti i "${songTitle}"${featuringText} në shqip]`,
@@ -1689,7 +1690,7 @@ chrome.storage.local.get([
                 "hu": { // Hungarian
                     Default: [
                         { displayText: "Header", fullText: "Header", hoverText: "Header" },
-                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Translation", fullText: "Translation", hoverText: "Translation" },
                         { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
                         { displayText: null, fullText: null, hoverText: null },
                     ]
