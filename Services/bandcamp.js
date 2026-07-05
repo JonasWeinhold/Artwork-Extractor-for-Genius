@@ -1,4 +1,5 @@
-chrome.storage.local.get(['Services/bandcamp.js', 'isBandcampCopyCover', 'isBandcampPopup', 'isBandcampSaveImage'], function (result) {
+chrome.storage.local.get(['Services/bandcamp.js', 'isBandcampCopyTracklist', 'isBandcampCopyCover', 'isBandcampPopup', 'isBandcampSaveImage'], function (result) {
+    const isBandcampCopyTracklist = result.isBandcampCopyTracklist !== undefined ? result.isBandcampCopyTracklist : true;
     const isBandcampCopyCover = result.isBandcampCopyCover !== undefined ? result.isBandcampCopyCover : true;
     const isBandcampPopup = result.isBandcampPopup !== undefined ? result.isBandcampPopup : true;
     const isBandcampSaveImage = result.isBandcampSaveImage !== undefined ? result.isBandcampSaveImage : false;
@@ -87,12 +88,54 @@ chrome.storage.local.get(['Services/bandcamp.js', 'isBandcampCopyCover', 'isBand
         return fileNameWithExtension;
     }
 
+    function addCopyTracklistButton() {
+        const rows = document.querySelectorAll("#track_table .track_row_view");
 
+        rows.forEach(row => {
+            if (row.querySelector(".ct-copy-btn")) return;
 
+            const titleEl = row.querySelector(".track-title");
+            if (!titleEl) return;
 
+            const title = titleEl.textContent.trim();
+
+            const btn = document.createElement("div");
+            btn.className = "ct-copy-btn";
+            btn.textContent = "CT";
+
+            btn.style.position = "absolute";
+            btn.style.left = "-26px";
+            btn.style.top = "50%";
+            btn.style.transform = "translateY(-52%)";
+            btn.style.height = "16px";
+            btn.style.lineHeight = "16px";
+            btn.style.padding = "0 2px";
+            btn.style.fontSize = "12px";
+            btn.style.cursor = "pointer";
+            btn.style.color = "#222";
+            btn.style.background = "#fff";
+            btn.style.border = "1px solid #d9d9d9";
+            btn.style.borderRadius = "2px";
+
+            btn.addEventListener("click", () => {
+                navigator.clipboard.writeText(title)
+
+                btn.style.color = "#fff";
+                btn.style.background = "#222";
+                setTimeout(() => {
+                    btn.style.color = "#222";
+                    btn.style.background = "#fff";
+                }, 250);
+            });
+
+            row.style.position = "relative";
+            row.appendChild(btn);
+        });
+    }
 
     window.addEventListener('click', function () {
         if (isBandcampCopyCover) addCopyCoverButton();
+        if (isBandcampCopyTracklist) addCopyTracklistButton();
     });
 
 });

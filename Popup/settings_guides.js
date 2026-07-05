@@ -271,6 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isAppleMusicPopup = document.getElementById('isAppleMusicPopup').checked;
         const isAppleMusicHighlighting = document.getElementById('isAppleMusicHighlighting').checked;
         const isAppleMusicSaveImage = document.getElementById('isAppleMusicSaveImage').checked;
+        const isBandcampCopyTracklist = document.getElementById('isBandcampCopyTracklist').checked;
         const isBandcampCopyCover = document.getElementById('isBandcampCopyCover').checked;
         const isBandcampPopup = document.getElementById('isBandcampPopup').checked;
         const isBandcampSaveImage = document.getElementById('isBandcampSaveImage').checked;
@@ -391,6 +392,7 @@ document.addEventListener('DOMContentLoaded', function () {
             isAppleMusicPopup: isAppleMusicPopup,
             isAppleMusicHighlighting: isAppleMusicHighlighting,
             isAppleMusicSaveImage: isAppleMusicSaveImage,
+            isBandcampCopyTracklist: isBandcampCopyTracklist,
             isBandcampCopyCover: isBandcampCopyCover,
             isBandcampPopup: isBandcampPopup,
             isBandcampSaveImage: isBandcampSaveImage,
@@ -454,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'isGeniusArtistArtistPage', 'isGeniusArtistArtistPageZwsp', 'isGeniusArtistArtistPageInfo', 'isGeniusArtistArtistId', 'isGeniusArtistAllSongsAlbumsPage', 'isGeniusArtistAllSongsAlbumsPageMetadata', 'isGeniusArtistAllSongsAlbumsPageZwsp', 'isGeniusArtistFollowButton', 'isGeniusArtistSpreadsheetButton', 'isGeniusArtistSearchArtistMetadata','isGeniusArtistRecords', 'isGeniusArtistNewPage',
         'is45CopyCover', 'is45Popup', 'is45ConvertPNG', 'is45SaveImage', 'is45HostImgBB', 'is45HostFilestack', 'is45RightClick',
         'isAppleMusicCopyTracklist', 'isAppleMusicCopyCover', 'isAppleMusicCopyAnimatedCover', 'isAppleMusicCopyLyrics', 'isAppleMusicCopyArtist', 'isAppleMusicCopyCredits', 'isAppleMusicPopup', 'isAppleMusicHighlighting', 'isAppleMusicSaveImage',
-        'isBandcampCopyCover', 'isBandcampPopup', 'isBandcampSaveImage',
+        'isBandcampCopyTracklist', 'isBandcampCopyCover', 'isBandcampPopup', 'isBandcampSaveImage',
         'isDeezerCopyCover', 'isDeezerCopyArtist', 'isDeezerTrack', 'isDeezerPopup', 'isDeezerPremiumPopup', 'isDeezerSaveImage',
         'isDistroKidCopyCover', 'isDistroKidPopup', 'isDistroKidConvertPNG', 'isDistroKidSaveImage', 'isDistroKidHostImgBB', 'isDistroKidHostFilestack',
         'isSoundCloudCopyCover', 'isSoundCloudPopup', 'isSoundCloudArtistBanner', 'isSoundCloudConvertPNG', 'isSoundCloudSaveImage', 'isSoundCloudHostImgBB', 'isSoundCloudHostFilestack',
@@ -527,6 +529,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isAppleMusicPopup').checked = result.isAppleMusicPopup !== undefined ? result.isAppleMusicPopup : true;
         document.getElementById('isAppleMusicHighlighting').checked = result.isAppleMusicHighlighting !== undefined ? result.isAppleMusicHighlighting : true;
         document.getElementById('isAppleMusicSaveImage').checked = result.isAppleMusicSaveImage !== undefined ? result.isAppleMusicSaveImage : false;
+        document.getElementById('isBandcampCopyTracklist').checked = result.isBandcampCopyTracklist !== undefined ? result.isBandcampCopyTracklist : true;
         document.getElementById('isBandcampCopyCover').checked = result.isBandcampCopyCover !== undefined ? result.isBandcampCopyCover : true;
         document.getElementById('isBandcampPopup').checked = result.isBandcampPopup !== undefined ? result.isBandcampPopup : true;
         document.getElementById('isBandcampSaveImage').checked = result.isBandcampSaveImage !== undefined ? result.isBandcampSaveImage : false;
@@ -648,6 +651,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isAppleMusicPopup').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicHighlighting').addEventListener('change', saveSettings);
     document.getElementById('isAppleMusicSaveImage').addEventListener('change', saveSettings);
+    document.getElementById('isBandcampCopyTracklist').addEventListener('change', saveSettings);
     document.getElementById('isBandcampCopyCover').addEventListener('change', saveSettings);
     document.getElementById('isBandcampPopup').addEventListener('change', saveSettings);
     document.getElementById('isBandcampSaveImage').addEventListener('change', saveSettings);
