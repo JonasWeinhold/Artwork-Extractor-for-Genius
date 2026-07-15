@@ -1189,6 +1189,35 @@ chrome.storage.local.get([
             }
         }
 
+        async function fetchAlbumsPage(id, type, page, perPage = 50, maxRetries = 5) {
+            let attempt = 0;
+
+            while (true) {
+                try {
+                    const url =
+                        type === "artist"
+                            ? `https://genius.com/api/artists/${id}/albums?page=${page}&per_page=${perPage}`
+                            : `https://genius.com/api/users/${id}/contributions/transcriptions?next_cursor=${page}&per_page=${perPage}`;
+
+                    const res = await fetch(url);
+
+                    if (res.status === 503) {
+                        attempt++;
+                        if (attempt > maxRetries) throw new Error(`503 after ${maxRetries} retries`);
+                        await sleep(200 * attempt);
+                        continue;
+                    }
+
+                    return await res.json();
+
+                } catch (err) {
+                    attempt++;
+                    if (attempt > maxRetries) throw err;
+                    await sleep(200 * attempt);
+                }
+            }
+        }
+
         function parseSongsFromPage(json, type) {
             if (type === "artist") {
                 return json.response?.songs || [];
@@ -1207,9 +1236,33 @@ chrome.storage.local.get([
             return songs;
         }
 
+        function parseAlbumsFromPage(json, type) {
+            if (type === "artist") {
+                return json.response?.albums || [];
+            }
+
+            const groups = json.response?.contribution_groups || [];
+            const albums = [];
+
+            for (const g of groups) {
+                if (g.contribution_type !== "album") continue;
+                for (const c of g.contributions) {
+                    if (c._type === "album") albums.push(c);
+                }
+            }
+
+            return albums;
+        }
+
         async function fetchSongDetails(songId) {
             const res = await fetch(`https://genius.com/api/songs/${songId}`);
             if (!res.ok) throw new Error(`Song ${songId}: ${res.status}`);
+            return res.json();
+        }
+
+        async function fetchAlbumDetails(albumId) {
+            const res = await fetch(`https://genius.com/api/albums/${albumId}`);
+            if (!res.ok) throw new Error(`Album ${albumId}: ${res.status}`);
             return res.json();
         }
 
@@ -1240,6 +1293,33 @@ chrome.storage.local.get([
             return allSongs.sort((a, b) => a.id - b.id);
         }
 
+        async function fetchAllAlbumsDirect(id, type, button) {
+            const perPage = 50;
+            const workers = [1, 2, 3];
+            let allAlbums = [];
+
+            await fetchPaginated({
+                startPages: workers,
+                fetchPage: (page) => fetchAlbumsPage(id, type, page, perPage),
+                updateButton: (count) => button.textContent = `Page: ${count}`,
+                onPageData: (json) => {
+                    const albums = parseAlbumsFromPage(json, type);
+
+                    for (const album of albums) {
+                        allAlbums.push({
+                            ...album,
+                            id: Number(album.id)
+                        });
+                    }
+
+                    return albums;
+                },
+                stopCondition: (albums) => !albums.length
+            });
+
+            return allAlbums.sort((a, b) => a.id - b.id);
+        }
+
         async function fetchAllSongIds(id, type, button) {
             const perPage = 50;
             const workers = [1, 2, 3];
@@ -1255,6 +1335,26 @@ chrome.storage.local.get([
                     return songs;
                 },
                 stopCondition: (songs) => !songs.length
+            });
+
+            return ids.sort((a, b) => a - b);
+        }
+
+        async function fetchAllAlbumIds(id, type, button) {
+            const perPage = 50;
+            const workers = [1, 2, 3];
+            let ids = [];
+
+            await fetchPaginated({
+                startPages: workers,
+                fetchPage: (page) => fetchAlbumsPage(id, type, page, perPage),
+                updateButton: (count) => button.textContent = `Page: ${count}`,
+                onPageData: (json) => {
+                    const albums = parseAlbumsFromPage(json, type);
+                    for (const album of albums) ids.push(Number(album.id));
+                    return albums;
+                },
+                stopCondition: (albums) => !albums.length
             });
 
             return ids.sort((a, b) => a - b);
@@ -1291,6 +1391,36 @@ chrome.storage.local.get([
             return results;
         }
 
+        async function fetchAlbumDetailsByIds(albumIds, button) {
+            const workers = 3;
+            let results = [];
+            let counter = 0;
+
+            async function worker(startIndex) {
+                let index = startIndex;
+                while (index < albumIds.length) {
+                    const id = albumIds[index];
+                    try {
+                        const json = await fetchAlbumDetails(id);
+                        results.push({ id, data: json });
+                        counter++;
+                        button.textContent = `Album: ${counter}`;
+                    } catch (err) {
+                        console.error("Error fetching album", id, err);
+                    }
+                    index += workers;
+                }
+            }
+
+            const promises = [];
+            for (let i = 0; i < workers; i++) {
+                await sleep(200 * i);
+                promises.push(worker(i));
+            }
+
+            await Promise.all(promises);
+            return results;
+        }
 
         function filterSongIds(ids, text) {
             if (!text) return ids;
@@ -1451,7 +1581,215 @@ chrome.storage.local.get([
             }
         ]);
 
+        const wrapper2 = document.createElement('div');
+        wrapper2.style.display = "flex";
+        wrapper2.style.flexDirection = "row";
+        wrapper2.style.width = "100%";
+        wrapper2.style.gap = "0.5rem";
+
+        const translationArtists = [
+            "https://genius.com/artists/Genius-afrikaanse-vertalings",
+            "https://genius.com/artists/Genius-perkthime-ne-shqip",
+            "https://genius.com/artists/Genius-amharic-translations",
+            "https://genius.com/artists/Genius-aragonese-translations",
+            "https://genius.com/artists/Genius-asturian-translations",
+            "https://genius.com/artists/Genius-arabic-translations",
+            "https://genius.com/artists/Genius-armenian-translations",
+            "https://genius.com/artists/Genius-osterreichische-ubersetzungen",
+            "https://genius.com/artists/Genius-azrbaycan-trcum",
+            "https://genius.com/artists/Genius-bashkir-translations",
+            "https://genius.com/artists/Genius-itzulpena-euskarara",
+            "https://genius.com/artists/Genius-belarusian-translations",
+            "https://genius.com/artists/Genius-bengali-translations",
+            "https://genius.com/artists/Genius-bosanski-prijevodi",
+            "https://genius.com/artists/Genius-brasil-traducoes",
+            "https://genius.com/artists/Genius-bulgarian-translations",
+            "https://genius.com/artists/Genius-burmese-translations",
+            "https://genius.com/artists/Genius-tradusons-na-kriolu-kabuverdianu",
+            "https://genius.com/artists/Genius-traduccions-al-catala",
+            "https://genius.com/artists/Genius-cebuano-translations",
+            "https://genius.com/artists/Genius-cherokee-translations",
+            "https://genius.com/artists/Genius-chinese-translations",
+            "https://genius.com/artists/Genius-hrvatski-prijevodi",
+            "https://genius.com/artists/Genius-ceske-preklady",
+            "https://genius.com/artists/Genius-danske-oversttelser",
+            "https://genius.com/artists/Genius-nederlandse-vertalingen",
+            "https://genius.com/artists/Genius-english-translations",
+            "https://genius.com/artists/Genius-eestikeelsed-tolked",
+            "https://genius.com/artists/Genius-farsi-translations",
+            "https://genius.com/artists/Genius-pagsasalin-sa-filipino",
+            "https://genius.com/artists/Genius-suomenkielinen-kaannos",
+            "https://genius.com/artists/Genius-traductions-francaises",
+            "https://genius.com/artists/Genius-traducions-ao-galego",
+            "https://genius.com/artists/Genius-georgian-translations",
+            "https://genius.com/artists/Genius-deutsche-ubersetzungen",
+            "https://genius.com/artists/Genius-greek-translations",
+            "https://genius.com/artists/Genius-guarani-translations",
+            "https://genius.com/artists/Genius-unuhi-olelo-hawaii",
+            "https://genius.com/artists/Genius-hebrew-translations",
+            "https://genius.com/artists/Genius-hochdeutsche-ubersetzungen",
+            "https://genius.com/artists/Genius-hindi-translations",
+            "https://genius.com/artists/Genius-magyar-forditasok",
+            "https://genius.com/artists/Genius-islensk-yingar",
+            "https://genius.com/artists/Genius-ilocano-translations",
+            "https://genius.com/artists/Genius-terjemahan-indonesia",
+            "https://genius.com/artists/Genius-inuktitut-translations",
+            "https://genius.com/artists/Genius-aistriuchain-gaeilge",
+            "https://genius.com/artists/Genius-traduzioni-italiane",
+            "https://genius.com/artists/Genius-japanese-translations",
+            "https://genius.com/artists/Genius-kannada-translations",
+            "https://genius.com/artists/Genius-kazakh-translations",
+            "https://genius.com/artists/Genius-khmer-translations",
+            "https://genius.com/artists/Genius-korean-translations",
+            "https://genius.com/artists/Genius-kurdish-translations",
+            "https://genius.com/artists/Genius-translationes-latina",
+            "https://genius.com/artists/Genius-latviesu-tulkojums",
+            "https://genius.com/artists/Genius-lietuviskos-vertimai",
+            "https://genius.com/artists/Genius-letzebuergesch-iwwersetzungen",
+            "https://genius.com/artists/Genius-makedonski-prevodi",
+            "https://genius.com/artists/Terjemahan-bahasa-melayu-genius",
+            "https://genius.com/artists/Genius-malayalam-translations",
+            "https://genius.com/artists/Genius-mongolian-translations",
+            "https://genius.com/artists/Genius-nepali-translations",
+            "https://genius.com/artists/Genius-liphetolelo-yasesotho",
+            "https://genius.com/artists/Genius-norske-oversettelser",
+            "https://genius.com/artists/Genius-pashto-translations",
+            "https://genius.com/artists/Genius-plattdeutsche-ubersetzungen",
+            "https://genius.com/artists/Polskie-tumaczenia-genius",
+            "https://genius.com/artists/Genius-portugal-traducoes",
+            "https://genius.com/artists/Genius-traducions-ao-galego-reintegrado",
+            "https://genius.com/artists/Genius-traduceri-in-romana",
+            "https://genius.com/artists/Genius-russian-translations",
+            "https://genius.com/artists/Genius-sakha-translations",
+            "https://genius.com/artists/Genius-samoan-translations",
+            "https://genius.com/artists/Genius-srpski-prevodi",
+            "https://genius.com/artists/Genius-sinhala-translations",
+            "https://genius.com/artists/Genius-slovenske-preklady",
+            "https://genius.com/artists/Genius-slovenski-prevod",
+            "https://genius.com/artists/Genius-traducciones-al-espanol",
+            "https://genius.com/artists/Genius-swahili-translations",
+            "https://genius.com/artists/Genius-svenska-oversattningar",
+            "https://genius.com/artists/Genius-tamazight-translations",
+            "https://genius.com/artists/Genius-tamil-translations",
+            "https://genius.com/artists/Genius-tatar-translations",
+            "https://genius.com/artists/Genius-telugu-translations",
+            "https://genius.com/artists/Genius-thai-translations",
+            "https://genius.com/artists/Genius-toki-pona-pi-toki-ante",
+            "https://genius.com/artists/Genius-turkce-ceviriler",
+            "https://genius.com/artists/Genius-twi-kasadan",
+            "https://genius.com/artists/Genius-ukrainian-translations",
+            "https://genius.com/artists/Genius-urdu-translations",
+            "https://genius.com/artists/Genius-ozbekcha-tarjimalar",
+            "https://genius.com/artists/Genius-ban-dich-tieng-viet",
+            "https://genius.com/artists/Genius-cyfieithiadau-cymraeg",
+            "https://genius.com/artists/Genius-izinguqulelo-yesixhosa",
+            "https://genius.com/artists/Genius-romanizations"
+        ];
+
+        const current = window.location.href;
+        const isTranslationArtist = translationArtists.some(url => current.startsWith(url));
+
+        if (isTranslationArtist) {
+            insertButtons(wrapper2, [
+                // Spreadsheet 3
+                {
+                    text: "Spreadsheet 3",
+                    onClick: async (button) => {
+                        button.disabled = true;
+                        button.textContent = "Downloading CSV";
+
+                        const albums = await fetchAllAlbumsDirect(id, type, button);
+                        console.log("Fetched albums:", albums);
+
+                        const header = [
+                            "Album ID",
+                            "Primary Artist",
+                            "Album Title",
+                            "URL",
+                            "Release Date",
+                            "Cover Image Info",
+                        ];
+
+                        const rows = albums.map(album =>
+                            [
+                                album.id,
+                                escapeCSV(album.primary_artist_names),
+                                escapeCSV(album.name),
+                                escapeCSV(album.url),
+                                escapeCSV(getReleaseDate(album.release_date_components)),
+                                escapeCSV(getCoverInfo(album.cover_art_url)),
+                            ].join(",")
+                        );
+
+                        exportCSV(rows, header, `${type}_${id}_albums_3.csv`);
+
+                        button.textContent = "Spreadsheet 3";
+                        button.disabled = false;
+                    }
+                },
+
+                // Input Field
+                {
+                    type: "input",
+                    placeholder: "Album ID",
+                    marginLeft: "0.25rem",
+                },
+
+                // Spreadsheet 4
+                {
+                    text: "Spreadsheet 4",
+                    marginLeft: "0.25rem",
+                    onClick: async (button) => {
+                        button.disabled = true;
+                        button.textContent = "Downloading CSV";
+
+                        const input = wrapper._songIdInput;
+                        const filterText = input?.value.trim() || "";
+
+                        const ids = await fetchAllAlbumIds(id, type, button);
+                        const filteredIds = filterSongIds(ids, filterText);
+
+                        let details = await fetchAlbumDetailsByIds(filteredIds, button);
+                        details = details.sort((a, b) => a.id - b.id);
+
+                        const header = [
+                            "Album ID",
+                            "Primary Artist",
+                            "Album Title",
+                            "URL",
+                            "Release Date",
+                            "Cover Image Info",
+                            "Language",
+                            "Translation Of",
+                            "Translation Of URL"
+                        ];
+
+                        const rows = details.map(item => {
+                            const album = item.data.response.album;
+                            return [
+                                album.id,
+                                escapeCSV(album.primary_artist_names),
+                                escapeCSV(album.name),
+                                escapeCSV(album.url),
+                                escapeCSV(getReleaseDate(album.release_date_components)),
+                                escapeCSV(getCoverInfo(album.cover_art_url)),
+                                escapeCSV(album.language),
+                                escapeCSV(album.translation_of ? `${album.translation_of.primary_artist_names} - ${album.translation_of.name}` : ""),
+                                escapeCSV(album.translation_of ? album.translation_of.url : "")
+                            ].join(",")
+                        });
+
+                        exportCSV(rows, header, `${type}_${id}_albums_4.csv`);
+
+                        button.textContent = "Spreadsheet 4";
+                        button.disabled = false;
+                    }
+                }
+            ]);
+        }
+
         profileContainer.parentNode.insertBefore(wrapper, profileContainer);
+        profileContainer.parentNode.insertBefore(wrapper2, profileContainer);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
