@@ -1,0 +1,5 @@
+# IDE folders
+.claude/
+.copilot/
+.vscode/
+.idea/
