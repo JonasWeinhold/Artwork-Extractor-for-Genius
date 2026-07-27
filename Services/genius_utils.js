@@ -115,7 +115,9 @@ function geniusFetch(url, options) {
 async function getApiData(id, type) {
     return rateLimitGeniusRequest(async () => {
         const response = await fetch(`https://genius.com/api/${type}/${id}`);
+        if (!response.ok) throw new Error(`${type}/${id}: ${response.status} ${response.statusText}`);
         const json = await response.json();
+        if (!json?.response) throw new Error(`${type}/${id}: missing response payload`);
 
         return json.response;
     });
