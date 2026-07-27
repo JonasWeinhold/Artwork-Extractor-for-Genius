@@ -94,7 +94,8 @@ const rateLimitGeniusRequest = (function createGeniusRateLimiter(maxPerSecond) {
         }
 
         if (queue.length && !pumpScheduled) {
-            schedulePump(Math.max(windowMs - (Date.now() - starts[0]), 10));
+            const oldestStart = starts[0] ?? Date.now();
+            schedulePump(Math.max(windowMs - (Date.now() - oldestStart), 10));
         }
     }
 
@@ -115,9 +116,11 @@ function geniusFetch(url, options) {
 async function getApiData(id, type) {
     return rateLimitGeniusRequest(async () => {
         const response = await fetch(`https://genius.com/api/${type}/${id}`);
-        if (!response.ok) throw new Error(`${type}/${id}: ${response.status} ${response.statusText}`);
+        if (!response.ok) throw new Error(`${type}/${id}: ${response.status} ${response.statusText}`);
+
         const json = await response.json();
-        if (!json?.response) throw new Error(`${type}/${id}: missing response payload`);
+        if (!json?.response) throw new Error(`${type}/${id}: missing response payload`);
+
 
         return json.response;
     });
