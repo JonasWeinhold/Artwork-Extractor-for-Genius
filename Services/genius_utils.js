@@ -94,8 +94,10 @@ const rateLimitGeniusRequest = (function createGeniusRateLimiter(maxPerSecond) {
         }
 
         if (queue.length && !pumpScheduled) {
-            const oldestStart = starts[0] ?? Date.now();
-            schedulePump(Math.max(windowMs - (Date.now() - oldestStart), 10));
+            const oldestStart = starts[0] ?? Date.now();
+
+            schedulePump(Math.max(windowMs - (Date.now() - oldestStart), 10));
+
         }
     }
 
@@ -424,7 +426,7 @@ async function sendUpdateRequest(songId, payload) {
     }
 }
 
-async function fetchSuggestions(type, query) {
+    const response = await fetch(url, {
     const url = `https://genius.com/api/${type}/autocomplete?q=${encodeURIComponent(query)}&text_format=html,markdown`;
     const response = await geniusFetch(url, {
         method: 'GET',
