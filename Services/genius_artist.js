@@ -107,7 +107,7 @@ chrome.storage.local.get([
         if (!artistId || !userId) return { artistId: null, userId, artistData: null };
 
         // Artist Data
-        const response = await fetch(`https://genius.com/api/artists/${artistId}`);
+        const response = await geniusFetch(`https://genius.com/api/artists/${artistId}`);
         const json = await response.json();
 
         return { artistId, userId, artistData: json.response.artist };
@@ -342,14 +342,14 @@ chrome.storage.local.get([
             const blackSquare = document.createElement('span');
             blackSquare.className = 'black-square';
             blackSquare.style.cssText = `
-            height: 8px; 
-            width: 8px; 
-            background-color: #2C2C2C; 
-            display: inline-block; 
-            position: absolute; 
+            height: 8px;
+            width: 8px;
+            background-color: #2C2C2C;
+            display: inline-block;
+            position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%); 
+            transform: translate(-50%, -50%);
         `;
             square.appendChild(blackSquare);
         }
@@ -364,14 +364,14 @@ chrome.storage.local.get([
             const square = document.createElement('span');
             square.className = 'square-indicator';
             square.style.cssText = `
-                font-variant: JIS04; 
-                height: 16px; 
-                width: 28px; 
-                display: inline-block; 
-                margin-left: -0.100rem; 
-                margin-right: 0.375rem; 
+                font-variant: JIS04;
+                height: 16px;
+                width: 28px;
+                display: inline-block;
+                margin-left: -0.100rem;
+                margin-right: 0.375rem;
                 position: relative;
-                background-color: ${color}; 
+                background-color: ${color};
                 border: 1px solid ${borderColor};
             `;
             button.style.cssText += `
@@ -653,7 +653,7 @@ chrome.storage.local.get([
     async function fetchAllSongIds(artistId) {
         let songIds = [], page = 1, perPage = 50;
         while (true) {
-            const json = await fetch(`https://genius.com/api/artists/${artistId}/songs?page=${page}&per_page=${perPage}`)
+            const json = await geniusFetch(`https://genius.com/api/artists/${artistId}/songs?page=${page}&per_page=${perPage}`)
                 .then(res => res.json());
             if (!json.response.songs?.length) break;
 
@@ -828,7 +828,7 @@ chrome.storage.local.get([
         }
 
         async function fetchSongDetails(songId) {
-            const res = await fetch(`https://genius.com/api/songs/${songId}`);
+            const res = await geniusFetch(`https://genius.com/api/songs/${songId}`);
             if (!res.ok) throw new Error(`Song ${songId}: ${res.status}`);
             return res.json();
         }
@@ -1255,13 +1255,13 @@ chrome.storage.local.get([
         }
 
         async function fetchSongDetails(songId) {
-            const res = await fetch(`https://genius.com/api/songs/${songId}`);
+            const res = await geniusFetch(`https://genius.com/api/songs/${songId}`);
             if (!res.ok) throw new Error(`Song ${songId}: ${res.status}`);
             return res.json();
         }
 
         async function fetchAlbumDetails(albumId) {
-            const res = await fetch(`https://genius.com/api/albums/${albumId}`);
+            const res = await geniusFetch(`https://genius.com/api/albums/${albumId}`);
             if (!res.ok) throw new Error(`Album ${albumId}: ${res.status}`);
             return res.json();
         }
@@ -1990,7 +1990,7 @@ chrome.storage.local.get([
 
                 const chunkResults = await Promise.all(
                     chunk.map(song =>
-                        fetch(`https://genius.com/api/songs/${song.id}`)
+                        geniusFetch(`https://genius.com/api/songs/${song.id}`)
                             .then(res => res.json())
                             .then(json => {
                                 const songData = json.response.song;
