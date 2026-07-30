@@ -2504,6 +2504,8 @@ chrome.storage.local.get([
                             line = line.replace(/'\bCuz\b/g, "'Cause");
                             line = line.replace(/'\bcuz\b/g, "'cause");
 
+                            line = line.replace(/ & /g, " and ");
+
                             const slangMap = {
                                 'ay': 'ayy',
                                 'aye': 'ayy',
