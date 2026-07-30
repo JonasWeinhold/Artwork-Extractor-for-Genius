@@ -754,6 +754,7 @@ chrome.storage.local.get([
             { code: 'MN', value: 'mn', name: 'Mongolian' },
             { code: 'NO', value: 'no', name: 'Norwegian' },
             { code: 'PL', value: 'pl', name: 'Polish' },
+            { code: 'PT', value: 'pt', name: 'Portuguese' },
             { code: 'RU', value: 'ru', name: 'Russian' },
             { code: 'SC', value: 'sc', name: 'Sardinian' },
             { code: 'SH-E', value: 'sr', name: 'Serbo-Croatian (ekavica)' },
@@ -1197,6 +1198,7 @@ chrome.storage.local.get([
                     'nl': `[Songtekst van "${songTitle}"${featuringText}]`,
                     'no': `[Tekst til «${songTitle}»${featuringText}]`,
                     'pl': `[Tekst piosenki "${songTitle}"${featuringText}]`,
+                    'pt': `[Letra de "${songTitle}"${featuringText}]`,
                     'ru': `[Текст песни «${songTitle}»${featuringText}]`,
                     'sc': `[Testu de "${songTitle}"${featuringText}]`,
                     'sk': `[Text skladby „${songTitle}“${featuringText}]`,
@@ -1214,6 +1216,7 @@ chrome.storage.local.get([
                     'hu': `[„${songTitle}” magyarul]`,
                     'nl': `[Songtekst van "${songTitle}"${featuringText} (Vertaling)]`,
                     'no': `[Tekst til ${primaryArtists} – «${songTitle}»${featuringText} (Oversettelse)]`,
+                    'pt': `[Letra de „${songTitle}“${featuringText}]`,
                     'sq': `[Teksti i "${songTitle}"${featuringText} në shqip]`,
                     'tr': `["${songTitle}"${featuringText} için Türkçe şarkı sözleri]`,
                     'vi': `[Lời dịch tiếng Việt cho "${songTitle}"${featuringText}]`,
@@ -1225,6 +1228,7 @@ chrome.storage.local.get([
                     'en': `<b>[Lyrics from [Snippet]()]</b>`,
                     'nl': `<b>[Songtekst van [Fragment]()]</b>`,
                     'pl': `<b>[Tekst piosenki pochodzi ze [Snippetu]()]</b>`,
+                    'pt': `<b>[Letra da [prévia]()]</b>`,
                     'sk': `<b>[Lyrics from [Snippet]()]</b>`,
                     'tr': `<b>[[Kesit]() şarkı sözleri, resmî sözler yayımlanınca güncellenecektir]</b>`,
                 }
@@ -1837,6 +1841,25 @@ chrome.storage.local.get([
                         { displayText: "Interludium", fullText: "Interludium", hoverText: "Interlude" },
                         { displayText: "Przerwa instr.", fullText: "Przerwa instrumentalna", hoverText: "Instrumental Break" },
                         { displayText: "Wokaliza", fullText: "Wokaliza", hoverText: "Non-Lyrical Vocals" },
+                    ]
+                },
+                "pt": { // Portuguese
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Intro", fullText: "Intro", hoverText: "Intro" },
+                        { displayText: "Saída", fullText: "Saída", hoverText: "Outro" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Verso", fullText: "Verso", hoverText: "Verse" },
+                        { displayText: "Pré-Refrão", fullText: "Pré-Refrão", hoverText: "Pre-Chorus" },
+                        { displayText: "Refrão", fullText: "Refrão", hoverText: "Chorus" },
+                        { displayText: "Pós-Refrão", fullText: "Pós-Refrão", hoverText: "Post-Chorus" },
+                        { displayText: "Estribilho", fullText: "Estribilho", hoverText: "Refrain" },
+                        { displayText: "Ponte", fullText: "Ponte", hoverText: "Bridge" },
+                        { displayText: "Interlúdio", fullText: "Interlúdio", hoverText: "Interlude" }
                     ]
                 },
                 "ru": { // Russian
