@@ -2436,15 +2436,10 @@ chrome.storage.local.get([
                         for (const [key, value] of Object.entries(replacementsLanguage)) {
                             const regex = new RegExp(key, 'g');
                             line = line.replace(regex, (match) => {
-                                if (key === '"') {
-                                    return typeof value === 'function' ? value(index++) : value;
-                                }
-                                return value;
+                                return typeof value === 'function' ? value(index++) : value;
                             });
                         }
-                    }
-
-                    if (cleanupType === 'language') {
+                        
                         if (storedLanguage === 'en') {
                             line = line.replace(/^(['"]?\s*<[^>]*>\s*|\s*['"])?(['"]?\w|'\w)/, (match, prefix, word) => {
                                 if (word.startsWith("'")) {
@@ -2456,26 +2451,8 @@ chrome.storage.local.get([
 
                             line = line.replace(/\bi\b(?!>)/g, 'I');
 
-                            line = line.replace(/\s(ai|are|ca|could|did|do|does|had|have|is|must|should|was|were|wo|would)nt\b/gi, (match, verb) => {
-                                const map = {
-                                    ai: "ain't",
-                                    are: "aren't",
-                                    ca: "can't",
-                                    could: "couldn't",
-                                    did: "didn't",
-                                    do: "don't",
-                                    does: "doesn't",
-                                    had: "hadn't",
-                                    have: "haven't",
-                                    is: "isn't",
-                                    must: "mustn't",
-                                    should: "shouldn't",
-                                    was: "wasn't",
-                                    were: "weren't",
-                                    wo: "won't",
-                                    would: "wouldn't"
-                                };
-                                return ' ' + map[verb.toLowerCase()];
+                            line = line.replace(/\b(ai|are|ca|could|did|do|does|had|have|is|must|should|was|were|wo|would)nt\b/gi, (match, verb) => {
+                                return `${verb.toLowerCase()}n't`;
                             });
 
                             line = line.replace(/\b(i|they|we|you)ve\b/gi, (match, subject) => {
