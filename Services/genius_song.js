@@ -1216,7 +1216,7 @@ chrome.storage.local.get([
                     'hu': `[„${songTitle}” magyarul]`,
                     'nl': `[Songtekst van "${songTitle}"${featuringText} (Vertaling)]`,
                     'no': `[Tekst til ${primaryArtists} – «${songTitle}»${featuringText} (Oversettelse)]`,
-                    'pt': `[Letra de „${songTitle}“${featuringText}]`,
+                    'pt': `[Letra de "${songTitle}"${featuringText}]`,
                     'sq': `[Teksti i "${songTitle}"${featuringText} në shqip]`,
                     'tr': `["${songTitle}"${featuringText} için Türkçe şarkı sözleri]`,
                     'vi': `[Lời dịch tiếng Việt cho "${songTitle}"${featuringText}]`,
