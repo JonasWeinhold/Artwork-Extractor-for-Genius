@@ -4819,11 +4819,14 @@ chrome.storage.local.get([
                 setTimeout(() => {
                     document.body.removeChild(modal.overlay);
                     document.body.style.overflow = "";
+                    setTimeout(() => {
+                        if (autoReopenSongCredits) openCreditsEditor();
+                    }, 250);
                 }, 250);
-
 
             });
         }
+
         creditsButton.addEventListener("click", openCreditsEditor);
 
         function createModal(songIds, rawTrackNumbers, trackNumbers, creditsState, optionSets) {
