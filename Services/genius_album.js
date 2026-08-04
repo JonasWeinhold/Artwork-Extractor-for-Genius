@@ -10,6 +10,7 @@ chrome.storage.local.get([
     'isGeniusAlbumUploadCover',
     'isGeniusAlbumRenameButtons',
     'isGeniusAlbumSongCreditsButton',
+    'isGeniusAlbumSongCreditsAutoReopen',
     'isGeniusAlbumFollowButton',
     'isGeniusAlbumCleanupButton',
     'functionOrder'
@@ -26,6 +27,108 @@ chrome.storage.local.get([
     const isGeniusAlbumSongCreditsButton = result.isGeniusAlbumSongCreditsButton ?? true;
     const isGeniusAlbumFollowButton = result.isGeniusAlbumFollowButton ?? true;
     const isGeniusAlbumCleanupButton = result.isGeniusAlbumCleanupButton ?? true;
+
+    // ? Live state of the "Auto-Reopen" toggle inside the song credits editor.
+    // * Initialized from the settings page value and kept in sync with it, so toggling it in the editor sticks.
+    let autoReopenSongCredits = result.isGeniusAlbumSongCreditsAutoReopen ?? false;
+
+    function setAutoReopenSongCredits(enabled) {
+        autoReopenSongCredits = enabled;
+        chrome.storage.local.set({ isGeniusAlbumSongCreditsAutoReopen: enabled });
+    }
+
+    // ? Slider switch for the "Auto-Reopen" option, shared by both song credits editors.
+    // * Mirrors the settings page switch (40x20 pill, 14px knob), styled inline because the editors are injected into Genius pages.
+    function createAutoReopenSwitch({ orientation = "column", caption = "Reopen", captionColor = "#fff", offColor = "#8c8c8c", onColor = "#24c609", ringColor = "rgba(255, 255, 255, 0.7)" } = {}) {
+        const isRow = orientation === "row";
+        const trackBorder = "inset 0 0 0 1px rgba(0, 0, 0, 0.15)";
+
+        const field = document.createElement("label");
+        field.title = "Reopen the editor automatically after saving";
+        Object.assign(field.style, {
+            position: "relative",
+            display: "flex",
+            flexDirection: isRow ? "row" : "column",
+            alignItems: "center",
+            gap: isRow ? "0.6rem" : "9px",
+            cursor: "pointer",
+            userSelect: "none"
+        });
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.id = "auto_reopen_song_credits";
+        input.checked = autoReopenSongCredits;
+        Object.assign(input.style, {
+            position: "absolute",
+            width: "1px",
+            height: "1px",
+            margin: "0",
+            opacity: "0"
+        });
+
+        const track = document.createElement("span");
+        Object.assign(track.style, {
+            position: "relative",
+            display: "block",
+            flex: "0 0 auto",
+            width: "40px",
+            height: "20px",
+            borderRadius: "20px",
+            boxShadow: trackBorder,
+            transition: "background-color 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease"
+        });
+
+        const knob = document.createElement("span");
+        Object.assign(knob.style, {
+            position: "absolute",
+            top: "3px",
+            left: "3px",
+            width: "14px",
+            height: "14px",
+            borderRadius: "50%",
+            backgroundColor: "#fff",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.35)",
+            transition: "transform 0.25s ease"
+        });
+
+        const text = document.createElement("div");
+        text.textContent = caption;
+        Object.assign(text.style, {
+            fontSize: "0.75rem",
+            color: captionColor,
+            textAlign: "center",
+            transition: "opacity 0.25s ease"
+        });
+
+        track.appendChild(knob);
+        field.appendChild(input);
+        field.appendChild(track);
+        field.appendChild(text);
+
+        function refresh() {
+            track.style.backgroundColor = input.checked ? onColor : offColor;
+            knob.style.transform = input.checked ? "translateX(20px)" : "translateX(0)";
+            text.style.opacity = input.checked ? "1" : "0.65";
+            field.setAttribute("aria-label", `Auto-Reopen after saving: ${input.checked ? "on" : "off"}`);
+        }
+
+        input.addEventListener("change", () => {
+            setAutoReopenSongCredits(input.checked);
+            refresh();
+        });
+
+        field.addEventListener("mouseenter", () => track.style.filter = "brightness(1.15)");
+        field.addEventListener("mouseleave", () => track.style.filter = "none");
+
+        // ? The checkbox itself is visually hidden, so mirror its focus state on the track.
+        input.addEventListener("focus", () => track.style.boxShadow = `${trackBorder}, 0 0 0 2px ${ringColor}`);
+        input.addEventListener("blur", () => track.style.boxShadow = trackBorder);
+
+        refresh();
+
+        return { field, input };
+    }
 
 
     if (result['Services/genius_album.js'] === false) {
@@ -581,14 +684,14 @@ chrome.storage.local.get([
             const blackSquare = document.createElement('span');
             blackSquare.className = 'black-square';
             blackSquare.style.cssText = `
-            height: 8px; 
-            width: 8px; 
-            background-color: #2C2C2C; 
-            display: inline-block; 
-            position: absolute; 
+            height: 8px;
+            width: 8px;
+            background-color: #2C2C2C;
+            display: inline-block;
+            position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%); 
+            transform: translate(-50%, -50%);
         `;
             square.appendChild(blackSquare);
         }
@@ -603,14 +706,14 @@ chrome.storage.local.get([
             const square = document.createElement('span');
             square.className = 'square-indicator';
             square.style.cssText = `
-                font-variant: JIS04; 
-                height: 16px; 
-                width: 28px; 
-                display: inline-block; 
-                margin-left: -0.100rem; 
-                margin-right: 0.375rem; 
+                font-variant: JIS04;
+                height: 16px;
+                width: 28px;
+                display: inline-block;
+                margin-left: -0.100rem;
+                margin-right: 0.375rem;
                 position: relative;
-                background-color: ${color}; 
+                background-color: ${color};
                 border: 1px solid ${borderColor};
             `;
             button.style.cssText += `
@@ -688,11 +791,11 @@ chrome.storage.local.get([
                         color = '#dddddd'; // Grey
                         borderColor = '#aaaaaa';
                     } else {
-                        color = '#ffff64'; // Yellow 
+                        color = '#ffff64'; // Yellow
                         borderColor = '#cccc00';
                     }
                 } else {
-                    color = '#fa7878'; // Red 
+                    color = '#fa7878'; // Red
                     borderColor = '#a74d4d';
                 }
                 addColoredSquare(secondEditAlbumButton, color, borderColor);
@@ -1617,7 +1720,7 @@ chrome.storage.local.get([
             form.appendChild(createTracklist(trackNumbers, rawTrackNumbers));
             form.appendChild(createLine());
             form.appendChild(createSpacer('1.25rem'));
-            
+
               form.appendChild(createContainer([
                   () => createRelationships(),
                   () => createInputTextField('Related album', 'related_album', 'Genius Album URL')
@@ -1733,7 +1836,8 @@ chrome.storage.local.get([
             }
 
 
-            const { statusDisplay, saveButton, cancelButton } = createStatusSaveCancelButton();
+            const { statusDisplay, saveButton, cancelButton, autoReopenToggle } = createStatusSaveCancelButton();
+            form.appendChild(autoReopenToggle);
             form.appendChild(statusDisplay);
             form.appendChild(saveButton);
             form.appendChild(cancelButton);
@@ -1872,7 +1976,7 @@ chrome.storage.local.get([
                                     label: role[0]?.label,
                                     artists: artistRolesArray[index]?.map(artist => ({ id: artist.id, name: artist.name })) || []
                                 }));
-                
+
                 */
                 console.log('Song ID Checkboxes:', checkedSongIds);
                 console.log('Checkbox States:', checkboxStates);
@@ -2317,9 +2421,26 @@ chrome.storage.local.get([
                     }
 
                     main()
+
+                    if (autoReopenSongCredits) waitForSongCreditsButton();
                 }, 1000);
 
             });
+
+            // ? main() rebuilds the album buttons asynchronously, so wait for the fresh "Song Credits" button before reopening the editor.
+            function waitForSongCreditsButton() {
+                let attempts = 0;
+                const timer = setInterval(() => {
+                    const button = [...document.querySelectorAll('button.square_button')].find(btn => btn.textContent.trim() === 'Song Credits');
+
+                    if (button) {
+                        clearInterval(timer);
+                        button.click();
+                    } else if (++attempts >= 50) {
+                        clearInterval(timer);
+                    }
+                }, 100);
+            }
 
             cancelButton.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -3570,7 +3691,17 @@ chrome.storage.local.get([
                 const cancelButton = document.createElement('button');
                 cancelButton.className = 'square_button square_button--transparent square_button--gray';
                 cancelButton.textContent = 'Cancel';
-                return { statusDisplay, saveButton, cancelButton };
+
+                const { field: autoReopenToggle } = createAutoReopenSwitch({
+                    orientation: 'row',
+                    caption: 'Auto-Reopen after saving',
+                    captionColor: '#000',
+                    offColor: '#c9c9c9',
+                    ringColor: 'rgba(0, 0, 0, 0.5)'
+                });
+                autoReopenToggle.style.marginBottom = '1.25rem';
+
+                return { statusDisplay, saveButton, cancelButton, autoReopenToggle };
             }
 
             function createCloseButton() {
@@ -3899,7 +4030,8 @@ chrome.storage.local.get([
         stickyToolbarLeft.appendChild(creditsButton);
 
         let creditsState = {};
-        creditsButton.addEventListener("click", async () => {
+
+        async function openCreditsEditor() {
             creditsState = {
                 roleIndex: 0,
                 activeTagsList: undefined,
@@ -3984,6 +4116,7 @@ chrome.storage.local.get([
             modal.saveButton.style.cursor = "pointer";
 
             modal.cancelButton.addEventListener("click", () => {
+                modal.stopObservers();
                 modal.overlay.remove();
                 document.body.style.overflow = "";
             });
@@ -4690,9 +4823,8 @@ chrome.storage.local.get([
 
 
             });
-        });
-
-
+        }
+        creditsButton.addEventListener("click", openCreditsEditor);
 
         function createModal(songIds, rawTrackNumbers, trackNumbers, creditsState, optionSets) {
             function createForm() {
@@ -4805,14 +4937,25 @@ chrome.storage.local.get([
                     viewBox: "0 0 22 22"
                 });
 
+                const reopen = createAutoReopenSwitch();
+
+                const separator = document.createElement('div');
+                Object.assign(separator.style, {
+                    width: '2.25rem',
+                    height: '1px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
+                });
+
                 save.btn.disabled = true;
                 save.btn.style.cursor = "not-allowed";
 
                 controls.appendChild(save.field);
                 controls.appendChild(cancel.field);
+                controls.appendChild(separator);
+                controls.appendChild(reopen.field);
                 overlay.appendChild(controls);
 
-                return { controls, saveButton: save.btn, cancelButton: cancel.btn };
+                return { controls, saveButton: save.btn, cancelButton: cancel.btn, reopenToggle: reopen.input };
             }
 
             function createContent(form) {
@@ -6578,7 +6721,12 @@ chrome.storage.local.get([
                     attributeFilter: ["style"]
                 });
 
-                return { stop: () => observer.disconnect() };
+                return {
+                    stop: () => {
+                        observer.disconnect();
+                        window.removeEventListener("resize", apply);
+                    }
+                };
             }
 
 
@@ -6638,11 +6786,11 @@ chrome.storage.local.get([
 
             syncTracklists(tracklist1, tracklist2);
 
-            observeFormWidth(form, controls);
+            const formWidth = observeFormWidth(form, controls);
 
             document.body.appendChild(overlay);
 
-            return { overlay, form, saveButton, cancelButton, status };
+            return { overlay, form, saveButton, cancelButton, status, stopObservers: formWidth.stop };
         }
 
     }
