@@ -4821,7 +4821,7 @@ chrome.storage.local.get([
                     document.body.style.overflow = "";
                     setTimeout(() => {
                         if (autoReopenSongCredits) openCreditsEditor();
-                    }, 250);
+                    }, 150);
                 }, 250);
 
             });
