@@ -1224,7 +1224,7 @@ chrome.storage.local.get([
                 Snippet: {
                     'cs': `<b>[Lyrics from [Snippet]()]</b>`,
                     'da': `<b>[Tekst fra [snippet]()]</b>`,
-                    'de': `<b>[Lyrics von [Snippet](), vollständige Lyrics bei Release]</b>`,
+                    'de': `<b>[Lyrics von [Snippet]()]</b>`,
                     'en': `<b>[Lyrics from [Snippet]()]</b>`,
                     'nl': `<b>[Songtekst van [Fragment]()]</b>`,
                     'pl': `<b>[Tekst piosenki pochodzi ze [Snippetu]()]</b>`,
@@ -1846,9 +1846,9 @@ chrome.storage.local.get([
                 "pt": { // Portuguese
                     Default: [
                         { displayText: "Header", fullText: "Header", hoverText: "Header" },
-                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Translation", fullText: "Translation", hoverText: "Translation" },
                         { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
-                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Snippet", fullText: "Snippet", hoverText: "Snippet" },
                         { displayText: "Intro", fullText: "Intro", hoverText: "Intro" },
                         { displayText: "Saída", fullText: "Saída", hoverText: "Outro" },
                         { displayText: null, fullText: null, hoverText: null },
@@ -3034,7 +3034,7 @@ chrome.storage.local.get([
         }
 
         function addActivityFilterButton(modal) {
-            const title = modal?.querySelector('[class^="RecentActivity__Title"]');
+            const title = modal?.querySelector('[class^="ContributionsRecentActivity__Title"]');
             if (!title) return;
 
             if (modal.querySelector("#filter-activity-button")) return;
@@ -3239,7 +3239,7 @@ chrome.storage.local.get([
 
         const modalObserver = new MutationObserver(() => {
             const modal = document.querySelector('[class^="Modal-desktop__Contents"]');
-            const title = modal?.querySelector('[class^="RecentActivity__Title"]');
+            const title = modal?.querySelector('[class^="ContributionsRecentActivity__Title"]');
 
             if (modal && title && !filterInitialized) {
                 addActivityFilterButton(modal);

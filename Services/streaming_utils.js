@@ -1,13 +1,14 @@
 async function uploadToFilestackJPG(imageUrl, urlName) {
+    const { geniusApi, geniusPolicy, geniusSignature } = await chrome.storage.local.get(["geniusApi", "geniusPolicy", "geniusSignature"]);
     try {
         const metadataResponse = await fetch("https://cloud.filestackapi.com/metadata", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                apikey: window.secrets.GENIUS_API,
+                apikey: geniusApi,
                 url: imageUrl,
-                policy: window.secrets.GENIUS_POLICY,
-                signature: window.secrets.GENIUS_SIGNATURE
+                policy: geniusPolicy,
+                signature: geniusSignature
             })
         });
 
@@ -20,7 +21,7 @@ async function uploadToFilestackJPG(imageUrl, urlName) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                apikey: window.secrets.GENIUS_API,
+                apikey: geniusApi,
                 sources: [metadata.link_path],
                 tasks: [
                     {
@@ -33,8 +34,8 @@ async function uploadToFilestackJPG(imageUrl, urlName) {
                     {
                         name: "security",
                         params: {
-                            policy: window.secrets.GENIUS_POLICY,
-                            signature: window.secrets.GENIUS_SIGNATURE
+                            policy: geniusPolicy,
+                            signature: geniusSignature
                         }
                     }
                 ]
@@ -55,15 +56,17 @@ async function uploadToFilestackJPG(imageUrl, urlName) {
 }
 
 async function uploadToFilestackPNG(imageUrl, urlName) {
+    const { geniusApi, geniusPolicy, geniusSignature } = await chrome.storage.local.get(["geniusApi", "geniusPolicy", "geniusSignature"]);
+
     try {
         const metadataResponse = await fetch("https://cloud.filestackapi.com/metadata", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                apikey: window.secrets.GENIUS_API,
+                apikey: geniusApi,
                 url: imageUrl,
-                policy: window.secrets.GENIUS_POLICY,
-                signature: window.secrets.GENIUS_SIGNATURE
+                policy: geniusPolicy,
+                signature: geniusSignature
             })
         });
 
@@ -83,7 +86,7 @@ async function uploadToFilestackPNG(imageUrl, urlName) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                apikey: window.secrets.GENIUS_API,
+                apikey: geniusApi,
                 sources: [metadata.link_path],
                 tasks: [
                     { name: "output", params: { format: "png" } },
@@ -97,8 +100,8 @@ async function uploadToFilestackPNG(imageUrl, urlName) {
                     {
                         name: "security",
                         params: {
-                            policy: window.secrets.GENIUS_POLICY,
-                            signature: window.secrets.GENIUS_SIGNATURE
+                            policy: geniusPolicy,
+                            signature: geniusSignature
                         }
                     }
                 ]
@@ -230,9 +233,12 @@ function downloadImage(dataUrl, fileName, extension) {
 }
 
 async function processJpgImage(extractedUrl, urlName, fileName, isHostFilestack, isHostImgBB, isSaveImage, isConvertPNG, isPopup, design) {
+    const { geniusApi, geniusPolicy, geniusSignature } = await chrome.storage.local.get(["geniusApi", "geniusPolicy", "geniusSignature"]);
+
     if (isConvertPNG) {
         if (isHostFilestack) {
-            if (window.secrets.GENIUS_API && window.secrets.GENIUS_POLICY && window.secrets.GENIUS_SIGNATURE) {
+            console.log("Secrets:", geniusApi);
+            if (geniusApi && geniusPolicy && geniusSignature) {
                 const uploadedUrl = await uploadToFilestackPNG(extractedUrl, urlName);
                 if (uploadedUrl) {
                     await navigator.clipboard.writeText(uploadedUrl);

@@ -39,31 +39,6 @@ chrome.storage.local.get(['geniusApi', 'geniusPolicy', 'geniusSignature'], (resu
 });
 
 (function () {
-    const host = location.hostname;
-    if (/^genius(\-|\.|$)/.test(host)) {
-        const observer = new MutationObserver(() => {
-            const iframe = document.querySelector('#filepicker_dialog');
-            if (iframe && iframe.src.includes("dialog.filepicker.io/dialog/open")) {
-                const u = new URL(iframe.src);
-                const geniusApi = u.searchParams.get("key") || "";
-                const geniusPolicy = u.searchParams.get("policy") || "";
-                const geniusSignature = u.searchParams.get("signature") || "";
-
-                chrome.storage.local.set({ geniusApi, geniusPolicy, geniusSignature });
-
-                window.secrets.GENIUS_API = geniusApi;
-                window.secrets.GENIUS_POLICY = geniusPolicy;
-                window.secrets.GENIUS_SIGNATURE = geniusSignature;
-
-                observer.disconnect();
-            }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-})();
-
-(function () {
     const scripts = document.body.querySelectorAll("script:not([src])");
 
     for (const script of scripts) {
