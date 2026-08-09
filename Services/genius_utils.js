@@ -66,16 +66,87 @@ function getCsrfToken() {
     return match ? decodeURIComponent(match[1]) : '';
 }
 
-async function getApiData(id, type) {
-    const response = await fetch(`https://genius.com/api/${type}/${id}`);
-    const json = await response.json();
+// ? Shared rate limiter for every Genius API call the extension can fan out over a tracklist.
+// * Album pages need one request per song, so an unthrottled fan-out gets users rate limited and hammers Genius.
+// * Requests queue here and start at most GENIUS_REQUESTS_PER_SECOND per rolling second, in the order they were queued.
+const GENIUS_REQUESTS_PER_SECOND = 10;
 
-    return json.response;
+const rateLimitGeniusRequest = (function createGeniusRateLimiter(maxPerSecond) {
+    const windowMs = 1000;
+    const starts = [];
+    const queue = [];
+    let pumpScheduled = false;
+
+    function schedulePump(waitMs) {
+        pumpScheduled = true;
+        setTimeout(pump, waitMs);
+    }
+
+    function pump() {
+        pumpScheduled = false;
+
+        const now = Date.now();
+        while (starts.length && now - starts[0] >= windowMs) starts.shift();
+
+        while (queue.length && starts.length < maxPerSecond) {
+            starts.push(Date.now());
+            queue.shift()();
+        }
+
+        if (queue.length && !pumpScheduled) {
+            const oldestStart = starts[0] ?? Date.now();
+
+            schedulePump(Math.max(windowMs - (Date.now() - oldestStart), 10));
+
+        }
+    }
+
+    return function rateLimitGeniusRequest(task) {
+        return new Promise((resolve, reject) => {
+            // ! A failing task must settle its own promise only, never stall the queue.
+            queue.push(() => Promise.resolve().then(task).then(resolve, reject));
+            if (!pumpScheduled) schedulePump(0);
+        });
+    };
+})(GENIUS_REQUESTS_PER_SECOND);
+
+// ? Drop-in fetch for genius.com/api calls that charges the request against the shared budget above.
+function geniusFetch(url, options) {
+    return rateLimitGeniusRequest(() => fetch(url, options));
+}
+
+async function getApiData(id, type) {
+    return rateLimitGeniusRequest(async () => {
+        const response = await fetch(`https://genius.com/api/${type}/${id}`);
+        if (!response.ok) throw new Error(`${type}/${id}: ${response.status} ${response.statusText}`);
+
+        const json = await response.json();
+        if (!json?.response) throw new Error(`${type}/${id}: missing response payload`);
+
+
+        return json.response;
+    });
+}
+
+// ? Loads many ids through the rate limiter and keeps the input order.
+// * A single failed request returns null instead of rejecting the whole batch, so one rate limited song can't blank the page.
+async function getApiDataBatch(ids, type) {
+    const results = await Promise.all(ids.map(id =>
+        getApiData(id, type).catch(error => {
+            console.warn(`Request for ${type}/${id} failed:`, error);
+            return null;
+        })
+    ));
+
+    const failed = results.filter(result => result === null).length;
+    if (failed) console.warn(`${failed} of ${ids.length} ${type} requests failed`);
+
+    return results;
 }
 
 async function followId(id, type, action) {
     const url = `https://genius.com/api/${type}/${id}/${action}`;
-    const response = await fetch(url, {
+    const response = await geniusFetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -95,7 +166,7 @@ async function followId(id, type, action) {
 async function updateSongMetadata(song, payload) {
     if (Object.keys(payload).length === 0) return;
     try {
-        const response = await fetch(`https://genius.com/api/songs/${song.id}`, {
+        const response = await geniusFetch(`https://genius.com/api/songs/${song.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -117,7 +188,7 @@ async function updateSongMetadata(song, payload) {
 async function updateAlbumMetadata(album, payload) {
     if (Object.keys(payload).length === 0) return;
     try {
-        const response = await fetch(`https://genius.com/api/albums/${album.id}`, {
+        const response = await geniusFetch(`https://genius.com/api/albums/${album.id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -143,7 +214,7 @@ async function updateAlbumMetadata(album, payload) {
 async function updateSongLyrics(song, payload) {
     if (Object.keys(payload).length === 0) return;
     try {
-        const response = await fetch(`https://genius.com/api/songs/${song.id}/lyrics`, {
+        const response = await geniusFetch(`https://genius.com/api/songs/${song.id}/lyrics`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -171,7 +242,7 @@ async function updateSongMetadata2(song, updates) {
 
     try {
         if (needsTitleUpdate && isPublished) {
-            const unpublishResponse = await fetch(`https://genius.com/api/songs/${song.id}/unpublish`, {
+            const unpublishResponse = await geniusFetch(`https://genius.com/api/songs/${song.id}/unpublish`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -187,7 +258,7 @@ async function updateSongMetadata2(song, updates) {
             }
         }
 
-        const updateResponse = await fetch(`https://genius.com/api/songs/${song.id}`, {
+        const updateResponse = await geniusFetch(`https://genius.com/api/songs/${song.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -204,7 +275,7 @@ async function updateSongMetadata2(song, updates) {
         }
 
         if (needsTitleUpdate && isPublished) {
-            const publishResponse = await fetch(`https://genius.com/api/songs/${song.id}/publish`, {
+            const publishResponse = await geniusFetch(`https://genius.com/api/songs/${song.id}/publish`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -227,7 +298,7 @@ async function updateSongMetadata2(song, updates) {
 
 async function toggleFollowSong(songId, action) {
     const url = `https://genius.com/api/songs/${songId}/${action}`;
-    const response = await fetch(url, {
+    const response = await geniusFetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -249,7 +320,7 @@ async function sendCoverArts(imageUrl, albumId) {
     };
 
     try {
-        const response = await fetch("https://genius.com/api/cover_arts/", {
+        const response = await geniusFetch("https://genius.com/api/cover_arts/", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -274,7 +345,7 @@ async function sendCoverArts(imageUrl, albumId) {
 
 async function deleteCoverArts(coverId) {
     try {
-        const response = await fetch(`https://genius.com/api/cover_arts/${coverId}`, {
+        const response = await geniusFetch(`https://genius.com/api/cover_arts/${coverId}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
@@ -313,7 +384,7 @@ async function moveCoverArts(position, coverId, coverArts) {
     }
 
     try {
-        const response = await fetch(`https://genius.com/api/cover_arts/${coverId}/move_between`, {
+        const response = await geniusFetch(`https://genius.com/api/cover_arts/${coverId}/move_between`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -337,7 +408,7 @@ async function moveCoverArts(position, coverId, coverArts) {
 
 async function sendUpdateRequest(songId, payload) {
     const url = `https://genius.com/api/songs/${songId}`;
-    const response = await fetch(url, {
+    const response = await geniusFetch(url, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -355,9 +426,9 @@ async function sendUpdateRequest(songId, payload) {
     }
 }
 
-async function fetchSuggestions(type, query) {
+    const response = await fetch(url, {
     const url = `https://genius.com/api/${type}/autocomplete?q=${encodeURIComponent(query)}&text_format=html,markdown`;
-    const response = await fetch(url, {
+    const response = await geniusFetch(url, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',

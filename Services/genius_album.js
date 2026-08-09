@@ -1,3 +1,5 @@
+const DELAY_BEFORE_CLEANUP = 250; // ? milliseconds
+
 chrome.storage.local.get([
     'Services/genius_album.js',
     'isGeniusAlbumAlbumPage',
@@ -198,26 +200,12 @@ chrome.storage.local.get([
             }*/
 
             async function songDataFunctions() {
-                const songsPerBatch = 25;
-                const delay = 750;
-                const songDataAlbum = [];
+                // ? Every function below needs the full song payload, which the API only serves one song at a time.
+                // * So don't spend a request per track when none of them are switched on.
+                if (!isGeniusAlbumFollowButton && !isGeniusAlbumCleanupButton && !isGeniusAlbumAlbumPageLyrics) return;
 
-                for (let i = 0; i < songIds.length; i += songsPerBatch) {
-                    const batch = songIds.slice(i, i + songsPerBatch);
-
-                    const batchResults = await Promise.all(
-                        batch.map(async songId => {
-                            const { song: songData } = await getApiData(songId, "songs");
-                            return songData;
-                        })
-                    );
-
-                    songDataAlbum.push(...batchResults);
-
-                    if (i + songsPerBatch < songIds.length) {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
-                }
+                // * getApiDataBatch() queues through the shared rate limiter, so this stays under the API budget.
+                const songDataAlbum = (await getApiDataBatch(songIds, "songs")).map(data => data?.song).filter(Boolean);
 
                 if (!songDataAlbum.length) return;
 
@@ -287,8 +275,9 @@ chrome.storage.local.get([
             while ((match = songIdRegex.exec(html)) !== null) {
                 songIds.push(match[1]);
             }
+            // * geniusFetch() queues through the shared rate limiter, so long tracklists don't fire at once.
             const responses = await Promise.all(songIds.map(songId =>
-                fetch(`https://genius.com/api/songs/${songId}`).then(res => res.json())
+                geniusFetch(`https://genius.com/api/songs/${songId}`).then(res => res.json())
             ));
             return responses;
         }
@@ -1184,7 +1173,7 @@ chrome.storage.local.get([
             buttons[buttons.length - 1].style.display = "none";
         }
 
-        const response = await fetch(`https://genius.com/api/albums/${albumId}`);
+        const response = await geniusFetch(`https://genius.com/api/albums/${albumId}`);
         const json = await response.json();
         const coverArts = json.response.album.cover_arts;
 
@@ -1634,7 +1623,7 @@ chrome.storage.local.get([
 
             const responses = await Promise.all(
                 songIds.map(songId =>
-                    fetch(`https://genius.com/api/songs/${songId}`)
+                    geniusFetch(`https://genius.com/api/songs/${songId}`)
                         .then(res => res.json())
                 )
             );
@@ -3990,6 +3979,7 @@ chrome.storage.local.get([
 
     function songCreditsButtonAlbumPage(songIds) {
         console.log("Run function songCreditsButtonAlbumPage()");
+        const DELAY_BEFORE_REOPEN = 150; // ? milliseconds
 
         const { stickyToolbarLeft, smallButton } = getDomElements();
         if (!stickyToolbarLeft || !smallButton) return;
@@ -4177,35 +4167,16 @@ chrome.storage.local.get([
                     })
                 );*/
 
-                async function fetchSongData(ids) {
-                    const songs = 25;
-                    const delay = 500;
-                    const results = [];
+                // * Queued through the shared rate limiter instead of firing every selected track at once.
+                const songDataAlbum = (await getApiDataBatch(allSongIds, "songs")).map(data => data?.song).filter(Boolean);
 
-                    for (let i = 0; i < ids.length; i += songs) {
-                        const batch = ids.slice(i, i + songs);
-
-                        const batchResults = await Promise.all(
-                            batch.map(async songId => {
-                                const { song: songData } = await getApiData(songId, "songs");
-                                return songData;
-                            })
-                        );
-
-                        results.push(...batchResults);
-
-                        if (i + songs < ids.length) {
-                            await new Promise(resolve => setTimeout(resolve, delay));
-                        }
-                    }
-
-                    return results;
+                // ! Payloads are merged into the song's current data, so a missing song could wipe its metadata. Save nothing instead.
+                if (songDataAlbum.length !== allSongIds.length) {
+                    modal.status.textContent = `Could not load ${allSongIds.length - songDataAlbum.length} of ${allSongIds.length} selected songs. Nothing was saved, please try again.`;
+                    return;
                 }
 
-                const songDataAlbum = await fetchSongData(allSongIds);
-
-
-                if (!songDataAlbum) return;
+                if (!songDataAlbum.length) return;
 
                 const primaryArtistsPayload = creditsState.primaryArtistsArray.map(primary_artists => ({ id: primary_artists.id, name: primary_artists.name }));
                 const featuredArtistsPayload = creditsState.featuredArtistsArray.map(featured_artists => ({ id: featured_artists.id, name: featured_artists.name }));
@@ -4814,15 +4785,16 @@ chrome.storage.local.get([
 
                 await runInParallel();
 
-                modal.status.textContent = "Done!";
+                modal.status.textContent = autoReopenSongCredits ? "Done! Reopening editor..." : "Done!";
 
-                setTimeout(() => {
+                setTimeout(async () => {
+                    modal.stopObservers();
                     document.body.removeChild(modal.overlay);
                     document.body.style.overflow = "";
                     setTimeout(() => {
                         if (autoReopenSongCredits) openCreditsEditor();
-                    }, 150);
-                }, 250);
+                    }, DELAY_BEFORE_REOPEN);
+                }, DELAY_BEFORE_CLEANUP);
 
             });
         }
