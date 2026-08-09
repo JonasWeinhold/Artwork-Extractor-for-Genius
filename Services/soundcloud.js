@@ -255,7 +255,7 @@ chrome.storage.local.get(['Services/soundcloud.js', 'isSoundCloudCopyCover', 'is
 
 
 
-  document.addEventListener('click', function () {
+  window.addEventListener('click', function () {
     if (isSoundCloudCopyCover) addCopyCoverButtonOldPage();
     if (isSoundCloudCopyCover) addCopyCoverButton();
   });
