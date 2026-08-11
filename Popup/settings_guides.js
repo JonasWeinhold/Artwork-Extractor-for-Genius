@@ -213,6 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isGeniusSongSongId = document.getElementById('isGeniusSongSongId').checked;
         const isGeniusSongCheckIndex = document.getElementById('isGeniusSongCheckIndex').checked;
         const isGeniusSongFollowButton = document.getElementById('isGeniusSongFollowButton').checked;
+        const isGeniusSongTranslationButton = document.getElementById('isGeniusSongTranslationButton').checked;
         const isGeniusSongShellyButton = document.getElementById('isGeniusSongShellyButton').checked;
         const isGeniusSongCleanupMetadataButton = document.getElementById('isGeniusSongCleanupMetadataButton').checked;
         const isGeniusSongLanguageButton = document.getElementById('isGeniusSongLanguageButton').checked;
@@ -335,6 +336,7 @@ document.addEventListener('DOMContentLoaded', function () {
             isGeniusSongSongId: isGeniusSongSongId,
             isGeniusSongCheckIndex: isGeniusSongCheckIndex,
             isGeniusSongFollowButton: isGeniusSongFollowButton,
+            isGeniusSongTranslationButton: isGeniusSongTranslationButton,
             isGeniusSongShellyButton: isGeniusSongShellyButton,
             isGeniusSongCleanupMetadataButton: isGeniusSongCleanupMetadataButton,
             isGeniusSongLanguageButton: isGeniusSongLanguageButton,
@@ -453,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     chrome.storage.local.get([
-        'isGeniusSongSongPage', 'isGeniusSongSongPageZwsp', 'isGeniusSongSongPageInfo', 'isGeniusSongSongId', 'isGeniusSongCheckIndex', 'isGeniusSongFollowButton', 'isGeniusSongShellyButton', 'isGeniusSongCleanupMetadataButton', 'isGeniusSongLanguageButton', 'isGeniusSongCleanupButton', 'isGeniusSongSectionsButtons', 'isGeniusSongExpandSectionsButtons', 'isGeniusSongAnnotationsButtons', 'isGeniusSongFilterActivity', 'isGeniusSongFilterNotifications', 'isGeniusSongSaveFilters', 'isGeniusSongFilterFirehose','isGeniusSongCopyCover', 'isGeniusSongAppleMusicPlayer', 'isGeniusSongYouTubePlayer', 'isGeniusSongSoundCloudPlayer', 'isGeniusSongSpotifyPlayer', 'isGeniusSongLyricEditor', 'isGeniusSongRenameButtons',
+        'isGeniusSongSongPage', 'isGeniusSongSongPageZwsp', 'isGeniusSongSongPageInfo', 'isGeniusSongSongId', 'isGeniusSongCheckIndex', 'isGeniusSongFollowButton', 'isGeniusSongTranslationButton','isGeniusSongShellyButton', 'isGeniusSongCleanupMetadataButton', 'isGeniusSongLanguageButton', 'isGeniusSongCleanupButton', 'isGeniusSongSectionsButtons', 'isGeniusSongExpandSectionsButtons', 'isGeniusSongAnnotationsButtons', 'isGeniusSongFilterActivity', 'isGeniusSongFilterNotifications', 'isGeniusSongSaveFilters', 'isGeniusSongFilterFirehose','isGeniusSongCopyCover', 'isGeniusSongAppleMusicPlayer', 'isGeniusSongYouTubePlayer', 'isGeniusSongSoundCloudPlayer', 'isGeniusSongSpotifyPlayer', 'isGeniusSongLyricEditor', 'isGeniusSongRenameButtons',
         'isGeniusAlbumAlbumPage', 'isGeniusAlbumAlbumPageZwsp', 'isGeniusAlbumAlbumPageInfo', 'isGeniusAlbumAlbumId', 'isGeniusAlbumAlbumPageLyrics', 'isGeniusAlbumExpandTracklist', 'isGeniusAlbumEditTracklist', 'isGeniusAlbumUploadCover', 'isGeniusAlbumRenameButtons', 'isGeniusAlbumSongCreditsButton', 'isGeniusAlbumSongCreditsAutoReopen', 'isGeniusAlbumFollowButton', 'isGeniusAlbumCleanupButton',
         'isGeniusArtistArtistPage', 'isGeniusArtistArtistPageZwsp', 'isGeniusArtistArtistPageInfo', 'isGeniusArtistArtistId', 'isGeniusArtistAllSongsAlbumsPage', 'isGeniusArtistAllSongsAlbumsPageMetadata', 'isGeniusArtistAllSongsAlbumsPageZwsp', 'isGeniusArtistFollowButton', 'isGeniusArtistSpreadsheetButton', 'isGeniusArtistSearchArtistMetadata','isGeniusArtistRecords', 'isGeniusArtistNewPage',
         'is45CopyCover', 'is45Popup', 'is45ConvertPNG', 'is45SaveImage', 'is45HostImgBB', 'is45HostFilestack', 'is45RightClick',
@@ -473,6 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isGeniusSongSongId').checked = result.isGeniusSongSongId !== undefined ? result.isGeniusSongSongId : false;
         document.getElementById('isGeniusSongCheckIndex').checked = result.isGeniusSongCheckIndex !== undefined ? result.isGeniusSongCheckIndex : false;
         document.getElementById('isGeniusSongFollowButton').checked = result.isGeniusSongFollowButton !== undefined ? result.isGeniusSongFollowButton : true;
+        document.getElementById('isGeniusSongTranslationButton').checked = result.isGeniusSongTranslationButton !== undefined ? result.isGeniusSongTranslationButton : true;
         document.getElementById('isGeniusSongShellyButton').checked = result.isGeniusSongShellyButton !== undefined ? result.isGeniusSongShellyButton : true;
         document.getElementById('isGeniusSongCleanupMetadataButton').checked = result.isGeniusSongCleanupMetadataButton !== undefined ? result.isGeniusSongCleanupMetadataButton : true;
         document.getElementById('isGeniusSongLanguageButton').checked = result.isGeniusSongLanguageButton !== undefined ? result.isGeniusSongLanguageButton : true;
@@ -596,6 +599,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isGeniusSongSongId').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongCheckIndex').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongFollowButton').addEventListener('change', saveSettings);
+    document.getElementById('isGeniusSongTranslationButton').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongShellyButton').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongCleanupMetadataButton').addEventListener('change', saveSettings);
     document.getElementById('isGeniusSongLanguageButton').addEventListener('change', saveSettings);
