@@ -6,6 +6,7 @@ chrome.storage.local.get([
     'isGeniusSongSongId',
     'isGeniusSongCheckIndex',
     'isGeniusSongFollowButton',
+    'isGeniusSongTranslationButton',
     'isGeniusSongShellyButton',
     'isGeniusSongCleanupMetadataButton',
     'isGeniusSongLanguageButton',
@@ -31,6 +32,7 @@ chrome.storage.local.get([
     const isGeniusSongSongId = result.isGeniusSongSongId ?? false;
     const isGeniusSongCheckIndex = result.isGeniusSongCheckIndex ?? false;
     const isGeniusSongFollowButton = result.isGeniusSongFollowButton ?? true;
+    const isGeniusSongTranslationButton = result.isGeniusSongTranslationButton ?? true;
     const isGeniusSongShellyButton = result.isGeniusSongShellyButton ?? true;
     const isGeniusSongCleanupMetadataButton = result.isGeniusSongCleanupMetadataButton ?? true;
     const isGeniusSongLanguageButton = result.isGeniusSongLanguageButton ?? true;
@@ -95,6 +97,7 @@ chrome.storage.local.get([
         if (isGeniusSongSongPage) checkSongCover(songData)
 
         if (isGeniusSongFollowButton) addFollowButton();
+        if (isGeniusSongTranslationButton) addTranslationButton(songData);
         if (isGeniusSongShellyButton) addShellyButton(songData);
 
         if (isGeniusSongCleanupMetadataButton) cleanupMetadata(userId, songData);
@@ -525,6 +528,1129 @@ chrome.storage.local.get([
 
 
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////                               TRANSLATION BUTTON                               //////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    const LANGUAGE_CONFIG = [
+        {
+            value: "Afrikaans",
+            language: "af",
+            artistName: "Genius Afrikaanse Vertalings",
+            tagId: "5262",
+            titleSuffix: "Afrikaanse Vertaling",
+            urlSlug: "Genius-afrikaanse-vertalings"
+        },
+        {
+            value: "Albanian",
+            language: "sq",
+            artistName: "Genius Përkthime në Shqip",
+            tagId: "3771",
+            titleSuffix: "Përkthim në Shqip",
+            urlSlug: "Genius-perkthime-ne-shqip"
+        },
+        {
+            value: "Amharic",
+            language: "am",
+            artistName: "Genius Amharic Translations (የአማርኛ ትርጉም)",
+            tagId: "347", //Translation
+            titleSuffix: "",
+            urlSlug: "Genius-amharic-translations"
+        },
+        {
+            value: "Arabic",
+            language: "ar",
+            artistName: "Genius Arabic Translations (الترجمات العربية)",
+            tagId: "3504",
+            titleSuffix: "الترجمة العربية",
+            urlSlug: "Genius-arabic-translations"
+        },
+        {
+            value: "Aragonese",
+            language: "es",
+            artistName: "Genius Aragonese Translations",
+            tagId: "347", //Translation
+            titleSuffix: "Traducción Aragonés",
+            urlSlug: "Genius-aragonese-translations"
+        },
+        {
+            value: "Armenian",
+            language: "hy",
+            artistName: "Genius Armenian Translations (Հայերեն Թարգմանություններ)",
+            tagId: "347", //Translation
+            titleSuffix: "Հայերեն Թարգմանություն",
+            urlSlug: "Genius-armenian-translations"
+        },
+        {
+            value: "Asturian",
+            language: "es",
+            artistName: "Genius Asturian Translations",
+            tagId: "347", //Translation
+            titleSuffix: "Traducción asturiana",
+            urlSlug: "Genius-asturian-translations"
+        },
+        {
+            value: "Austrian",
+            language: "de-at",
+            artistName: "Genius Österreichische Übersetzungen",
+            tagId: "347", //Translation
+            titleSuffix: "Österreichische Übersetzung",
+            urlSlug: "Genius-osterreichische-ubersetzungen"
+        },
+        {
+            value: "Azerbaijani",
+            language: "az",
+            artistName: "Genius Azərbaycan Tərcümə",
+            tagId: "3644",
+            titleSuffix: "Azərbaycan Tərcümə",
+            urlSlug: "Genius-azrbaycan-trcum"
+        },
+        {
+            value: "Bashkir",
+            language: "ba",
+            artistName: "Genius Bashkir Translations",
+            tagId: "347", //Translation
+            titleSuffix: "Башҡорт теленә тәржемә",
+            urlSlug: "Genius-bashkir-translations"
+        },
+        {
+            value: "Basque",
+            language: "eu",
+            artistName: "Genius Itzulpena Euskarara",
+            tagId: "347", //Translation
+            titleSuffix: "Itzulpena Euskarara",
+            urlSlug: "Genius-itzulpena-euskarara"
+        },
+        {
+            value: "Belarusian",
+            language: "be",
+            artistName: "Genius Belarusian Translations (Беларускі пераклад)",
+            tagId: "4341",
+            titleSuffix: "Беларускі пераклад",
+            urlSlug: "Genius-belarusian-translations"
+        },
+        {
+            value: "Bengali",
+            language: "bn",
+            artistName: "Genius Bengali Translations (বাংলা অনুবাদ)",
+            tagId: "5280",
+            titleSuffix: "বাংলা অনুবাদ",
+            urlSlug: "Genius-bengali-translations"
+        },
+        {
+            value: "Bosnian",
+            language: "bs",
+            artistName: "Genius bosanski prijevodi",
+            tagId: "5624",
+            titleSuffix: "Bosanski prijevod",
+            urlSlug: "Genius-bosanski-prijevodi"
+        },
+        {
+            value: "Bulgarian",
+            language: "bg",
+            artistName: "Genius Bulgarian Translations (Български Преводи)",
+            tagId: "5278",
+            titleSuffix: "Български Превод",
+            urlSlug: "Genius-bulgarian-translations"
+        },
+        {
+            value: "Burmese",
+            language: "my",
+            artistName: "Genius Burmese Translations",
+            tagId: "347", //Translation
+            titleSuffix: "မြန်မာဘာသာပြန်",
+            urlSlug: "Genius-burmese-translations"
+        },
+        {
+            value: "Cape Verdean Creole",
+            language: "kea",
+            artistName: "Genius Tradusons na Kriolu Kabuverdianu",
+            tagId: "347", //Translation
+            titleSuffix: "Traduson na Kriolu Kabuverdianu",
+            urlSlug: "Genius-tradusons-na-kriolu-kabuverdianu"
+        },
+        {
+            value: "Catalan",
+            language: "ca",
+            artistName: "Genius Traduccions al Català",
+            tagId: "4292",
+            titleSuffix: "Traducció al Català",
+            urlSlug: "Genius-traduccions-al-catala"
+        },
+        {
+            value: "Cebuano",
+            language: "ceb",
+            artistName: "Genius Cebuano Translations",
+            tagId: "347", //Translation
+            titleSuffix: "Cebuano Translation",
+            urlSlug: "Genius-cebuano-translations"
+        },
+        {
+            value: "Cherokee",
+            language: "chr",
+            artistName: "Genius Cherokee Translations",
+            tagId: "347", //Translation
+            titleSuffix: "Cherokee syllabary",
+            urlSlug: "Genius-cherokee-translations"
+        },
+        {
+            value: "Chinese (Simplified)",
+            language: "zh",
+            artistName: "Genius Chinese Translations (中文翻譯/中文翻译)",
+            tagId: "5277",
+            titleSuffix: "中文翻译 - Simplified",
+            urlSlug: "Genius-chinese-translations"
+        },
+        {
+            value: "Chinese (Traditional)",
+            language: "zh-Hant",
+            artistName: "Genius Chinese Translations (中文翻譯/中文翻译)",
+            tagId: "5276",
+            titleSuffix: "中文翻譯 - Traditional",
+            urlSlug: "Genius-chinese-translations"
+        },
+        {
+            value: "Croatian",
+            language: "hr",
+            artistName: "Genius hrvatski prijevodi",
+            tagId: "5263",
+            titleSuffix: "Hrvatski prijevod",
+            urlSlug: "Genius-hrvatski-prijevodi"
+        },
+        {
+            value: "Czech",
+            language: "cs",
+            artistName: "Genius České překlady",
+            tagId: "4473",
+            titleSuffix: "Český překlad",
+            urlSlug: "Genius-ceske-preklady"
+        },
+        {
+            value: "Danish",
+            language: "da",
+            artistName: "Genius Danske Oversættelser",
+            tagId: "4801",
+            titleSuffix: "Dansk Oversættelse",
+            urlSlug: "Genius-danske-oversttelser"
+        },
+        {
+            value: "Dutch",
+            language: "nl",
+            artistName: "Genius Nederlandse Vertalingen",
+            tagId: "3268",
+            titleSuffix: "Nederlandse Vertaling",
+            urlSlug: "Genius-nederlandse-vertalingen"
+        },
+        {
+            value: "English",
+            language: "en",
+            artistName: "Genius English Translations",
+            tagId: "3269",
+            titleSuffix: "English Translation",
+            urlSlug: "Genius-english-translations"
+        },
+        {
+            value: "Estonian",
+            language: "et",
+            artistName: "Genius Eestikeelsed tõlked",
+            tagId: "5623",
+            titleSuffix: "Eesti Tõlge",
+            urlSlug: "Genius-eestikeelsed-tolked"
+        },
+        {
+            value: "Farsi",
+            language: "fa",
+            artistName: "Genius Farsi Translations (ترجمه‌ی فارسی)",
+            tagId: "3546",
+            titleSuffix: "ترجمه فارسی",
+            urlSlug: "Genius-farsi-translations"
+        },
+        {
+            value: "Filipino",
+            language: "tl",
+            artistName: "Genius Pagsasalin Sa Filipino",
+            tagId: "5213",
+            titleSuffix: "Pagsasalin sa Filipino",
+            urlSlug: "Genius-pagsasalin-sa-filipino"
+        },
+        {
+            value: "Finnish",
+            language: "fi",
+            artistName: "Genius Suomenkielinen Käännös",
+            tagId: "5279",
+            titleSuffix: "Suomenkielinen Käännös",
+            urlSlug: "Genius-suomenkielinen-kaannos"
+        },
+        {
+            value: "French",
+            language: "fr",
+            artistName: "Genius traductions françaises",
+            tagId: "3267",
+            titleSuffix: "Traduction française",
+            urlSlug: "Genius-traductions-francaises"
+        },
+        {
+            value: "Galacian",
+            language: "gl",
+            artistName: "Genius Traducións ao Galego",
+            tagId: "347", //Translation
+            titleSuffix: "Tradución ao galego",
+            urlSlug: "Genius-traducions-ao-galego"
+        },
+        {
+            value: "Georgian",
+            language: "ka",
+            artistName: "Genius Georgian Translations (ქართული თარგმანები)",
+            tagId: "347", //Translation
+            titleSuffix: "ქართული თარგმანი",
+            urlSlug: "Genius-georgian-translations"
+        },
+        {
+            value: "German",
+            language: "de",
+            artistName: "Genius Deutsche Übersetzungen",
+            tagId: "2405",
+            titleSuffix: "Deutsche Übersetzung",
+            urlSlug: "Genius-deutsche-ubersetzungen"
+        },
+        {
+            value: "Greek",
+            language: "el",
+            artistName: "Genius Greek Translations (Ελληνικές μεταφράσεις)",
+            tagId: "4077",
+            titleSuffix: "Ελληνική μετάφραση",
+            urlSlug: "Genius-greek-translations"
+        },
+        {
+            value: "Guarani",
+            language: "gn",
+            artistName: "Genius Guarani Translations",
+            tagId: "347", //Translation
+            titleSuffix: "Guarani Translation",
+            urlSlug: "Genius-guarani-translations"
+        },
+        {
+            value: "Hawaiian",
+            language: "haw",
+            artistName: "Genius Unuhi ʻŌlelo Hawaiʻi",
+            tagId: "347", //Translation
+            titleSuffix: "Unuhi ʻŌlelo Hawaiʻi",
+            urlSlug: "Genius-unuhi-olelo-hawaii"
+        },
+        {
+            value: "Hebrew",
+            language: "iw",
+            artistName: "Genius Hebrew Translations - ג’ינייס תרגומים לעברית",
+            tagId: "3849",
+            titleSuffix: "תרגום לעברית",
+            urlSlug: "Genius-hebrew-translations"
+        },
+        {
+            value: "High German",
+            language: "de",
+            artistName: "Genius Hochdeutsche Übersetzungen",
+            tagId: "3962",
+            titleSuffix: "Hochdeutsche Übersetzung",
+            urlSlug: "Genius-hochdeutsche-ubersetzungen"
+        },
+        {
+            value: "Hindi",
+            language: "hi",
+            artistName: "Genius Hindi Translations (हिंदी अनुवाद)",
+            tagId: "4177",
+            titleSuffix: "हिंदी अनुवाद",
+            urlSlug: "Genius-hindi-translations"
+        },
+        {
+            value: "Hungarian",
+            language: "hu",
+            artistName: "Genius magyar fordítások",
+            tagId: "3949",
+            titleSuffix: "magyar fordítás",
+            urlSlug: "Genius-magyar-forditasok"
+        },
+        {
+            value: "Icelandic",
+            language: "is",
+            artistName: "Genius Íslensk Þýðingar",
+            tagId: "347", //Translation
+            titleSuffix: "Íslensk Þýðing",
+            urlSlug: "Genius-islensk-yingar"
+        },
+        {
+            value: "Ilocano",
+            language: "tl",
+            artistName: "Genius Ilocano Translations",
+            tagId: "347", //Translation
+            titleSuffix: "Ilocano Translation",
+            urlSlug: "Genius-ilocano-translations"
+        },
+        {
+            value: "Indonesian",
+            language: "id",
+            artistName: "Genius Terjemahan Indonesia",
+            tagId: "4295",
+            titleSuffix: "Terjemahan Indonesia",
+            urlSlug: "Genius-terjemahan-indonesia"
+        },
+        {
+            value: "Inuktitut",
+            language: "iu",
+            artistName: "Genius Inuktitut Translations",
+            tagId: "347", //Translation
+            titleSuffix: "ᐃᓄᒃᑎᑐᑦ ᐃᓄᒃᑎᑑᓕᖅᑎᑕᐅᓂᖅ",
+            urlSlug: "Genius-inuktitut-translations"
+        },
+        {
+            value: "Irish",
+            language: "ga",
+            artistName: "Genius Aistriúcháin Gaeilge",
+            tagId: "347", //Translation
+            titleSuffix: "Aistriúchán Gaeilge",
+            urlSlug: "Genius-aistriuchain-gaeilge"
+        },
+        {
+            value: "Italian",
+            language: "it",
+            artistName: "Genius Traduzioni Italiane",
+            tagId: "3270",
+            titleSuffix: "Traduzione Italiana",
+            urlSlug: "Genius-traduzioni-italiane"
+        },
+        {
+            value: "Japanese",
+            language: "ja",
+            artistName: "Genius Japanese Translations (歌詞和訳)",
+            tagId: "4035",
+            titleSuffix: "歌詞和訳",
+            urlSlug: "Genius-japanese-translations"
+        },
+        {
+            value: "Kannada",
+            language: "kn",
+            artistName: "Genius Kannada Translations (ಕನ್ನಡ ಭಾಷಾಂತರ)",
+            tagId: "347", //Translation
+            titleSuffix: "ಕನ್ನಡ ಅನುವಾದ",
+            urlSlug: "Genius-kannada-translations"
+        },
+        {
+            value: "Kazakh",
+            language: "kk",
+            artistName: "Genius Kazakh Translations (Қазақша Аудармалар)",
+            tagId: "347", //Translation
+            titleSuffix: "Қазақша Аударма",
+            urlSlug: "Genius-kazakh-translations"
+        },
+        {
+            value: "Khmer",
+            language: "km",
+            artistName: "Genius Khmer Translations",
+            tagId: "347", //Translation
+            titleSuffix: "បកប្រែខ្មែរ",
+            urlSlug: "Genius-khmer-translations"
+        },
+        {
+            value: "Korean",
+            language: "ko",
+            artistName: "Genius Korean Translations (한국어 번역)",
+            tagId: "4111",
+            titleSuffix: "한국어 번역",
+            urlSlug: "Genius-korean-translations"
+        },
+        {
+            value: "Kurdish",
+            language: "ku",
+            artistName: "Genius Kurdish Translations (وەڕگێڕانەکانی کوردی)",
+            tagId: "347", //Translation
+            titleSuffix: "وەرگێڕانی کوردی",
+            urlSlug: "Genius-kurdish-translations"
+        },
+        {
+            value: "Latin",
+            language: "la",
+            artistName: "Genius Translationes Latina",
+            tagId: "347", //Translation
+            titleSuffix: "Translatio Latina",
+            urlSlug: "Genius-translationes-latina"
+        },
+        {
+            value: "Latvian",
+            language: "lv",
+            artistName: "Genius Latviešu Tulkojums",
+            tagId: "5282",
+            titleSuffix: "Latviešu Tulkojums",
+            urlSlug: "Genius-latviesu-tulkojums"
+        },
+        {
+            value: "Lithuanian",
+            language: "lt",
+            artistName: "Genius Lietuviškos Vertimai",
+            tagId: "347", //Translation
+            titleSuffix: "Lietuvių Kalbos Vertimas",
+            urlSlug: "Genius-lietuviskos-vertimai"
+        },
+        {
+            value: "Low German",
+            language: "de",
+            artistName: "Genius Plattdeutsche Übersetzungen",
+            tagId: "5626",
+            titleSuffix: "Plattdeutsche Übersetzung",
+            urlSlug: "Genius-plattdeutsche-ubersetzungen"
+        },
+        {
+            value: "Luxembourgish",
+            language: "lb",
+            artistName: "Genius Lëtzebuergesch Iwwersetzungen",
+            tagId: "347", //Translation
+            titleSuffix: "Lëtzebuergesch Iwwersetzung",
+            urlSlug: "Genius-letzebuergesch-iwwersetzungen"
+        },
+        {
+            value: "Macedonian",
+            language: "mk",
+            artistName: "Genius Makedonski Prevodi",
+            tagId: "4342",
+            titleSuffix: "Македонски превод",
+            urlSlug: "Genius-makedonski-prevodi"
+        },
+        {
+            value: "Malay",
+            language: "ms",
+            artistName: "Terjemahan Bahasa Melayu Genius",
+            tagId: "5475",
+            titleSuffix: "Terjemahan Bahasa Melayu",
+            urlSlug: "Terjemahan-bahasa-melayu-genius"
+        },
+        {
+            value: "Malayalam",
+            language: "ml",
+            artistName: "Genius Malayalam Translations (മലയാളം പരിഭാഷ)",
+            tagId: "347", //Translation
+            titleSuffix: "മലയാളം പരിഭാഷ",
+            urlSlug: "Genius-malayalam-translations"
+        },
+        {
+            value: "Mongolian",
+            language: "mn",
+            artistName: "Genius Mongolian Translations (Монгол орчуулга)",
+            tagId: "347", //Translation
+            titleSuffix: "Монгол орчуулга",
+            urlSlug: "Genius-mongolian-translations"
+        },
+        {
+            value: "Nepali",
+            language: "ne",
+            artistName: "Genius Nepali Translations (नेपाली आनुवाद)",
+            tagId: "347", //Translation
+            titleSuffix: "नेपाली आनुवाद",
+            urlSlug: "Genius-nepali-translations"
+        },
+        {
+            value: "Northern Sotho",
+            language: "st",
+            artistName: "Genius Liphetolelo yaSesotho",
+            tagId: "347", //Translation
+            titleSuffix: "Phetolelo ya Sesotho",
+            urlSlug: "Genius-liphetolelo-yasesotho"
+        },
+        {
+            value: "Norwegian",
+            language: "no",
+            artistName: "Genius Norske Oversettelser",
+            tagId: "4368",
+            titleSuffix: "Norsk Oversettelse",
+            urlSlug: "Genius-norske-oversettelser"
+        },
+        {
+            value: "Pashto",
+            language: "ps",
+            artistName: "Genius Pashto Translations (پښتو ژباړې)",
+            tagId: "347", //Translation
+            titleSuffix: "پښتو ژباړه",
+            urlSlug: "Genius-pashto-translations"
+        },
+        {
+            value: "Polish",
+            language: "pl",
+            artistName: "Polskie tłumaczenia Genius",
+            tagId: "3645",
+            titleSuffix: "polskie tłumaczenie",
+            urlSlug: "Polskie-tumaczenia-genius"
+        },
+        {
+            value: "Portuguese (Brazil)",
+            language: "pt",
+            artistName: "Genius Brasil Traduções",
+            tagId: "2281",
+            titleSuffix: "Tradução em Português",
+            urlSlug: "Genius-brasil-traducoes"
+        },
+        {
+            value: "Portuguese (European)",
+            language: "pt",
+            artistName: "Genius Portugal Traduções",
+            tagId: "2281",
+            titleSuffix: "Tradução em Português de Portugal",
+            urlSlug: "Genius-portugal-traducoes"
+        },
+        {
+            value: "Punjabi",
+            language: "pa",
+            artistName: "Genius Punjabi Translations (ਗੁਰਮੁਖੀ/شاہ مُکھی)",
+            tagId: "347", //Translation
+            titleSuffix: "شاہ مُکھی پنجابی",
+            urlSlug: "Genius-punjabi-translations"
+        },
+        {
+            value: "Reintegrated Galician",
+            language: "pt",
+            artistName: "Genius Traducións ao Galego Reintegrado",
+            tagId: "347", //Translation
+            titleSuffix: "Tradución ao Galego Reintegrado",
+            urlSlug: "Genius-traducions-ao-galego-reintegrado"
+        },
+        {
+            value: "Romanian",
+            language: "ro",
+            artistName: "Genius traduceri în română",
+            tagId: "4028",
+            titleSuffix: "Traducere în română",
+            urlSlug: "Genius-traduceri-in-romana"
+        },
+        {
+            value: "Romanizations",
+            language: "romanization",
+            artistName: "Genius Romanizations",
+            tagId: "3646",
+            titleSuffix: "Romanized",
+            urlSlug: "Genius-romanizations"
+        },
+        {
+            value: "Russian",
+            language: "ru",
+            artistName: "Genius Russian Translations (Русский перевод)",
+            tagId: "3274",
+            titleSuffix: "Русский перевод",
+            urlSlug: "Genius-russian-translations"
+        },
+        {
+            value: "Sakha",
+            language: "sah",
+            artistName: "Genius Sakha Translations (Сахалыы Тылбаастар)",
+            tagId: "347", //Translation
+            titleSuffix: "Сахалыы Тылбаас",
+            urlSlug: "Genius-sakha-translations"
+        },
+        {
+            value: "Samoan",
+            language: "sm",
+            artistName: "Genius Samoan Translations",
+            tagId: "347", //Translation
+            titleSuffix: "Samoan Translation",
+            urlSlug: "Genius-samoan-translations"
+        },
+        {
+            value: "Serbian",
+            language: "sr",
+            artistName: "Genius srpski prevodi",
+            tagId: "3899",
+            titleSuffix: "Srpski prevod",
+            urlSlug: "Genius-srpski-prevodi"
+        },
+        {
+            value: "Sinhala",
+            language: "si",
+            artistName: "Genius Sinhala Translations (සිංහල පරිවර්තන)",
+            tagId: "4554",
+            titleSuffix: "සිංහල පරිවර්තන",
+            urlSlug: "Genius-sinhala-translations"
+        },
+        {
+            value: "Slovak",
+            language: "sk",
+            artistName: "Genius Slovenské preklady",
+            tagId: "5627",
+            titleSuffix: "Slovenský Preklad",
+            urlSlug: "Genius-slovenske-preklady"
+        },
+        {
+            value: "Slovenian",
+            language: "sl",
+            artistName: "Genius Slovenski Prevod",
+            tagId: "4886",
+            titleSuffix: "Slovenski Prevod",
+            urlSlug: "Genius-slovenski-prevod"
+        },
+        {
+            value: "Spanish",
+            language: "es",
+            artistName: "Genius Traducciones al Español",
+            tagId: "3447",
+            titleSuffix: "Traducción al Español",
+            urlSlug: "Genius-traducciones-al-espanol"
+        },
+        {
+            value: "Swahili",
+            language: "sw",
+            artistName: "Genius Swahili Translations",
+            tagId: "5628",
+            titleSuffix: "Swahili Translation",
+            urlSlug: "Genius-swahili-translations"
+        },
+        {
+            value: "Swedish",
+            language: "sv",
+            artistName: "Genius Svenska Översättningar",
+            tagId: "3786",
+            titleSuffix: "Svensk Översättning",
+            urlSlug: "Genius-svenska-oversattningar"
+        },
+        {
+            value: "Tamazight",
+            language: "",
+            artistName: "Genius Tamazight Translations",
+            tagId: "347", //Translation
+            titleSuffix: "ⵜⴰⵎⴰⵣⵉⵖⵜ",
+            urlSlug: "Genius-tamazight-translations"
+        },
+        {
+            value: "Tamil",
+            language: "ta",
+            artistName: "Genius Tamil Translations (தமிழ் மொழிபெயர்ப்பு)",
+            tagId: "347", //Translation
+            titleSuffix: "தமிழ் மொழிபெயர்ப்பு",
+            urlSlug: "Genius-tamil-translations"
+        },
+        {
+            value: "Tatar",
+            language: "tt",
+            artistName: "Genius Tatar Translations (Татарча тәрҗемәләре)",
+            tagId: "347", //Translation
+            titleSuffix: "Татар тәрҗемәсе",
+            urlSlug: "Genius-tatar-translations"
+        },
+        {
+            value: "Telugu",
+            language: "te",
+            artistName: "Genius Telugu Translations (తెలుగు అనువాదాలు)",
+            tagId: "347", //Translation
+            titleSuffix: "తెలుగు అనువాదాలు",
+            urlSlug: "Genius-telugu-translations"
+        },
+        {
+            value: "Thai",
+            language: "th",
+            artistName: "Genius Thai Translations (คำแปลภาษาไทย)",
+            tagId: "4482",
+            titleSuffix: "แปลภาษาไทย",
+            urlSlug: "Genius-thai-translations"
+        },
+        {
+            value: "Toki Pona",
+            language: "",
+            artistName: "Genius toki pona pi toki ante",
+            tagId: "347", //Translation
+            titleSuffix: "toki ni li kama toki pona",
+            urlSlug: "Genius-toki-pona-pi-toki-ante"
+        },
+        {
+            value: "Turkish",
+            language: "tr",
+            artistName: "Genius Türkçe Çeviriler",
+            tagId: "3299",
+            titleSuffix: "Türkçe Çeviri",
+            urlSlug: "Genius-turkce-ceviriler"
+        },
+        {
+            value: "Twi",
+            language: "ak",
+            artistName: "Genius Twi ɔkasadán",
+            tagId: "347", //Translation
+            titleSuffix: "Twi ɔkasadán",
+            urlSlug: "Genius-twi-kasadan"
+        },
+        {
+            value: "Ukrainian",
+            language: "uk",
+            artistName: "Genius Ukrainian Translations (Українські переклади)",
+            tagId: "4225",
+            titleSuffix: "Український переклад",
+            urlSlug: "Genius-ukrainian-translations"
+        },
+        {
+            value: "Urdu",
+            language: "ur",
+            artistName: "Genius Urdu Translations (اردو تراجم)",
+            tagId: "5345",
+            titleSuffix: "اردو ترجمہ",
+            urlSlug: "Genius-urdu-translations"
+        },
+        {
+            value: "Uzbek",
+            language: "uz",
+            artistName: "Genius Oʻzbekcha Tarjimalar",
+            tagId: "347", //Translation
+            titleSuffix: "Oʻzbekcha Tarjima",
+            urlSlug: "Genius-ozbekcha-tarjimalar"
+        },
+        {
+            value: "Vietnamese",
+            language: "vi",
+            artistName: "Genius Bản dịch tiếng Việt",
+            tagId: "4497",
+            titleSuffix: "Bản dịch tiếng Việt",
+            urlSlug: "Genius-ban-dich-tieng-viet"
+        },
+        {
+            value: "Welsh",
+            language: "cy",
+            artistName: "Genius Cyfieithiadau Cymraeg",
+            tagId: "347", //Translation
+            titleSuffix: "Cyfieithiad Cymraeg",
+            urlSlug: "Genius-cyfieithiadau-cymraeg"
+        },
+        {
+            value: "Xhosa",
+            language: "xh",
+            artistName: "Genius Izinguqulelo yesiXhosa",
+            tagId: "347", //Translation
+            titleSuffix: "Inguqulelo yesiXhosa",
+            urlSlug: "Genius-izinguqulelo-yesixhosa"
+        }
+    ];
+
+    function addTranslationButton(songData) {
+        console.log("Run function addTranslationButton()");
+
+        const currentUrl = window.location.href.toLowerCase();
+        const isTranslationPage = LANGUAGE_CONFIG.some(cfg =>
+            currentUrl.includes(`/artists/${cfg.urlSlug.toLowerCase()}`) ||
+            currentUrl.includes(`/${cfg.urlSlug.toLowerCase()}-`)
+        );
+
+        // No button on translation pages
+        if (isTranslationPage) return;
+
+        const { adminSpan } = getDomElements();
+        if (!adminSpan) return;
+
+        const dropdownContainer = adminSpan.closest('[class^="Dropdown__Container-"]');
+        if (!dropdownContainer) return;
+
+        const list = dropdownContainer.querySelector('[class^="StickyToolbarDropdown__DropdownItems-"]');
+        if (!list) return;
+
+        if (document.getElementById("translation-btn")) return;
+
+        const existingButton = list.querySelector("button");
+        const existingLi = list.querySelector("li");
+        if (!existingButton || !existingLi) return;
+
+        const li = document.createElement("li");
+        li.className = existingLi.className;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.id = "translation-btn";
+        btn.textContent = "Create Translation";
+        btn.className = existingButton.className;
+
+        btn.addEventListener("click", () => {
+            openTranslationModal(songData);
+        });
+
+        li.appendChild(btn);
+        list.appendChild(li);
+    }
+
+    function openTranslationModal(songData) {
+        const { editmetadatabutonSmallbutton } = getDomElements();
+        if (document.getElementById("create-translation-modal")) return;
+
+        const translations = songData?.song_relationships?.find(r => r.type === "translations")?.songs || [];
+        const existingTranslationLanguages = LANGUAGE_CONFIG.filter(cfg => translations.some(t => t.artist_names === cfg.artistName)).map(cfg => cfg.value);
+
+        document.body.style.overflow = "hidden";
+
+        const baseInputStyle = {
+            width: "100%",
+            padding: "7.75px 8px",
+            fontSize: "0.8em",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            minHeight: "32px"
+        };
+
+        const baseBoxStyle = {
+            padding: "6px 8px",
+            fontSize: "0.8em",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            background: "#f9f9f9",
+            minHeight: "32px"
+        };
+
+        const columnStyle = {
+            display: "flex",
+            flexDirection: "column",
+            flex: "1",
+            gap: "4px"
+        };
+
+        const overlay = document.createElement("div");
+        Object.assign(overlay.style, {
+            position: "fixed",
+            top: "0",
+            left: "0",
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: "9999"
+        });
+
+        const modal = document.createElement("div");
+        Object.assign(modal.style, {
+            background: "#fff",
+            padding: "20px",
+            borderRadius: "8px",
+            width: "800px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "18px"
+        });
+
+        const row = document.createElement("div");
+        Object.assign(row.style, {
+            display: "flex",
+            flexDirection: "row",
+            gap: "20px"
+        });
+
+        // --- Language Column ---
+        const languageWrapper = document.createElement("div");
+        Object.assign(languageWrapper.style, columnStyle);
+
+        const languageLabel = document.createElement("label");
+        languageLabel.textContent = "Language";
+        languageLabel.style.fontWeight = "600";
+
+        const languageSelect = document.createElement("select");
+        Object.assign(languageSelect.style, {
+            width: "100%",
+            padding: "6.75px 8px",
+            fontSize: "0.8em",
+            border: "1px solid #ccc",
+            borderRadius: "4px"
+        });
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select language";
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        languageSelect.appendChild(placeholder);
+
+        // Remove existing translation languages from the dropdown
+        LANGUAGE_CONFIG
+            .map(cfg => cfg.value)
+            .sort()
+            .filter(lang => !existingTranslationLanguages.includes(lang))
+            .forEach(lang => {
+                const opt = document.createElement("option");
+                opt.value = lang;
+                opt.textContent = lang;
+                languageSelect.appendChild(opt);
+            });
+
+        languageWrapper.appendChild(languageLabel);
+        languageWrapper.appendChild(languageSelect);
+
+        // --- Artist Column ---
+        const artistWrapper = document.createElement("div");
+        Object.assign(artistWrapper.style, columnStyle);
+
+        const artistLabel = document.createElement("label");
+        artistLabel.textContent = "Artist";
+        artistLabel.style.fontWeight = "600";
+
+        const artistValue = document.createElement("div");
+        Object.assign(artistValue.style, baseBoxStyle);
+        artistValue.textContent = "";
+
+        function updateArtistValue() {
+            const selectedLang = languageSelect.value;
+            if (!selectedLang) {
+                artistValue.textContent = "";
+                return;
+            }
+            const cfg = LANGUAGE_CONFIG.find(c => c.value === selectedLang);
+            artistValue.textContent = cfg ? cfg.artistName : "";
+            updateTitleValue();
+        }
+
+        artistWrapper.appendChild(artistLabel);
+        artistWrapper.appendChild(artistValue);
+
+        row.appendChild(languageWrapper);
+        row.appendChild(artistWrapper);
+
+        // --- Title Column ---
+        const titleWrapper = document.createElement("div");
+        Object.assign(titleWrapper.style, columnStyle);
+
+        const titleLabel = document.createElement("label");
+        titleLabel.textContent = "Title";
+        titleLabel.style.fontWeight = "600";
+
+        const titleInput = document.createElement("input");
+        titleInput.type = "text";
+        Object.assign(titleInput.style, baseInputStyle);
+        titleInput.value = "";
+
+        function updateTitleValue() {
+            const selectedLang = languageSelect.value;
+            if (!selectedLang) {
+                titleInput.value = "";
+                return;
+            }
+
+            const cfg = LANGUAGE_CONFIG.find(c => c.value === selectedLang);
+            const suffix = cfg?.titleSuffix || "";
+
+            const artist = (songData?.primary_artist_names || "").replace(/\s*\([^()]*\)\s*$/, "");
+            const title = songData?.title || "";
+            const featuredArtists = (songData?.featured_artists || [])
+                .map(a => {
+                    const raw = a.name || "";
+                    return raw.replace(/\s*\([^()]*\)\s*$/, "");
+                });
+
+            // Featured formatting
+            let featuredString = "";
+            if (featuredArtists.length === 1) {
+                featuredString = ` ft. ${featuredArtists[0]}`;
+            } else if (featuredArtists.length === 2) {
+                featuredString = ` ft. ${featuredArtists[0]} & ${featuredArtists[1]}`;
+            } else if (featuredArtists.length > 2) {
+                const last = featuredArtists.pop();
+                featuredString = ` ft. ${featuredArtists.join(", ")} & ${last}`;
+            }
+
+            const baseTitle = `${artist} - ${title}${featuredString}`;
+            const endsWithRoundBracket = baseTitle.trim().endsWith(")");
+            const finalSuffix = endsWithRoundBracket ? `[${suffix}]` : `(${suffix})`;
+
+            titleInput.value = `${baseTitle} ${finalSuffix}`;
+        }
+
+        languageSelect.addEventListener("change", updateArtistValue);
+
+        titleWrapper.appendChild(titleLabel);
+        titleWrapper.appendChild(titleInput);
+
+        // --- Buttons ---
+        const buttonRow = document.createElement("div");
+        Object.assign(buttonRow.style, {
+            display: "flex",
+            flexDirection: "row",
+            gap: "10px"
+        });
+
+        const createBtn = document.createElement("button");
+        createBtn.textContent = "Create Translation Page";
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "Cancel";
+
+        if (editmetadatabutonSmallbutton) {
+            [createBtn, cancelBtn].forEach(btn => {
+                btn.className = editmetadatabutonSmallbutton.className;
+                Array.from(editmetadatabutonSmallbutton.attributes).forEach(attr => {
+                    btn.setAttribute(attr.name, attr.value);
+                });
+                btn.style.width = "fit-content";
+            });
+        }
+
+        createBtn.addEventListener("click", async () => {
+            const selectedLang = languageSelect.value;
+            if (!selectedLang) return;
+
+            const cleanArtist = artistValue.textContent.trim();
+            const cleanTitle = titleInput.value.trim();
+
+            if (!cleanArtist || !cleanTitle) return;
+
+            const cfg = LANGUAGE_CONFIG.find(c => c.value === selectedLang);
+            const language = cfg?.language || null;
+            const tagId = cfg?.tagId ? Number(cfg.tagId) : null;
+
+            const payload = {
+                text_format: "html,markdown,preview",
+                song: {
+                    lyrics_state: "incomplete",
+                    lyrics: "",
+
+                    primary_artists: [
+                        {
+                            name: cleanArtist
+                        }
+                    ],
+
+                    title: cleanTitle,
+
+                    primary_tag_id: songData?.primary_tag.id || null,
+                    tags: tagId ? [{ id: tagId }] : [],
+
+                    release_date_components: songData?.release_date_components || null,
+
+                    custom_song_art_image_url: songData?.custom_song_art_image_url || null,
+
+                    youtube_url: songData?.youtube_url || null,
+                    youtube_start: songData?.youtube_start || null,
+
+                    language: language,
+
+                    song_relationships_by_id: songData?.id
+                        ? [
+                            {
+                                type: "translation_of",
+                                song_ids: [songData?.id]
+                            }
+                        ]
+                        : [],
+                }
+            };
+
+            const result = await createSong(payload);
+            overlay.remove();
+            document.body.style.overflow = "";
+
+            const newSongUrl = result?.response?.song?.url;
+            if (newSongUrl) window.location.href = newSongUrl;
+        });
+
+        cancelBtn.addEventListener("click", () => {
+            overlay.remove();
+            document.body.style.overflow = "";
+        });
+
+        buttonRow.appendChild(createBtn);
+        buttonRow.appendChild(cancelBtn);
+
+        modal.appendChild(row);
+        modal.appendChild(titleWrapper);
+        modal.appendChild(buttonRow);
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
+
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                                CLEANUP METADATA                                //////////
@@ -632,7 +1758,6 @@ chrome.storage.local.get([
 
         stickytoolbarLeft.appendChild(actionButton);
     }
-
 
 
 
@@ -2462,7 +3587,7 @@ chrome.storage.local.get([
                                 return typeof value === 'function' ? value(index++) : value;
                             });
                         }
-                        
+
                         if (storedLanguage === 'en') {
                             line = line.replace(/^(['"]?\s*<[^>]*>\s*|\s*['"])?(['"]?\w|'\w)/, (match, prefix, word) => {
                                 if (word.startsWith("'")) {
