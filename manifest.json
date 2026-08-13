@@ -4,7 +4,6 @@
   "version": "0.7.9",
   "description": "Copy the artwork URL to the clipboard for genius.com by clicking the copy button on Apple Music, Deezer, Spotify, and more.",
   "permissions": [
-    "activeTab",
     "clipboardWrite",
     "storage",
     "scripting"
@@ -141,6 +140,11 @@
     "default_popup": "Popup/popup.html",
     "default_icon": {
       "128": "128.png"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "strict_min_version": "127.0"
     }
   },
   "host_permissions": [
