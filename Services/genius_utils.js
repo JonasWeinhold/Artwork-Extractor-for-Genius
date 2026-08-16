@@ -231,7 +231,27 @@ async function updateAlbumMetadata(album, payload) {
 }
 
 
+async function updateCoverArts(album, payload) {
+    if (Object.keys(payload).length === 0) return;
+    try {
+        const response = await geniusFetch(`https://genius.com/api/albums/${album.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cookie': document.cookie,
+                'X-CSRF-Token': getCsrfToken(),
+                'User-Agent': 'ArtworkExtractorForGenius/0.7.9 (Artwork Extractor for Genius)'
+            },
+            body: JSON.stringify({ album: payload })
+        });
 
+        if (!response.ok) {
+            console.error(`Error updating album cover art: ${response.statusText}`);
+        }
+    } catch (error) {
+        console.error(`Error: ${error}`);
+    }
+}
 
 
 async function updateSongLyrics(song, payload) {
