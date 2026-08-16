@@ -1336,6 +1336,7 @@ chrome.storage.local.get([
 
         const rows = [];
         const coverArts = albumData.cover_arts;
+        console.log("coverArts:", coverArts);
 
         let modalObserver = null;
         let modalCloseObserver = null;
@@ -1456,34 +1457,54 @@ chrome.storage.local.get([
             saveBtn.addEventListener("click", async () => {
                 saveBtn.disabled = true;
 
+                const updatedCoverArts = albumData.cover_arts.map(ca => ({
+                    id: ca.id
+                }));
+
                 for (const { checkbox, input1, input2 } of rows) {
                     const inputNumber = input1.value.trim();
                     const imageUrl = input2.value.trim();
-
                     if (!imageUrl) continue;
 
-                    if (checkbox.checked) {
-                        const position = inputNumber === "" ? 1 : (/^\d+$/.test(inputNumber) ? parseInt(inputNumber, 10) : null);
+                    let position = null;
+                    if (/^\d+$/.test(inputNumber)) {
+                        position = parseInt(inputNumber, 10);
+                    } else if (checkbox.checked) {
+                        position = 1;
+                    }
 
-                        const coverId = await sendCoverArts(imageUrl, albumId);
-                        if (position > 0 && position <= coverArts.length) {
-                            await moveCoverArts(position, coverId, coverArts);
-                            await deleteCoverArts(coverArts[position - 1].id);
+                    let newEntry;
+
+                    if (checkbox.checked) {
+                        if (position && position > 0 && position <= updatedCoverArts.length) {
+                            const existingId = updatedCoverArts[position - 1].id;
+                            newEntry = { id: existingId, image_url: imageUrl };
+                            updatedCoverArts[position - 1] = newEntry;
+                        } else {
+                            newEntry = { image_url: imageUrl };
+                            updatedCoverArts.push(newEntry);
                         }
                     } else {
-                        const position = /^\d+$/.test(inputNumber) ? parseInt(inputNumber, 10) : null;
+                        newEntry = { image_url: imageUrl };
 
-                        const coverId = await sendCoverArts(imageUrl, albumId);
-                        if (position > 0 && position <= coverArts.length) {
-                            await moveCoverArts(position, coverId, coverArts);
+                        if (position && position > 0 && position <= updatedCoverArts.length + 1) {
+                            updatedCoverArts.splice(position - 1, 0, newEntry);
+                        } else {
+                            updatedCoverArts.push(newEntry);
                         }
                     }
                 }
 
+                const payload = {
+                    cover_arts: updatedCoverArts,
+                    text_format: "html,markdown,preview"
+                };
+
+                await updateCoverArts(albumData, payload);
+
                 const closeButton = modal.querySelector('[aria-label="Cancel"]');
                 if (closeButton) closeButton.click();
             });
-
 
             wrapper.appendChild(leftCol);
             wrapper.appendChild(rightCol);
