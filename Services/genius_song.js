@@ -1498,9 +1498,22 @@ chrome.storage.local.get([
         row.appendChild(languageWrapper);
         row.appendChild(artistWrapper);
 
-        // --- Title Column ---
+        // --- Title Row ---
+        const titleRow = document.createElement("div");
+        Object.assign(titleRow.style, {
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: "14px"
+        });
+
         const titleWrapper = document.createElement("div");
-        Object.assign(titleWrapper.style, columnStyle);
+        Object.assign(titleWrapper.style, {
+            display: "flex",
+            flexDirection: "column",
+            flex: "1",
+            gap: "4px"
+        });
 
         const titleLabel = document.createElement("label");
         titleLabel.textContent = "Title";
@@ -1508,8 +1521,80 @@ chrome.storage.local.get([
 
         const titleInput = document.createElement("input");
         titleInput.type = "text";
-        Object.assign(titleInput.style, baseInputStyle);
+        Object.assign(titleInput.style, {
+            width: "100%",
+            padding: "7.75px 8px",
+            fontSize: "0.8em",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            minHeight: "32px"
+        });
         titleInput.value = "";
+
+        titleWrapper.appendChild(titleLabel);
+        titleWrapper.appendChild(titleInput);
+
+        const transcribeWrapper = document.createElement("label");
+        Object.assign(transcribeWrapper.style, {
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: "6px",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            marginTop: "28px"
+        });
+
+        const transcribeCheckbox = document.createElement("input");
+        transcribeCheckbox.type = "checkbox";
+        Object.assign(transcribeCheckbox.style, {
+            width: "0.9rem",
+            height: "0.9rem",
+            cursor: "pointer"
+        });
+
+        const transcribeText = document.createElement("span");
+        transcribeText.textContent = "Transcribe lyrics now";
+        transcribeText.style.fontSize = "0.8rem";
+
+        transcribeWrapper.appendChild(transcribeCheckbox);
+        transcribeWrapper.appendChild(transcribeText);
+
+        titleRow.appendChild(titleWrapper);
+        titleRow.appendChild(transcribeWrapper);
+
+        // --- Lyrics Row ---
+        const lyricsRow = document.createElement("div");
+        Object.assign(lyricsRow.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+            marginTop: "4px"
+        });
+        lyricsRow.style.display = "none";
+
+        const lyricsLabel = document.createElement("label");
+        lyricsLabel.textContent = "Lyrics";
+        lyricsLabel.style.fontWeight = "600";
+
+        const lyricsTextarea = document.createElement("textarea");
+        Object.assign(lyricsTextarea.style, {
+            width: "100%",
+            minHeight: "200px",
+            padding: "8px",
+            fontSize: "0.8em",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            resize: "vertical"
+        });
+
+        lyricsRow.appendChild(lyricsLabel);
+        lyricsRow.appendChild(lyricsTextarea);
+
+        transcribeCheckbox.addEventListener("change", () => {
+            lyricsRow.style.display = transcribeCheckbox.checked ? "flex" : "none";
+        });
+
 
         function updateTitleValue() {
             const selectedLang = languageSelect.value;
@@ -1549,9 +1634,6 @@ chrome.storage.local.get([
 
         languageSelect.addEventListener("change", updateArtistValue);
 
-        titleWrapper.appendChild(titleLabel);
-        titleWrapper.appendChild(titleInput);
-
         // --- Buttons ---
         const buttonRow = document.createElement("div");
         Object.assign(buttonRow.style, {
@@ -1589,11 +1671,14 @@ chrome.storage.local.get([
             const language = cfg?.language || null;
             const tagId = cfg?.tagId ? Number(cfg.tagId) : null;
 
+            const rawLyrics = lyricsTextarea?.value?.trim() || "";
+            const hasLyrics = rawLyrics.length > 0;
+
             const payload = {
                 text_format: "html,markdown,preview",
                 song: {
                     lyrics_state: "incomplete",
-                    lyrics: "",
+                    lyrics: hasLyrics ? rawLyrics : "",
 
                     primary_artists: [
                         {
@@ -1643,7 +1728,8 @@ chrome.storage.local.get([
         buttonRow.appendChild(cancelBtn);
 
         modal.appendChild(row);
-        modal.appendChild(titleWrapper);
+        modal.appendChild(titleRow);
+        modal.appendChild(lyricsRow);
         modal.appendChild(buttonRow);
 
         overlay.appendChild(modal);

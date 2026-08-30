@@ -1336,7 +1336,6 @@ chrome.storage.local.get([
 
         const rows = [];
         const coverArts = albumData.cover_arts;
-        console.log("coverArts:", coverArts);
 
         let modalObserver = null;
         let modalCloseObserver = null;
