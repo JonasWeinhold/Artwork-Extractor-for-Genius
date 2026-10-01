@@ -30,6 +30,41 @@ chrome.storage.local.get([
     const isGeniusAlbumFollowButton = result.isGeniusAlbumFollowButton ?? true;
     const isGeniusAlbumCleanupButton = result.isGeniusAlbumCleanupButton ?? true;
 
+
+
+    function unescapeJsString(raw) {
+        let out = '';
+        for (let i = 0; i < raw.length; i++) {
+            if (raw[i] !== '\\') {
+                out += raw[i];
+                continue;
+            }
+            const next = raw[++i];
+            switch (next) {
+                case 'n': out += '\n'; break;
+                case 't': out += '\t'; break;
+                case 'r': out += '\r'; break;
+                case 'b': out += '\b'; break;
+                case 'f': out += '\f'; break;
+                case 'v': out += '\v'; break;
+                case '0': out += '\0'; break;
+                case 'x': out += String.fromCharCode(parseInt(raw.substr(i + 1, 2), 16)); i += 2; break;
+                case 'u': out += String.fromCharCode(parseInt(raw.substr(i + 1, 4), 16)); i += 4; break;
+                case '\n': break;
+                default: out += next; break;
+            }
+        }
+        return out;
+    }
+
+    const script = [...document.scripts].find(s => s.textContent.includes('window.__PRELOADED_STATE__'));
+    const match = script.textContent.match(/window\.__PRELOADED_STATE__\s*=\s*JSON\.parse\('((?:[^'\\]|\\.)*)'\);/);
+    if (match) { const state = JSON.parse(unescapeJsString(match[1])); console.log("• Preloaded State:", state); }
+
+
+
+
+
     // ? Live state of the "Auto-Reopen" toggle inside the song credits editor.
     // * Initialized from the settings page value and kept in sync with it, so toggling it in the editor sticks.
     let autoReopenSongCredits = result.isGeniusAlbumSongCreditsAutoReopen ?? false;
@@ -4008,7 +4043,7 @@ chrome.storage.local.get([
         if (existingButton) existingButton.remove();
 
         function extractTrackNumbers() {
-            const trackContainers = document.querySelectorAll('a[class^="Track__Container-"]');
+            const trackContainers = document.querySelectorAll('div[class^="Track__Container-"]');
 
             const rawTrackNumbers = [];
             const trackNumbers = [];
@@ -6863,58 +6898,77 @@ chrome.storage.local.get([
     }
 
     function lyricStateTracklist(songData, userData) {
-        console.log("Run function lyricStateTracklist()");
+    console.log("Run function lyricStateTracklist()");
 
-        songData.forEach(song => {
-            const trackContainer = document.querySelector(`a[href="${song.url}"]`)?.closest('a[class^="Track__Container-"]');
-            if (!trackContainer) return;
+    songData.forEach(song => {
+        const trackContainer = document.querySelector(
+            `a[href="${song.url}"]`
+        )?.closest('div[class^="Track__Container-"]');
+        if (!trackContainer) return;
 
-            const viewsContainer = trackContainer.querySelector('div[class^="Track__Views-"]');
-            if (!viewsContainer) return;
+        const creditsButton = trackContainer.querySelector(
+            'button[class*="Track__CreditsToggle"]'
+        );
+        if (!creditsButton) return;
 
-            if (viewsContainer.querySelector('.lyric-status-box')) return;
+        creditsButton.style.marginLeft = "0.55rem";
 
-            const lyricsAreValidated = song.lyrics_marked_complete_by || song.lyrics_marked_staff_approved_by || song.lyrics_verified === true;
-            const userRoles = userData?.roles_for_display;
+        const lyricsAreValidated =
+            song.lyrics_marked_complete_by ||
+            song.lyrics_marked_staff_approved_by ||
+            song.lyrics_verified === true;
 
-            let color = '#ff7878';
-            if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
-                if (lyricsAreValidated && song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
-                    color = '#99f2a5';
-                } else if (song.lyrics_state === 'complete' &&
-                    song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
-                    color = '#ffff64';
-                } else if (song.lyrics_state === 'complete' && song.current_user_metadata?.permissions?.includes("award_transcription_iq")) {
-                    color = '#ffa335';
-                }
-            } else {
-                if (lyricsAreValidated) {
-                    color = '#99f2a5';
-                } else if (song.lyrics_state === 'complete') {
-                    color = '#ffff64';
-                }
+        const userRoles = userData?.roles_for_display;
+
+        let color = '#ff7878';
+        if (userRoles.includes('transcriber') ||
+            userRoles.includes('editor') ||
+            userRoles.includes('moderator')) {
+
+            if (lyricsAreValidated &&
+                song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+                color = '#99f2a5';
+            } else if (song.lyrics_state === 'complete' &&
+                song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+                color = '#ffff64';
+            } else if (song.lyrics_state === 'complete' &&
+                song.current_user_metadata?.permissions?.includes("award_transcription_iq")) {
+                color = '#ffa335';
             }
+        } else {
+            if (lyricsAreValidated) {
+                color = '#99f2a5';
+            } else if (song.lyrics_state === 'complete') {
+                color = '#ffff64';
+            }
+        }
 
-            const box = document.createElement('div');
-            box.className = 'lyric-status-box';
-            box.style.width = '0.625rem';
-            box.style.height = '100%';
-            box.style.borderRadius = '1.25rem';
-            box.style.backgroundColor = color;
-            box.style.marginLeft = 'auto';
-            box.style.position = 'relative';
+        const applyCircle = () => {
+            const svg = creditsButton.querySelector('svg');
+            if (!svg) return;
+
+            svg.style.display = 'inline-block';
+            svg.style.backgroundColor = color;
+            svg.style.borderRadius = '50%';
+            svg.style.padding = '0.375rem';
+            svg.style.boxSizing = 'content-box';
 
             if (song.pending_lyrics_edits_count > 0) {
-                box.style.boxShadow = '2px 2px 0.225rem 0px #000';
+                svg.style.filter = 'drop-shadow(0 0 6px #000)';
+            } else {
+                svg.style.filter = '';
             }
+        };
 
-            const wrapper = document.createElement("div");
-            wrapper.style.marginLeft = "0.5rem";
+        applyCircle();
 
-            viewsContainer.appendChild(wrapper);
-            viewsContainer.appendChild(box);
-        });
-    }
+        const observer = new MutationObserver(() => applyCircle());
+        observer.observe(creditsButton, { childList: true, subtree: true });
+    });
+}
+
+
+
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////

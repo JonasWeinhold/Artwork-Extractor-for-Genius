@@ -362,7 +362,7 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
     }
 
     function addCopyArtistArtwork() {
-        const artistHeader = document.querySelector('h1.artist-header__name');
+        const artistHeader = document.querySelector('h1.artist-expression-header__name');
         if (artistHeader) {
             artistHeader.style.cursor = 'pointer';
             artistHeader.style.transition = 'text-decoration 0.3s';
