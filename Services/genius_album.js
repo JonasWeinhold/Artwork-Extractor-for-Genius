@@ -31,40 +31,6 @@ chrome.storage.local.get([
     const isGeniusAlbumCleanupButton = result.isGeniusAlbumCleanupButton ?? true;
 
 
-
-    function unescapeJsString(raw) {
-        let out = '';
-        for (let i = 0; i < raw.length; i++) {
-            if (raw[i] !== '\\') {
-                out += raw[i];
-                continue;
-            }
-            const next = raw[++i];
-            switch (next) {
-                case 'n': out += '\n'; break;
-                case 't': out += '\t'; break;
-                case 'r': out += '\r'; break;
-                case 'b': out += '\b'; break;
-                case 'f': out += '\f'; break;
-                case 'v': out += '\v'; break;
-                case '0': out += '\0'; break;
-                case 'x': out += String.fromCharCode(parseInt(raw.substr(i + 1, 2), 16)); i += 2; break;
-                case 'u': out += String.fromCharCode(parseInt(raw.substr(i + 1, 4), 16)); i += 4; break;
-                case '\n': break;
-                default: out += next; break;
-            }
-        }
-        return out;
-    }
-
-    const script = [...document.scripts].find(s => s.textContent.includes('window.__PRELOADED_STATE__'));
-    const match = script.textContent.match(/window\.__PRELOADED_STATE__\s*=\s*JSON\.parse\('((?:[^'\\]|\\.)*)'\);/);
-    if (match) { const state = JSON.parse(unescapeJsString(match[1])); console.log("• Preloaded State:", state); }
-
-
-
-
-
     // ? Live state of the "Auto-Reopen" toggle inside the song credits editor.
     // * Initialized from the settings page value and kept in sync with it, so toggling it in the editor sticks.
     let autoReopenSongCredits = result.isGeniusAlbumSongCreditsAutoReopen ?? false;
@@ -186,38 +152,57 @@ chrome.storage.local.get([
         //const isAlbumNew = /https:\/\/(genius\.com|genius-staging\.com)\/albums\/[^/]+\/[^/?]+\?react=1$/.test(window.location.href);
         const isAlbumNew = Array.from(document.querySelectorAll("button")).some(btn => btn.textContent.includes("View Old Album Page"));
 
-
         if (isAlbumNew) {
+            const state = getScripts("window.__PRELOADED_STATE__");
+            const userId = state?.session?.currentUser;
+            const userRole = state?.entities?.users?.[userId]?.roleForDisplay;
+            const albumId = state?.albumPage?.album;
+            const highContrastMode = state?.albumPage?.highContrastMode;
+            const primaryColor = state?.entities?.albums?.[albumId]?.albumArtPrimaryColor;
+            const secondaryColor = state?.entities?.albums?.[albumId]?.albumArtSecondaryColor;
+            const textColor = state?.entities?.albums?.[albumId]?.albumArtTextColor;
+            const coverArtUrl = state?.entities?.albums?.[albumId]?.coverArtUrl;
+            const coverArts = state?.entities?.albums?.[albumId]?.coverArts?.map(id => state?.entities?.coverArts?.[id]);
+            const albumType = state?.entities?.albums?.[albumId]?.albumType;
+            const albumTitle = state?.entities?.albums?.[albumId]?.name;
+            const albumFollow = state?.entities?.albums?.[albumId]?.currentUserMetadata?.interactions?.following;
+
+
+            const albumData = state?.entities;
+            const songIds = state?.entities?.albumAppearances ? Object.values(state.entities.albumAppearances).sort((a, b) => a.trackNumber - b.trackNumber).map(entry => entry.song) : [];
+            console.log(state);
+
+
             if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
 
-            const userId = getId("currentUser");
-            const albumId = getId("album");
-            const songIds = getSongIds();
+            //const userId = getId("currentUser");
+            //const albumId = getId("album");
+            //const songIds = getSongIds();
 
-            const { user: userData } = await getApiData(userId, "users");
-            const { album: albumData } = await getApiData(albumId, "albums");
+            //const { user: userData } = await getApiData(userId, "users");
+            //const { album: albumData } = await getApiData(albumId, "albums");
 
-            if (!userId || !albumId || !userData || !albumData) return;
+            if (!userId || !userRole || !albumId || !albumData) return;
 
             console.log("• User ID:", userId);
+            console.log("• User Role:", userRole);
+            console.log("• Album Data:", albumData);
             console.log("• Album ID:", albumId);
             console.log("• Song IDs:", songIds);
-            console.log("• User Data:", userData);
-            console.log("• Album Data:", albumData);
 
 
             if (isGeniusAlbumAlbumId) showAlbumIdButton(albumId);
 
-            if (isGeniusAlbumAlbumPageInfo) showCoverInfo(albumData);
-            if (isGeniusAlbumAlbumPage) checkAlbumCover(albumData);
+            if (isGeniusAlbumAlbumPageInfo) showCoverInfo(coverArtUrl, primaryColor, secondaryColor, textColor);
+            if (isGeniusAlbumAlbumPage) checkAlbumCover(coverArtUrl);
 
-            if (isGeniusAlbumUploadCover) uploadAlbumCover(albumId, albumData);
+            if (isGeniusAlbumUploadCover) uploadAlbumCover(albumId, coverArts);
 
-            if (isGeniusAlbumEditTracklist) addTracklistCheckboxes(userData);
+            if (isGeniusAlbumEditTracklist) addTracklistCheckboxes(userRole, highContrastMode, textColor, primaryColor, secondaryColor);
 
 
             if (isGeniusAlbumSongCreditsButton) songCreditsButtonAlbumPage(songIds);
-            //if (isGeniusAlbumCleanupButton) cleanupAlbumType(albumData);
+            //if (isGeniusAlbumCleanupButton) cleanupAlbumType(albumId, albumType, albumTitle);
 
 
             /*async function songDataFunctions() {
@@ -244,13 +229,49 @@ chrome.storage.local.get([
 
                 if (!songDataAlbum.length) return;
 
-                if (isGeniusAlbumFollowButton) followButtonAlbumPage(songDataAlbum, albumData);
-                if (isGeniusAlbumCleanupButton) cleanupMetadata(songDataAlbum, userData);
-                if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(songDataAlbum, userData);
+                if (isGeniusAlbumFollowButton) followButtonAlbumPage(songDataAlbum, albumId, albumFollow);
+                if (isGeniusAlbumCleanupButton) cleanupMetadata(songDataAlbum, userRole);
+                if (isGeniusAlbumAlbumPageLyrics) lyricStateTracklist(songDataAlbum, userRole);
             }
 
 
-            chrome.runtime.sendMessage({ type: "IS_ACTIVE_TAB" }, (isActive) => {
+            function createSongDataFunctionsButton() {
+                const { stickyToolbarRight, smallButton } = getDomElements();
+                if (!stickyToolbarRight || !smallButton) return;
+
+                const existingButton = [...stickyToolbarRight.querySelectorAll("button")]
+                    .find(btn => ["Pull Song Data", "Running…"].includes(btn.textContent.trim()));
+                if (existingButton) existingButton.remove();
+
+                const runButton = document.createElement("button");
+                runButton.type = "button";
+                runButton.className = smallButton.className;
+                runButton.textContent = "Pull Song Data";
+                stickyToolbarRight.insertBefore(runButton, stickyToolbarRight.firstChild);
+
+                runButton.addEventListener("click", async () => {
+                    runButton.disabled = true;
+                    runButton.textContent = "Running…";
+
+                    try {
+                        await songDataFunctions();
+
+                        runButton.style.opacity = "0";
+                        runButton.style.pointerEvents = "none";
+
+                        setTimeout(() => runButton.remove(), 300);
+                    } catch (err) {
+                        runButton.textContent = "Error";
+
+                        setTimeout(() => {
+                            runButton.disabled = false;
+                            runButton.textContent = "Pull Song Data";
+                        }, 1500);
+                    }
+                });
+            }
+
+            /*chrome.runtime.sendMessage({ type: "IS_ACTIVE_TAB" }, (isActive) => {
                 if (isActive && !geniusStarted) {
                     geniusStarted = true;
                     songDataFunctions();
@@ -262,8 +283,21 @@ chrome.storage.local.get([
                     geniusStarted = true;
                     songDataFunctions();
                 }
+            });*/
+
+            chrome.runtime.sendMessage({ type: "IS_ACTIVE_TAB" }, (isActive) => {
+                if (isActive && !geniusStarted) {
+                    geniusStarted = true;
+                    createSongDataFunctionsButton();
+                }
             });
 
+            chrome.runtime.onMessage.addListener((msg) => {
+                if (msg.type === "TAB_ACTIVATED" && !geniusStarted) {
+                    geniusStarted = true;
+                    createSongDataFunctionsButton();
+                }
+            });
 
 
         } else if (isAlbum) {
@@ -471,7 +505,7 @@ chrome.storage.local.get([
         }
 
         function observeCoverElement(modal) {
-            const coverDiv = modal.querySelector('div[class*="CoverArtAnnotationModalContent__SizedImage-"]');
+            const coverDiv = modal.querySelector('img[class*="CoverArtAnnotationModalContent__SizedImage-"]');
             if (!coverDiv) return;
 
             if (coverObserver) coverObserver.disconnect();
@@ -479,7 +513,7 @@ chrome.storage.local.get([
             coverObserver = new MutationObserver(() => updateInfo(coverDiv, modal));
             coverObserver.observe(coverDiv, {
                 attributes: true,
-                attributeFilter: ["style", "class"]
+                attributeFilter: ["src"]
             });
 
             updateInfo(coverDiv, modal);
@@ -489,21 +523,25 @@ chrome.storage.local.get([
             const { CoverArtAnnotationNavigationContainer } = getDomElements();
             if (!CoverArtAnnotationNavigationContainer) return;
 
-            const CoverArtAnnotationNavigationArrows = CoverArtAnnotationNavigationContainer.querySelector('[class*="CoverArtAnnotationNavigation__Arrows-"]');
+            const CoverArtAnnotationNavigationArrows =
+                CoverArtAnnotationNavigationContainer.querySelector('[class*="CoverArtAnnotationNavigation__Arrows-"]');
             if (!CoverArtAnnotationNavigationArrows) return;
 
-            const bg = getComputedStyle(coverDiv).backgroundImage;
-            const match = bg.match(/url\(["']?(.*?)["']?\)/);
-            if (!match) return;
+            const src = coverDiv.src;
 
-            let rawUrl = match[1];
-            let decoded = decodeURIComponent(rawUrl.split("/").pop());
-            const finalUrl = decoded.startsWith("https") ? decoded : rawUrl;
+            let cleaned = src;
+            const unsafeMatch = cleaned.match(/unsafe\/\d+x\d+\/(.+)$/);
+            if (unsafeMatch) {
+                cleaned = unsafeMatch[1];
+            }
 
+            const finalUrl = decodeURIComponent(cleaned);
             const existing = CoverArtAnnotationNavigationContainer.querySelector('[data-type="annotation-resolution-info"]');
             if (existing) existing.remove();
 
             const info = createAnnotationResolutionInfo(finalUrl);
+
+            info.style.textAlign = "right";
 
             CoverArtAnnotationNavigationContainer.insertBefore(info, CoverArtAnnotationNavigationArrows);
         }
@@ -544,7 +582,7 @@ chrome.storage.local.get([
         }
     }
 
-    function showCoverInfo(albumData) {
+    function showCoverInfo(coverArtUrl, primaryColor, secondaryColor, textColor) {
         console.log("Run function showCoverInfo()");
 
         const { stackedCoverArts } = getDomElements();
@@ -559,14 +597,11 @@ chrome.storage.local.get([
         };
 
         const createResolutionInfo = () => {
-            const resolutionMatch = albumData.cover_art_url.match(/(\d+)x(\d+)/);
-            const formatMatch = albumData.cover_art_url.match(/\.(\w+)$/);
+            const resolutionMatch = coverArtUrl.match(/(\d+)x(\d+)/);
+            const formatMatch = coverArtUrl.match(/\.(\w+)$/);
 
             const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
             const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
-            const primaryColor = albumData.album_art_primary_color;
-            const secondaryColor = albumData.album_art_secondary_color;
-            const textColor = albumData.album_art_text_color;
 
             const resolutionInfo = document.createElement('div');
             resolutionInfo.dataset.type = "resolution-info";
@@ -604,7 +639,7 @@ chrome.storage.local.get([
     //////////                                COVER INDICATOR                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function checkAlbumCover(albumData) {
+    function checkAlbumCover(coverArtUrl) {
         console.log("Run function checkAlbumCover()");
 
         const { editmetadatabutonSmallbutton } = getDomElements();
@@ -612,8 +647,7 @@ chrome.storage.local.get([
 
         let color, borderColor;
 
-        const coverArt = albumData.cover_art_url;
-
+        const coverArt = coverArtUrl;
 
         if (coverArt) {
             if (coverArt.startsWith("https://images.genius.com") && coverArt.endsWith("1000x1000x1.png")) {
@@ -869,7 +903,7 @@ chrome.storage.local.get([
         });
     }
 
-    async function followButtonAlbumPage(songData, albumData) {
+    async function followButtonAlbumPage(songData, albumId, albumFollow) {
         console.log("Run function followButtonAlbumPage()");
 
         const { stickyToolbarLeft, smallButton } = getDomElements();
@@ -885,7 +919,7 @@ chrome.storage.local.get([
         stickyToolbarLeft.appendChild(followButton);
 
         const followingSongStates = songData.map(song => ({ songId: song.id, following: song.current_user_metadata?.interactions?.following }));
-        const followingAlbumStates = { songId: albumData.id, following: albumData.current_user_metadata?.interactions?.following, isAlbum: true };
+        const followingAlbumStates = { songId: albumId, following: albumFollow, isAlbum: true };
 
         const allFollowStates = [...followingSongStates, followingAlbumStates];
         const initiallyFollowing = allFollowStates.filter(s => s.following);
@@ -923,7 +957,7 @@ chrome.storage.local.get([
     //////////                                TRACKLIST BUTTON                                //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function addTracklistCheckboxes(userData) {
+    function addTracklistCheckboxes(userRole, highContrastMode, textColor, primaryColor, secondaryColor) {
         console.log("Run function addTracklistCheckboxes()");
 
         const observer = new MutationObserver(() => {
@@ -957,24 +991,27 @@ chrome.storage.local.get([
 
                 Object.assign(checkbox.style, {
                     appearance: "none",
-                    border: "1px solid rgb(0,0,0)",
+                    border: highContrastMode ? "1px solid rgb(0,0,0)" : `1px solid ${textColor}`,
+                    backgroundColor: "transparent",
                     width: "0.75rem",
                     height: "0.75rem",
-                    backgroundColor: "white",
                     cursor: "pointer"
                 });
 
-                const checkSvg = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
+                const checkSvg = highContrastMode
+                    ? "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")"
+                    : `url("data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='${encodeURIComponent(secondaryColor)}' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E")`;
 
                 const updateCheckboxStyle = () => {
                     if (checkbox.checked) {
-                        checkbox.style.backgroundColor = "rgb(0,0,0)";
+                        checkbox.style.backgroundColor = highContrastMode ? "rgb(0,0,0)" : textColor;
                         checkbox.style.backgroundImage = checkSvg;
                     } else {
-                        checkbox.style.backgroundColor = "white";
+                        checkbox.style.backgroundColor = "transparent";
                         checkbox.style.backgroundImage = "none";
                     }
                 };
+
 
                 checkbox.addEventListener("change", () => {
                     updateCheckboxStyle();
@@ -987,7 +1024,6 @@ chrome.storage.local.get([
                             return span && span.textContent.trim() === labelText;
                         })
                         .map(label => label.querySelector('input[type="checkbox"]'));
-                    console.log(targetCheckboxes);
 
                     targetCheckboxes.forEach(cb => {
                         if (cb.checked !== checkbox.checked) {
@@ -1016,7 +1052,7 @@ chrome.storage.local.get([
             const hideToggle = createToggle("Hide");
             const unreleasedToggle = createToggle("Unreleased");
 
-            const hasHidePermission = userData?.roles_for_display.includes("transcriber") || userData?.roles_for_display.includes("editor");
+            const hasHidePermission = userRole === "transcriber" || userRole === "editor" || userRole === "moderator";
             if (hasHidePermission) containerDiv.appendChild(hideToggle);
             containerDiv.appendChild(unreleasedToggle);
 
@@ -1366,11 +1402,11 @@ chrome.storage.local.get([
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    function uploadAlbumCover(albumId, albumData) {
+    function uploadAlbumCover(albumId, coverArts) {
         console.log("Run function uploadAlbumCover()");
 
         const rows = [];
-        const coverArts = albumData.cover_arts;
+        // const coverArts = albumData.cover_arts;
 
         let modalObserver = null;
         let modalCloseObserver = null;
@@ -1491,7 +1527,7 @@ chrome.storage.local.get([
             saveBtn.addEventListener("click", async () => {
                 saveBtn.disabled = true;
 
-                const updatedCoverArts = albumData.cover_arts.map(ca => ({
+                const updatedCoverArts = coverArts.map(ca => ({
                     id: ca.id
                 }));
 
@@ -1534,7 +1570,7 @@ chrome.storage.local.get([
                     text_format: "html,markdown,preview"
                 };
 
-                await updateCoverArts(albumData, payload);
+                await updateCoverArts(albumId, payload);
 
                 const closeButton = modal.querySelector('[aria-label="Cancel"]');
                 if (closeButton) closeButton.click();
@@ -6897,75 +6933,67 @@ chrome.storage.local.get([
         });
     }
 
-    function lyricStateTracklist(songData, userData) {
-    console.log("Run function lyricStateTracklist()");
+    function lyricStateTracklist(songData, userRole) {
+        console.log("Run function lyricStateTracklist()");
 
-    songData.forEach(song => {
-        const trackContainer = document.querySelector(
-            `a[href="${song.url}"]`
-        )?.closest('div[class^="Track__Container-"]');
-        if (!trackContainer) return;
+        songData.forEach(song => {
+            const trackContainer = document.querySelector(
+                `a[href="${song.url}"]`
+            )?.closest('div[class^="Track__Container-"]');
+            if (!trackContainer) return;
 
-        const creditsButton = trackContainer.querySelector(
-            'button[class*="Track__CreditsToggle"]'
-        );
-        if (!creditsButton) return;
+            const creditsButton = trackContainer.querySelector(
+                'button[class*="Track__CreditsToggle"]'
+            );
+            if (!creditsButton) return;
 
-        creditsButton.style.marginLeft = "0.55rem";
+            creditsButton.style.marginLeft = "0.55rem";
 
-        const lyricsAreValidated =
-            song.lyrics_marked_complete_by ||
-            song.lyrics_marked_staff_approved_by ||
-            song.lyrics_verified === true;
+            const lyricsAreValidated = song.lyrics_marked_complete_by || song.lyrics_marked_staff_approved_by || song.lyrics_verified === true;
 
-        const userRoles = userData?.roles_for_display;
-
-        let color = '#ff7878';
-        if (userRoles.includes('transcriber') ||
-            userRoles.includes('editor') ||
-            userRoles.includes('moderator')) {
-
-            if (lyricsAreValidated &&
-                song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
-                color = '#99f2a5';
-            } else if (song.lyrics_state === 'complete' &&
-                song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
-                color = '#ffff64';
-            } else if (song.lyrics_state === 'complete' &&
-                song.current_user_metadata?.permissions?.includes("award_transcription_iq")) {
-                color = '#ffa335';
-            }
-        } else {
-            if (lyricsAreValidated) {
-                color = '#99f2a5';
-            } else if (song.lyrics_state === 'complete') {
-                color = '#ffff64';
-            }
-        }
-
-        const applyCircle = () => {
-            const svg = creditsButton.querySelector('svg');
-            if (!svg) return;
-
-            svg.style.display = 'inline-block';
-            svg.style.backgroundColor = color;
-            svg.style.borderRadius = '50%';
-            svg.style.padding = '0.375rem';
-            svg.style.boxSizing = 'content-box';
-
-            if (song.pending_lyrics_edits_count > 0) {
-                svg.style.filter = 'drop-shadow(0 0 6px #000)';
+            let color = '#ff7878';
+            if (userRole === 'transcriber' || userRole === 'editor' || userRole === 'moderator') {
+                if (lyricsAreValidated &&
+                    song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+                    color = '#99f2a5';
+                } else if (song.lyrics_state === 'complete' &&
+                    song.current_user_metadata?.excluded_permissions?.includes("award_transcription_iq")) {
+                    color = '#ffff64';
+                } else if (song.lyrics_state === 'complete' &&
+                    song.current_user_metadata?.permissions?.includes("award_transcription_iq")) {
+                    color = '#ffa335';
+                }
             } else {
-                svg.style.filter = '';
+                if (lyricsAreValidated) {
+                    color = '#99f2a5';
+                } else if (song.lyrics_state === 'complete') {
+                    color = '#ffff64';
+                }
             }
-        };
 
-        applyCircle();
+            const applyCircle = () => {
+                const svg = creditsButton.querySelector('svg');
+                if (!svg) return;
 
-        const observer = new MutationObserver(() => applyCircle());
-        observer.observe(creditsButton, { childList: true, subtree: true });
-    });
-}
+                svg.style.display = 'inline-block';
+                svg.style.backgroundColor = color;
+                svg.style.borderRadius = '50%';
+                svg.style.padding = '0.375rem';
+                svg.style.boxSizing = 'content-box';
+
+                if (song.pending_lyrics_edits_count > 0) {
+                    svg.style.filter = 'drop-shadow(0 0 6px #000)';
+                } else {
+                    svg.style.filter = '';
+                }
+            };
+
+            applyCircle();
+
+            const observer = new MutationObserver(() => applyCircle());
+            observer.observe(creditsButton, { childList: true, subtree: true });
+        });
+    }
 
 
 
@@ -7032,10 +7060,8 @@ chrome.storage.local.get([
 
 
 
-    function cleanupMetadata(songData, userData) {
+    function cleanupMetadata(songData, userRole) {
         console.log("Run function cleanupMetadata()");
-
-        const userRoles = userData?.roles_for_display;
 
         let songsWithRenamedLabels = [];
         let songsWithWriterArtists = [];
@@ -7078,7 +7104,7 @@ chrome.storage.local.get([
 
         addCleanupButton(songsWithRenamedLabels, "LabelRenames", "Fix Metadata", { renameLabels: true });
         addCleanupButton(songsWithWriterArtists, "Writers", "Add Writers", { writerArtists: true });
-        if (userRoles.includes('transcriber') || userRoles.includes('editor') || userRoles.includes('moderator')) {
+        if (userRole === 'transcriber' || userRole === 'editor' || userRole === 'moderator') {
             addCleanupButton(songsWithDuplicateCoverArt, "CoverArt", "Remove Cover Art", { coverArt: true });
         }
     }
@@ -7590,7 +7616,7 @@ chrome.storage.local.get([
 
 
 
-    function cleanupAlbumType(albumData) {
+    function cleanupAlbumType(albumId, albumType, albumTitle) {
         const cleanupTypes = [
             "EP",
             "Single",
@@ -7611,14 +7637,10 @@ chrome.storage.local.get([
             "DJ Mix": "dj_mix"
         };
 
-        const matchedType = cleanupTypes.find(type =>
-            albumData.name.endsWith(` (${type})`) ||
-            albumData.name.endsWith(` [${type}]`) ||
-            albumData.name.endsWith(` - ${type}`)
-        );
+        const matchedType = cleanupTypes.find(type => albumTitle.endsWith(` (${type})`) || albumTitle.endsWith(` [${type}]`) || albumTitle.endsWith(` - ${type}`));
         if (!matchedType) return;
 
-        const typeAlreadyCorrect = albumData.album_type === typeMap[matchedType];
+        const typeAlreadyCorrect = albumType === typeMap[matchedType];
         const label = typeAlreadyCorrect ? "Fix Album Name" : "Fix Album Type & Name";
 
         const { stickyToolbarLeft, smallButton } = getDomElements();
@@ -7637,7 +7659,7 @@ chrome.storage.local.get([
         cleanupButton.addEventListener("click", async () => {
             const apiAlbumType = typeMap[matchedType];
 
-            let cleanedName = albumData.name
+            let cleanedName = albumTitle
                 .replace(` (${matchedType})`, "")
                 .replace(` - ${matchedType}`, "")
                 .replace(` [${matchedType}]`, "")
@@ -7654,7 +7676,7 @@ chrome.storage.local.get([
                     name: cleanedName
                 };
 
-            await updateAlbumMetadata(albumData, payload);
+            await updateAlbumMetadata(albumId, payload);
 
             cleanupButton.style.display = "none";
         });
