@@ -155,6 +155,7 @@ chrome.storage.local.get([
         if (isAlbumNew) {
             const state = getScripts("window.__PRELOADED_STATE__");
             const userId = state?.session?.currentUser;
+            const userUrl = state?.entities?.users?.[userId]?.url;
             const userRole = state?.entities?.users?.[userId]?.roleForDisplay;
             const albumId = state?.albumPage?.album;
             const highContrastMode = state?.albumPage?.highContrastMode;
@@ -240,7 +241,7 @@ chrome.storage.local.get([
                 if (!stickyToolbarRight || !smallButton) return;
 
                 const existingButton = [...stickyToolbarRight.querySelectorAll("button")]
-                    .find(btn => ["Pull Song Data", "Running…"].includes(btn.textContent.trim()));
+                    .find(btn => ["Pull Song Data", "Loading…"].includes(btn.textContent.trim()));
                 if (existingButton) existingButton.remove();
 
                 const runButton = document.createElement("button");
@@ -251,7 +252,7 @@ chrome.storage.local.get([
 
                 runButton.addEventListener("click", async () => {
                     runButton.disabled = true;
-                    runButton.textContent = "Running…";
+                    runButton.textContent = "Loading…";
 
                     try {
                         await songDataFunctions();
