@@ -2094,7 +2094,7 @@ chrome.storage.local.get([
                 dropdownText.textContent = `Language: ${selectedCode}`;
                 document.querySelectorAll('#lyricsSectionsButtonsContainer').forEach(div => div.remove());
                 document.querySelectorAll('#lyricsStyleButtonsContainer').forEach(div => div.remove());
-                lyricsSectionsButtons(primaryTag, songLanguage);
+                lyricsSectionsButtons(primaryTag, songLanguage, songTitle, primaryArtists, featuredArtists, artists, trackingData);
             } else if (dropdownType === "Cleanup") {
                 lyricsCleanupLogic(selectedCode);
             }
@@ -2689,10 +2689,14 @@ chrome.storage.local.get([
                 item.style.fontSize = "0.75rem";
 
                 const isSymbolsDropdown = hoverText === "Symbols";
-                const wideSymbolsDefault = ["ZWSP", "NBSP", "„...“"];
-                const wideSymbolsDE = ["ZWSP", "THSP", "NBSP", "„...“", "–", "—"];
+                const WIDE_SYMBOLS = {
+                    default: ["ZWSP", "NBSP", "„...“"],
+                    de: ["ZWSP", "THSP", "NBSP", "„...“", "–", "—"],
+                    ja: ["ZWSP", "「...」"]
+                };
 
-                const wideList = storedLanguage === "de" ? wideSymbolsDE : wideSymbolsDefault;
+                const wideList = WIDE_SYMBOLS[storedLanguage] || WIDE_SYMBOLS.default;
+
 
                 if (isSymbolsDropdown && wideList.includes(label)) {
                     item.style.gridColumn = "span 2";
@@ -3424,7 +3428,6 @@ chrome.storage.local.get([
                         ]
                     }
                 ],
-
                 de: {
                     Default: [
                         { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
@@ -3487,6 +3490,74 @@ chrome.storage.local.get([
                             ]
                         }
                     ]
+                },
+                ja: {
+                    Default: [
+                        { label: "<i>Italic</i>", openTag: "<i>", closeTag: "</i>", hoverText: "Italic" },
+                        { label: "<b>Bold</b>", openTag: "<b>", closeTag: "</b>", hoverText: "Bold" },
+                        { label: "<b><i>Italic + Bold</i></b>", openTag: "<b><i>", closeTag: "</i></b>", hoverText: "Italic+Bold" },
+                        { label: "Parentheses", openTag: "(", closeTag: ")", hoverText: "Parentheses" },
+                        {
+                            label: "Diacritics",
+                            isDropdown: true,
+                            hoverText: "Diacritics (uppercase)",
+                            items: [
+                                "Á", "À", "Â", "Ä",
+                                "É", "È", "Ê", "Ë",
+                                "Í", "Ì", "Î", "Ï",
+                                "Ó", "Ò", "Ô", "Ö",
+                                "Ú", "Ù", "Û", "Ü",
+                                "Ć", "Ń", "Ś", "Ź",
+                                "Č", "Ğ", "Š", "Ž",
+                                "Ç", "Ş", "I", "Ñ",
+                                "Đ", "Æ", "Œ", "ẞ",
+                            ]
+                        },
+                        {
+                            label: "Diacritics",
+                            isDropdown: true,
+                            hoverText: "Diacritics (lowercase)",
+                            items: [
+                                "á", "à", "â", "ä",
+                                "é", "è", "ê", "ë",
+                                "í", "ì", "î", "ï",
+                                "ó", "ò", "ô", "ö",
+                                "ú", "ù", "û", "ü",
+                                "ć", "ń", "ś", "ź",
+                                "č", "ğ", "š", "ž",
+                                "ç", "ş", "ı", "ñ",
+                                "đ", "æ", "œ", "ß",
+                            ]
+                        },
+                        {
+                            label: "Symbols",
+                            isDropdown: true,
+                            hoverText: "Symbols",
+                            items: [
+                                { label: "(", openTag: "&#40;", closeTag: "" },
+                                { label: ")", openTag: "&#41;", closeTag: "" },
+                                { label: "<", openTag: "&lt;", closeTag: "" },
+                                { label: ">", openTag: "&gt;", closeTag: "" },
+                                { label: "–", openTag: "–", closeTag: "" },
+                                { label: "—", openTag: "—", closeTag: "" },
+                                { label: "„...“", openTag: "„", closeTag: "“" },
+                                { label: "ZWSP", openTag: "&ZeroWidthSpace;", closeTag: "" },
+                                { label: "NBSP", openTag: "&nbsp;", closeTag: "" },
+                            ]
+                        },
+                        {
+                            label: "Symbols",
+                            isDropdown: true,
+                            hoverText: "Symbols",
+                            items: [
+                                { label: "！", openTag: "！", closeTag: "" },
+                                { label: "？", openTag: "？", closeTag: "" },
+                                { label: "、", openTag: "、", closeTag: "" },
+                                { label: "…", openTag: "…", closeTag: "" },
+                                { label: "「...」", openTag: "「", closeTag: "」" },
+                            ]
+                        }
+                    ],
                 },
             };
 

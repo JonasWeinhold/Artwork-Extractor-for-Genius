@@ -171,7 +171,6 @@ chrome.storage.local.get([
 
             const albumData = state?.entities;
             const songIds = state?.entities?.albumAppearances ? Object.values(state.entities.albumAppearances).sort((a, b) => a.trackNumber - b.trackNumber).map(entry => entry.song) : [];
-            console.log(state);
 
 
             if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
@@ -4835,7 +4834,7 @@ chrome.storage.local.get([
                     const song = songDataAlbum.find(s => s.id === Number(songId));
 
                     if (payload) {
-                        await updateSongMetadata(song, payload.song);
+                        await updateSongMetadata(song.id, payload.song);
                     } else {
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
