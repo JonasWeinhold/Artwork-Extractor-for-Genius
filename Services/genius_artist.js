@@ -53,25 +53,30 @@ chrome.storage.local.get([
         const isUser = profilePath ? new RegExp(`https:\\/\\/(genius\\.com|genius-staging\\.com)${profilePath}$`).test(window.location.href) : false;
 
         if (isAllSongs || isAllAlbums) {
-            const userId = getId("currentUser");
-            const artistId = getId("artist");
-            const { artist: artistData } = await getApiData(artistId, "artists");
-            if (!userId || !artistId || !artistData) return;
+            const state = getScripts("window.__PRELOADED_STATE__");
+
+            const artistId = state?.artistDiscography?.artist;
 
             if (isGeniusArtistAllSongsAlbumsPage || isGeniusArtistAllSongsAlbumsPageMetadata) checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums);
         } else if (isArtistNew) {
-            const userId = getId("currentUser");
-            const artistId = getId("artist");
-            const { artist: artistData } = await getApiData(artistId, "artists");
-            if (!userId || !artistId || !artistData) return;
+            const state = getScripts("window.__PRELOADED_STATE__");
 
-            if (isGeniusArtistArtistId) showArtistIdButtonNew(artistData);
-            if (isGeniusArtistArtistPageInfo) showCoverInfoNew(artistData);
+            const userId = state?.session?.currentUser;
+            const artistId = state?.profilePage?.artist;
+            const alternateNames = state?.entities?.artists?.[artistId]?.alternateNames;
+            const baseName = state?.entities?.artists?.[artistId]?.nameComponents?.baseName;
+            const headerImageUrl = state?.entities?.artists?.[artistId]?.headerImageUrl;
+            const imageUrl = state?.entities?.artists?.[artistId]?.imageUrl;
+
+            if (!userId || !artistId) return;
+
+            if (isGeniusArtistArtistId) showArtistIdButtonNew(artistId, alternateNames);
+            if (isGeniusArtistArtistPageInfo) showCoverInfoNew(headerImageUrl, imageUrl);
 
             if (isGeniusArtistFollowButton) FollowButtonArtistPageNew(artistId);
             if (isGeniusArtistSpreadsheetButton) getSpreadsheetNew(artistId, "artist");
 
-            if (isGeniusArtistSearchArtistMetadata) searchArtistMetadata(artistData);
+            if (isGeniusArtistSearchArtistMetadata) searchArtistMetadata(baseName);
 
         } else if (isArtist) {
             const { artistId, userId, artistData } = await getArtistInfo();
@@ -160,7 +165,7 @@ chrome.storage.local.get([
         identityTextContainer.appendChild(artistIdContainer);
     }
 
-    function showArtistIdButtonNew(artistData) {
+    function showArtistIdButtonNew(artistId, alternateNames) {
         const profileContainer = document.querySelector('h2[class^="ProfileContent-desktop__Heading-"]');
         if (!profileContainer) return;
 
@@ -174,9 +179,9 @@ chrome.storage.local.get([
         idLabel.textContent = "Artist ID: ";
 
         const idLink = document.createElement('a');
-        idLink.href = `https://genius.com/api/artists/${artistData.id}`;
+        idLink.href = `https://genius.com/api/artists/${artistId}`;
         idLink.target = "_blank";
-        idLink.textContent = artistData.id;
+        idLink.textContent = artistId;
         idLink.style.textDecoration = "none";
         idLink.style.color = "inherit";
 
@@ -187,7 +192,7 @@ chrome.storage.local.get([
         idRow.appendChild(idLink);
         infoBox.appendChild(idRow);
 
-        const altNamesArray = Array.isArray(artistData.alternate_names) ? artistData.alternate_names : [];
+        const altNamesArray = Array.isArray(alternateNames) ? alternateNames : [];
 
         if (altNamesArray.length > 0) {
             const akaRow = document.createElement('div');
@@ -255,18 +260,18 @@ chrome.storage.local.get([
         return resolutionInfo;
     }
 
-    function showCoverInfoNew(artistData) {
+    function showCoverInfoNew(headerImageUrl, imageUrl) {
         const header = document.querySelector('header[class^="PageGrid-desktop-"]');
         if (!header) return;
 
         const existing = header.querySelector('div[data-type="resolution-info"]');
         if (existing) existing.remove();
 
-        const infoElement = createResolutionInfoNew(artistData);
+        const infoElement = createResolutionInfoNew(headerImageUrl, imageUrl);
         header.insertBefore(infoElement, header.firstChild);
     }
 
-    function createResolutionInfoNew(artistData) {
+    function createResolutionInfoNew(headerImageUrl, imageUrl) {
         const resolutionInfo = document.createElement('div');
 
         const avatar = document.querySelector('div[class*="ProfileHeader__ArtistAvatar-"]');
@@ -285,10 +290,10 @@ chrome.storage.local.get([
         resolutionInfo.style.whiteSpace = "pre-line";
         resolutionInfo.dataset.type = "resolution-info";
 
-        const headerRes = artistData.header_image_url.match(/(\d+)x(\d+)/);
-        const headerFmt = artistData.header_image_url.match(/\.(\w+)$/);
-        const avatarRes = artistData.image_url.match(/(\d+)x(\d+)/);
-        const avatarFmt = artistData.image_url.match(/\.(\w+)$/);
+        const headerRes = headerImageUrl?.match(/(\d+)x(\d+)/);
+        const headerFmt = headerImageUrl?.match(/\.(\w+)$/);
+        const avatarRes = imageUrl?.match(/(\d+)x(\d+)/);
+        const avatarFmt = imageUrl?.match(/\.(\w+)$/);
 
         const headerText = `Header: ${headerRes ? `${headerRes[1]}x${headerRes[2]}` : "No"} ${headerFmt ? headerFmt[1].toUpperCase() : "Cover"}`;
         const avatarText = `Avatar: ${avatarRes ? `${avatarRes[1]}x${avatarRes[2]}` : "No"} ${avatarFmt ? avatarFmt[1].toUpperCase() : "Cover"}`;
@@ -1795,7 +1800,7 @@ chrome.storage.local.get([
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////                             SEARCH ARTISTMETADATA                              //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    function searchArtistMetadata(artistData) {
+    function searchArtistMetadata(baseName) {
         console.log("Run function searchArtistMetadata()");
 
         const observer = new MutationObserver(() => {
@@ -1829,9 +1834,6 @@ chrome.storage.local.get([
                 btn.addEventListener("mouseleave", () => { btn.style.textDecoration = "none"; });
 
                 btn.addEventListener("click", () => {
-                    const baseName = artistData?.name_components?.base_name;
-                    if (!baseName) return;
-
                     const SEARCH_URLS = {
                         "apple music": n => `https://music.apple.com/search?term=${encodeURIComponent(n)}`,
                         "spotify": n => `https://open.spotify.com/search/${encodeURIComponent(n)}`,
@@ -1871,6 +1873,65 @@ chrome.storage.local.get([
         let cachedSongs = null;
         let cachedAlbums = null;
         let items = [];
+        let entriesLoaded = false;
+        let metadataToggleActive = false;
+
+        function injectMetadataToggle() {
+            const sortContainer = document.querySelector('div[class^="ListSection-desktop__Sort-"]');
+            if (!sortContainer) return;
+
+            if (document.getElementById('metadataToggleSwitch')) return;
+
+            const wrapper = document.createElement("label");
+            wrapper.id = "metadataToggleSwitch";
+            wrapper.style.display = "flex";
+            wrapper.style.alignItems = "center";
+            wrapper.style.gap = "0.35rem";
+            wrapper.style.cursor = "pointer";
+            wrapper.style.marginLeft = "auto";
+            wrapper.style.marginRight = "1rem";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+
+            Object.assign(checkbox.style, {
+                appearance: "none",
+                border: "1px solid #000",
+                backgroundColor: "transparent",
+                width: "0.75rem",
+                height: "0.75rem",
+                cursor: "pointer"
+            });
+
+            const checkSvg =
+                "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 18 18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='m15.5 4.9-7.9 10-5-5L4 8.3l3.4 3.4L14 3.6 15.5 5Z'/%3E%3C/svg%3E\")";
+
+            const updateCheckboxStyle = () => {
+                if (checkbox.checked) {
+                    checkbox.style.backgroundColor = "#000";
+                    checkbox.style.backgroundImage = checkSvg;
+                } else {
+                    checkbox.style.backgroundColor = "transparent";
+                    checkbox.style.backgroundImage = "none";
+                }
+            };
+
+            checkbox.addEventListener("change", () => {
+                metadataToggleActive = checkbox.checked;
+                updateCheckboxStyle();
+            });
+
+            const label = document.createElement("span");
+            label.textContent = "Pull Song Data";
+            label.style.fontSize = "0.75rem";
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+
+            sortContainer.parentNode.insertBefore(wrapper, sortContainer);
+        }
+
+        injectMetadataToggle();
 
         async function fetchAll(artistId, type) {
             const results = [];
@@ -1916,9 +1977,34 @@ chrome.storage.local.get([
             return items;
         }
 
-        (async () => {
-            await checkAllEntriesAndFetchFunctions(artistId);
-        })();
+        function injectPullDataButton() {
+            const sortContainer = document.querySelector('div[class^="ListSection-desktop__Sort-"]');
+            if (!sortContainer) return;
+
+            if (document.getElementById('pullDataButton')) return;
+
+            const smallButton = document.querySelector('[class^="SmallButton__Container-"]');
+            if (!smallButton) return; 
+
+            const triggerBtn = document.createElement("button");
+            triggerBtn.id = "pullDataButton";
+            triggerBtn.type = "button";
+            triggerBtn.className = smallButton.className; 
+            triggerBtn.textContent = "Pull Data";
+            triggerBtn.style.marginRight = "1rem";
+
+            sortContainer.parentNode.insertBefore(triggerBtn, sortContainer);
+
+            triggerBtn.addEventListener("click", async () => {
+                triggerBtn.textContent = "Loading…";
+                await checkAllEntriesAndFetchFunctions(artistId);
+                entriesLoaded = true;
+                triggerBtn.style.display = "none";
+            });
+        }
+
+        injectPullDataButton();
+
 
 
         async function checkCoverImage() {
@@ -2064,6 +2150,8 @@ chrome.storage.local.get([
 
 
         document.addEventListener('click', async () => {
+            if (!entriesLoaded) return;
+
             if ((isAllSongs && isGeniusArtistAllSongsAlbumsPage) || (isAllAlbums && isGeniusArtistAllSongsAlbumsPage) && isGeniusArtistAllSongsAlbumsPage) {
                 updates = await checkCoverImage();
             }
@@ -2075,7 +2163,7 @@ chrome.storage.local.get([
                 if (isGeniusArtistAllSongsAlbumsPageZwsp) checkListItemsForZeroWidthSpace();
             }
 
-            if (isAllSongs && isGeniusArtistAllSongsAlbumsPageMetadata) {
+            if (metadataToggleActive && isAllSongs && isGeniusArtistAllSongsAlbumsPageMetadata) {
                 await checkMetadata();
             }
         });

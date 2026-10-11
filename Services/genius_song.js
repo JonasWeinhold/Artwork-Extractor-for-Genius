@@ -64,6 +64,47 @@ chrome.storage.local.get([
     queueMicrotask(main);
 
     async function main() {
+        const state = getScripts("window.__PRELOADED_STATE__");
+
+        const userId = state?.session?.currentUser;
+        const userRole = state?.entities?.users?.[userId]?.roleForDisplay;
+        const userUrl = state?.entities?.users?.[userId]?.url;
+        const songId = state?.songPage?.song;
+        const songTitle = state?.entities?.songs?.[songId]?.title;
+        const primaryColor = state?.entities?.songs?.[songId]?.songArtPrimaryColor;
+        const secondaryColor = state?.entities?.songs?.[songId]?.songArtSecondaryColor;
+        const textColor = state?.entities?.songs?.[songId]?.songArtTextColor;
+        const headerImageUrl = state?.entities?.songs?.[songId]?.headerImageUrl;
+        const customSongArtImageUrl = state?.entities?.songs?.[songId]?.customSongArtImageUrl;
+        const songArtImageUrl = state?.entities?.songs?.[songId]?.songArtImageUrl;
+        const album = state?.entities?.songs?.[songId]?.album;
+        const songs = state?.entities?.songs;
+        const primaryArtists = state?.entities?.songs?.[songId]?.primaryArtists;
+        const featuredArtists = state?.entities?.songs?.[songId]?.featuredArtists;
+        const artists = state?.entities?.artists;
+        const primaryArtistNames = state?.entities?.songs?.[songId]?.primaryArtistNames;
+        const lyricsMarkedCompleteBy = state?.entities?.songs?.[songId]?.lyricsMarkedCompleteBy;
+        const lyricsMarkedStaffApprovedBy = state?.entities?.songs?.[songId]?.lyricsMarkedStaffApprovedBy;
+        const lyricsVerified = state?.entities?.songs?.[songId]?.lyricsVerified;
+        const updatedByHumanAt = state?.entities?.songs?.[songId]?.updatedByHumanAt;
+        const lyricsUpdatedAt = state?.entities?.songs?.[songId]?.lyricsUpdatedAt;
+        const writerArtists = state?.entities?.songs?.[songId]?.writerArtists;
+        const customPerformances = state?.entities?.songs?.[songId]?.customPerformances;
+        const primaryTag = state?.entities?.songs?.[songId]?.primaryTag;
+        const releaseDateComponents = state?.entities?.songs?.[songId]?.releaseDateComponents;
+        const youtubeUrl = state?.entities?.songs?.[songId]?.youtubeUrl;
+        const youtubeStart = state?.entities?.songs?.[songId]?.youtubeStart;
+        const appleMusicId = state?.entities?.songs?.[songId]?.appleMusicId;
+        const soundcloudUrl = state?.entities?.songs?.[songId]?.soundcloudUrl;
+        const spotifyUuid = state?.entities?.songs?.[songId]?.spotifyUuid;
+        const songLanguage = state?.entities?.songs?.[songId]?.language;
+        const trackingData = state?.entities?.songs?.[songId]?.trackingData;
+
+
+
+        const songFollow = state?.entities?.songs?.[songId]?.currentUserMetadata?.interactions?.following;
+
+
         const isFirehose = window.location.href === 'https://genius.com/firehose';
         const isSong = /-lyrics(?:#primary-album|#about|\?.*)?$|-annotated$|\d+\?$/.test(window.location.href);
 
@@ -83,39 +124,35 @@ chrome.storage.local.get([
         editAppleMusicPlayer();
         playerSettings();
 
-        const userId = getId("currentUser");
-        const songId = getId("song");
-        const { song: songData } = await getApiData(songId, "songs");
-        if (!userId || !songId || !songData) return;
         console.log(`- User ID: ${userId}\n- Song ID: ${songId}`);
 
 
         if (isGeniusSongSongId) showSongIdButton(songId);
         if (isGeniusSongCheckIndex) showIndexButton();
 
-        if (isGeniusSongSongPageInfo) showCoverInfo(songData);
-        if (isGeniusSongSongPage) checkSongCover(songData)
+        if (isGeniusSongSongPageInfo) showCoverInfo(headerImageUrl, primaryColor, secondaryColor, textColor);
+        if (isGeniusSongSongPage) checkSongCover(customSongArtImageUrl, songArtImageUrl, album, songTitle);
 
         if (isGeniusSongFollowButton) addFollowButton();
-        if (isGeniusSongTranslationButton) addTranslationButton(songData);
-        if (isGeniusSongShellyButton) addShellyButton(songData);
+        if (isGeniusSongTranslationButton) addTranslationButton(songs, songId, songTitle, primaryArtistNames, featuredArtists, artists, primaryTag, releaseDateComponents, customSongArtImageUrl, youtubeUrl, youtubeStart);
+        if (isGeniusSongShellyButton) addShellyButton(songId, lyricsMarkedCompleteBy, lyricsMarkedStaffApprovedBy, lyricsVerified, updatedByHumanAt, lyricsUpdatedAt);
 
-        if (isGeniusSongCleanupMetadataButton) cleanupMetadata(userId, songData);
+        if (isGeniusSongCleanupMetadataButton) cleanupMetadata(songId, songTitle, writerArtists, customPerformances, artists);
 
-        if (isGeniusSongLanguageButton) selectDropdown(songData, "Language");
-        if (isGeniusSongCleanupButton) selectDropdown(songData, "Cleanup");
-        if (isGeniusSongSectionsButtons) lyricsSectionsButtons(songData);
+        if (isGeniusSongLanguageButton) selectDropdown(primaryTag, songLanguage, songTitle, primaryArtists, featuredArtists, artists, trackingData, "Language");
+        if (isGeniusSongCleanupButton) selectDropdown(primaryTag, songLanguage, songTitle, primaryArtists, featuredArtists, artists, trackingData, "Cleanup");
+        if (isGeniusSongSectionsButtons) lyricsSectionsButtons(primaryTag, songLanguage, songTitle, primaryArtists, featuredArtists, artists, trackingData);
         if (isGeniusSongAnnotationsButtons) lyricsAnnotationsButtons();
 
         if (isGeniusSongFilterActivity) filterRecentActivity(profilePath);
 
-        if (songData.apple_music_id) storeAppleMusicStructure();
+        if (appleMusicId) storeAppleMusicStructure();
 
-        if (songData.primary_tag.name !== "Non-Music") {
-            //    if (isGeniusSongSpotifyPlayer) addSpotifyPlayer(songData);
+        if (primaryTag !== 1452) {
+            //if (isGeniusSongSpotifyPlayer) addSpotifyPlayer(spotifyUuid, songTitle, primaryArtists, featuredArtists, artists);
         }
-        if (songData.soundcloud_url) {
-            if (isGeniusSongSoundCloudPlayer) addSoundCloudPlayer(songData);
+        if (soundcloudUrl) {
+            if (isGeniusSongSoundCloudPlayer) addSoundCloudPlayer(soundcloudUrl);
         }
     }
 
@@ -222,7 +259,7 @@ chrome.storage.local.get([
     //////////                                   COVER INFO                                   //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function showCoverInfo(songData) {
+    function showCoverInfo(headerImageUrl, primaryColor, secondaryColor, textColor) {
         console.log("Run function showCoverInfo()");
 
         const { sizedimageImage, songheaderCoverart } = getDomElements();
@@ -237,14 +274,11 @@ chrome.storage.local.get([
         };
 
         const createResolutionInfo = () => {
-            const resolutionMatch = songData.header_image_url.match(/(\d+)x(\d+)/);
-            const formatMatch = songData.header_image_url.match(/\.(\w+)$/);
+            const resolutionMatch = headerImageUrl.match(/(\d+)x(\d+)/);
+            const formatMatch = headerImageUrl.match(/\.(\w+)$/);
 
             const resolutionText = resolutionMatch?.[1] ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : "No";
             const formatText = formatMatch?.[1] ? formatMatch[1].toUpperCase() : "Cover";
-            const primaryColor = songData.song_art_primary_color;
-            const secondaryColor = songData.song_art_secondary_color;
-            const textColor = songData.song_art_text_color;
 
             const resolutionInfo = document.createElement('div');
             resolutionInfo.dataset.type = "resolution-info";
@@ -283,17 +317,13 @@ chrome.storage.local.get([
     //////////                                COVER INDICATOR                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function checkSongCover(songData) {
+    function checkSongCover(customSongArt, songArt, album, songTitle) {
         console.log("Run function checkSongCover()");
 
         const { editmetadatabutonSmallbutton } = getDomElements();
         if (!editmetadatabutonSmallbutton) return;
 
         let color, borderColor;
-
-        const customSongArt = songData.custom_song_art_image_url;
-        const songArt = songData.song_art_image_url;
-        const album = songData.album;
 
         if (customSongArt) {
             if (customSongArt.startsWith("https://images.genius.com") && customSongArt.endsWith("1000x1000x1.png")) {
@@ -328,7 +358,7 @@ chrome.storage.local.get([
         }
 
         addColoredCircle(editmetadatabutonSmallbutton, color, borderColor);
-        if (isGeniusSongSongPageZwsp) checkSongTitleForZeroWidthSpace(songData);
+        if (isGeniusSongSongPageZwsp) checkSongTitleForZeroWidthSpace(songTitle);
     }
 
     function addBlackCross(circle) {
@@ -414,8 +444,8 @@ chrome.storage.local.get([
         }
     }
 
-    function checkSongTitleForZeroWidthSpace(songData) {
-        if (songData.title.includes('\u200B')) {
+    function checkSongTitleForZeroWidthSpace(songTitle) {
+        if (songTitle.includes('\u200B')) {
             const { editmetadatabutonSmallbutton } = getDomElements();
             const circle = editmetadatabutonSmallbutton.querySelector('.circle-indicator');
             if (circle) {
@@ -467,7 +497,7 @@ chrome.storage.local.get([
     //////////                                 SHELLY BUTTON                                  //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function addShellyButton(songData) {
+    function addShellyButton(songId, lyricsMarkedCompleteBy, lyricsMarkedStaffApprovedBy, lyricsVerified, updatedByHumanAt, lyricsUpdatedAt) {
         console.log("Run function addShellyButton()");
 
         const { adminSpan } = getDomElements();
@@ -481,7 +511,7 @@ chrome.storage.local.get([
 
         if (document.getElementById("shelly-cleanup-btn")) return;
 
-        const lyricsAreValidated = songData.lyrics_marked_complete_by || songData.lyrics_marked_staff_approved_by || songData.lyrics_verified === true;
+        const lyricsAreValidated = lyricsMarkedCompleteBy || lyricsMarkedStaffApprovedBy || lyricsVerified === true;
         if (lyricsAreValidated) return;
 
         const existingButton = list.querySelector("button");
@@ -505,8 +535,8 @@ chrome.storage.local.get([
                 text_format: "html,markdown,preview",
                 react: true,
                 client_timestamps: {
-                    updated_by_human_at: songData.updated_by_human_at,
-                    lyrics_updated_at: songData.lyrics_updated_at
+                    updated_by_human_at: updatedByHumanAt,
+                    lyrics_updated_at: lyricsUpdatedAt
                 },
                 lyrics: {
                     body: {
@@ -515,7 +545,7 @@ chrome.storage.local.get([
                 }
             };
 
-            await updateSongLyrics(songData, payload);
+            await updateSongLyrics(songId, payload);
 
             const toggle = dropdownContainer.querySelector('[class^="Dropdown__Toggle-"]');
             toggle?.click();
@@ -1319,7 +1349,7 @@ chrome.storage.local.get([
         }
     ];
 
-    function addTranslationButton(songData) {
+    function addTranslationButton(songs, songId, songTitle, primaryArtistNames, featuredArtistsRaw, artists, primaryTag, releaseDateComponents, customSongArtImageUrl, youtubeUrl, youtubeStart) {
         console.log("Run function addTranslationButton()");
 
         const currentUrl = window.location.href.toLowerCase();
@@ -1356,19 +1386,23 @@ chrome.storage.local.get([
         btn.className = existingButton.className;
 
         btn.addEventListener("click", () => {
-            openTranslationModal(songData);
+            const featuredArtists = (featuredArtistsRaw || [])
+                .map(id => artists[id]?.name || "")
+                .map(name => name.replace(/ *\([^)]*\) */g, "").replace(/\u200B/g, "").trim());
+
+            openTranslationModal(songs, songId, songTitle, primaryArtistNames, featuredArtists, primaryTag, releaseDateComponents, customSongArtImageUrl, youtubeUrl, youtubeStart);
         });
 
         li.appendChild(btn);
         list.appendChild(li);
     }
 
-    function openTranslationModal(songData) {
+    function openTranslationModal(songs, songId, songTitle, primaryArtistNames, featuredArtistsRaw, primaryTag, releaseDateComponents, customSongArtImageUrl, youtubeUrl, youtubeStart) {
         const { editmetadatabutonSmallbutton } = getDomElements();
         if (document.getElementById("create-translation-modal")) return;
 
-        const translations = songData?.song_relationships?.find(r => r.type === "translations")?.songs || [];
-        const existingTranslationLanguages = LANGUAGE_CONFIG.filter(cfg => translations.some(t => t.artist_names === cfg.artistName)).map(cfg => cfg.value);
+        const translations = songs?.[songId]?.songRelationships?.find(r => r.relationshipType === "translations")?.songs || [];
+        const existingTranslationLanguages = LANGUAGE_CONFIG.filter(cfg => translations.some(id => songs?.[id]?.artistNames === cfg.artistName)).map(cfg => cfg.value);
 
         document.body.style.overflow = "hidden";
 
@@ -1606,13 +1640,9 @@ chrome.storage.local.get([
             const cfg = LANGUAGE_CONFIG.find(c => c.value === selectedLang);
             const suffix = cfg?.titleSuffix || "";
 
-            const artist = (songData?.primary_artist_names || "").replace(/\s*\([^()]*\)\s*$/, "");
-            const title = songData?.title || "";
-            const featuredArtists = (songData?.featured_artists || [])
-                .map(a => {
-                    const raw = a.name || "";
-                    return raw.replace(/\s*\([^()]*\)\s*$/, "");
-                });
+            const artist = (primaryArtistNames || "").replace(/\s*\([^()]*\)\s*$/, "");
+            const title = songTitle || "";
+            const featuredArtists = (featuredArtistsRaw || []).map(name => (name || "").replace(/\s*\([^()]*\)\s*$/, "").replace(/\u200B/g, "").trim());
 
             // Featured formatting
             let featuredString = "";
@@ -1672,7 +1702,7 @@ chrome.storage.local.get([
             const tagId = cfg?.tagId ? Number(cfg.tagId) : null;
 
             const rawLyrics = lyricsTextarea?.value?.trim() || "";
-            const hasLyrics = rawLyrics.length > 0;
+            const hasLyrics = transcribeCheckbox.checked && rawLyrics.length > 0;
 
             const payload = {
                 text_format: "html,markdown,preview",
@@ -1688,28 +1718,30 @@ chrome.storage.local.get([
 
                     title: cleanTitle,
 
-                    primary_tag_id: songData?.primary_tag.id || null,
+                    primary_tag_id: primaryTag || null,
                     tags: tagId ? [{ id: tagId }] : [],
 
-                    release_date_components: songData?.release_date_components || null,
+                    release_date_components: releaseDateComponents || null,
 
-                    custom_song_art_image_url: songData?.custom_song_art_image_url || null,
+                    custom_song_art_image_url: customSongArtImageUrl || null,
 
-                    youtube_url: songData?.youtube_url || null,
-                    youtube_start: songData?.youtube_start || null,
+                    youtube_url: youtubeUrl || null,
+                    youtube_start: youtubeStart || null,
 
                     language: language,
 
-                    song_relationships_by_id: songData?.id
+                    song_relationships_by_id: songId
                         ? [
                             {
                                 type: "translation_of",
-                                song_ids: [songData?.id]
+                                song_ids: [songId]
                             }
                         ]
                         : [],
                 }
             };
+
+            console.log("Payload for creating translation:", payload);
 
             const result = await createSong(payload);
             overlay.remove();
@@ -1742,15 +1774,15 @@ chrome.storage.local.get([
     //////////                                CLEANUP METADATA                                //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function cleanupMetadata(userId, songData) {
+    function cleanupMetadata(songId, songTitle, writerArtists, customPerformances, artists) {
         console.log("Run function cleanupMetadata()");
-        checkZeroWidthSpaces(songData);
-        checkWriterArtists(songData)
-        renameAdditionalRoleLabels(songData);
+        checkZeroWidthSpaces(songId, songTitle);
+        checkWriterArtists(songId, writerArtists, customPerformances, artists);
+        renameAdditionalRoleLabels(songId, customPerformances, artists);
     }
 
-    function checkZeroWidthSpaces(songData) {
-        let updatedTitle = songData.title;
+    function checkZeroWidthSpaces(songId, songTitle) {
+        let updatedTitle = songTitle;
 
         updatedTitle = updatedTitle.replace(/\u200B{2,}/g, '\u200B');
         updatedTitle = updatedTitle.replace(/^\u200B|(?<=[\p{L}\p{N}\p{P}])\u200B|(?=[\p{L}\p{N}\p{P}])\u200B/gu, '');
@@ -1758,63 +1790,57 @@ chrome.storage.local.get([
         if (/\u200B/.test(updatedTitle)) {
             console.info(`Remaining ZWSP: "${updatedTitle}"`);
         }
-        if (songData.title !== updatedTitle) {
-            addCleanupButton(songData, "ZWSP", "Remove ZWSP", { title: updatedTitle });
+        if (songTitle !== updatedTitle) {
+            addCleanupButton(songId, "ZWSP", "Remove ZWSP", { title: updatedTitle });
         }
     }
 
-    function checkWriterArtists(songData) {
-        const writerArtists = songData.writer_artists || [];
-        const customPerformances = songData.custom_performances || [];
-
+    function checkWriterArtists(songId, writerArtists, customPerformances, artists) {
         const getUniqueArtists = (performances, label) => {
             return performances
-                .filter(p => p.label.toLowerCase() === label)
+                .filter(p => p.label.toLowerCase() === label.toLowerCase())
                 .flatMap(p => p.artists || [])
-                .filter((artist, index, self) =>
-                    index === self.findIndex(a => a.id === artist.id)
+                .filter((artistId, index, self) =>
+                    index === self.indexOf(artistId)
                 );
         };
 
-        const lyricists = getUniqueArtists(customPerformances, "lyricist");
-        const composers = getUniqueArtists(customPerformances, "composer");
-        const lyricistsAndComposers = [...lyricists, ...composers].filter((artist, index, self) =>
-            index === self.findIndex(a => a.id === artist.id)
-        );
-
-        const onlyWriters = writerArtists.filter(writer =>
-            !lyricistsAndComposers.some(ac => ac.id === writer.id)
-        );
-
-        const lyricistsAndComposersAndWriters = [...lyricists, ...composers, ...onlyWriters].filter((artist, index, self) =>
-            index === self.findIndex(a => a.id === artist.id)
-        );
+        const lyricists = getUniqueArtists(customPerformances, "Lyricist");
+        const composers = getUniqueArtists(customPerformances, "Composer");
+        const lyricistsAndComposers = [...new Set([...lyricists, ...composers])];
+        const onlyWriters = writerArtists.filter(id => !lyricistsAndComposers.includes(id));
+        const lyricistsAndComposersAndWriters = [...new Set([...lyricists, ...composers, ...onlyWriters])];
 
         if (lyricistsAndComposersAndWriters.length > writerArtists.length) {
-            const newWriterArtists = lyricistsAndComposersAndWriters.filter(
-                (artist, index, self) =>
-                    index === self.findIndex(a => a.id === artist.id)
-            );
+            const newWriterArtists = lyricistsAndComposersAndWriters.map(id => ({
+                id,
+                name: artists[id]?.name
+            }));
 
-            addCleanupButton(songData, "Writers", "Add Writers", { writer_artists: newWriterArtists });
+            addCleanupButton(songId, "Writers", "Add Writers", { writer_artists: newWriterArtists });
         }
     }
 
-    function renameAdditionalRoleLabels(songData) {
-        const customPerformances = songData.custom_performances || [];
+
+    function renameAdditionalRoleLabels(songId, customPerformances, artists) {
         let labelsToFix = [];
 
         const labelCorrections = {
             //"Primary Artists": "Group Members",
-            "Trompeta": "Trumpet",
         };
 
         const updatedCustomPerformances = customPerformances.map(perf => {
             if (labelCorrections[perf.label]) {
                 labelsToFix.push(perf.label);
-                return { ...perf, label: labelCorrections[perf.label] };
+                perf = { ...perf, label: labelCorrections[perf.label] };
             }
-            return perf;
+
+            const mappedArtists = perf.artists.map(id => ({
+                id,
+                name: artists[id]?.name
+            }));
+
+            return { ...perf, artists: mappedArtists };
         });
 
         if (!labelsToFix.length) return;
@@ -1822,13 +1848,13 @@ chrome.storage.local.get([
         const cleanupKey = labelsToFix.map(label => label.replace(/\s+/g, "")).join("And");
         const cleanupTitle = `Fix ${labelsToFix.join(", ")}`;
 
-        addCleanupButton(songData, cleanupKey, cleanupTitle, { custom_performances: updatedCustomPerformances });
+        addCleanupButton(songId, cleanupKey, cleanupTitle, { custom_performances: updatedCustomPerformances });
     }
 
-    function addCleanupButton(song, actionType, label, metadataUpdate) {
 
+
+    function addCleanupButton(songId, actionType, label, metadataUpdate) {
         const { stickytoolbarLeft, editmetadatabutonSmallbutton } = getDomElements();
-
         if (!stickytoolbarLeft || !editmetadatabutonSmallbutton) return;
 
         const actionButton = document.createElement('button');
@@ -1837,9 +1863,8 @@ chrome.storage.local.get([
         actionButton.textContent = label;
 
         actionButton.addEventListener('click', () => {
-            updateSongMetadata(song, metadataUpdate);
+            updateSongMetadata(songId, metadataUpdate);
             actionButton.style.display = 'none';
-            main();
         });
 
         stickytoolbarLeft.appendChild(actionButton);
@@ -1852,7 +1877,7 @@ chrome.storage.local.get([
     //////////                             LYRICS EDITOR BUTTONS                              //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function selectDropdown(songData, dropdownType) {
+    function selectDropdown(primaryTag, songLanguage, songTitle, primaryArtists, featuredArtists, artists, trackingData, dropdownType) {
         console.log(`Run function selectDropdown() for ${dropdownType} dropdown`);
 
         const { stickytoolbarLeft } = getDomElements();
@@ -1893,7 +1918,7 @@ chrome.storage.local.get([
         const arrowSvgClosed = createArrowSvg('M4.488 7 0 0h8.977L4.488 7Z');
         const arrowSvgOpen = createArrowSvg('M4.488.5 0 7.5h8.977L4.488.5Z');
 
-        const dropdownMenu = createDropdownMenu(songData, dropdownText, arrowSpan, dropdownType);
+        const dropdownMenu = createDropdownMenu(primaryTag, songLanguage, songTitle, primaryArtists, featuredArtists, artists, trackingData, dropdownText, arrowSpan, dropdownType);
 
         arrowSpan.appendChild(arrowSvgClosed.cloneNode(true));
         dropdownSpan.append(dropdownText, arrowSpan);
@@ -1938,7 +1963,7 @@ chrome.storage.local.get([
         toggleDropdownButton();
     }
 
-    function createDropdownMenu(songData, dropdownText, arrowSpan, dropdownType) {
+    function createDropdownMenu(primaryTag, songLanguage, songTitle, primaryArtists, featuredArtists, artists, trackingData, dropdownText, arrowSpan, dropdownType) {
         const LANGUAGE_OPTIONS = [
             //{ code: 'Auto', value: 'auto', name: 'Auto Language' },
             { code: 'SQ', value: 'sq', name: 'Albanian' },
@@ -1958,6 +1983,7 @@ chrome.storage.local.get([
             { code: 'HU', value: 'hu', name: 'Hungarian' },
             { code: 'IS', value: 'is', name: 'Icelandic' },
             { code: 'IT', value: 'it', name: 'Italian' },
+            { code: 'JA', value: 'ja', name: 'Japanese' },
             { code: 'KO', value: 'ko', name: 'Korean' },
             { code: 'LA', value: 'la', name: 'Latin' },
             { code: 'LT', value: 'lt', name: 'Lithuanian' },
@@ -2068,7 +2094,7 @@ chrome.storage.local.get([
                 dropdownText.textContent = `Language: ${selectedCode}`;
                 document.querySelectorAll('#lyricsSectionsButtonsContainer').forEach(div => div.remove());
                 document.querySelectorAll('#lyricsStyleButtonsContainer').forEach(div => div.remove());
-                lyricsSectionsButtons(songData);
+                lyricsSectionsButtons(primaryTag, songLanguage);
             } else if (dropdownType === "Cleanup") {
                 lyricsCleanupLogic(selectedCode);
             }
@@ -2213,7 +2239,7 @@ chrome.storage.local.get([
         }
     }
 
-    function lyricsSectionsButtons(songData) {
+    function lyricsSectionsButtons(primaryTag, songLanguage, songTitle, primaryArtists, featuredArtists, artists, trackingData) {
         console.log("Run function lyricsSectionsButtons()");
 
         const { lyricseditexplainerContainer, editmetadatabutonSmallbutton } = getDomElements();
@@ -2221,8 +2247,7 @@ chrome.storage.local.get([
 
         if (document.getElementById("lyricsSectionsButtonsContainer") && document.getElementById("lyricsStyleButtonsContainer")) return;
 
-        const isNonMusic = songData.primary_tag.name === "Non-Music";
-
+        const isNonMusic = primaryTag === 1452;
 
         const createGridContainer = (id, marginTop = "1.5rem") => {
             const div = document.createElement("div");
@@ -2296,7 +2321,7 @@ chrome.storage.local.get([
             }
         };
 
-        function insertSeoHeader(songData, headerType, storedLanguage) {
+        function insertSeoHeader(songTitleRaw, primaryArtistsRaw, featuredArtistsRaw, trackingData, headerType, storedLanguage) {
             const { lyricsTextareaInputTextarea } = getDomElements();
             if (!lyricsTextareaInputTextarea) return;
 
@@ -2318,22 +2343,22 @@ chrome.storage.local.get([
 
             const containsCyrillic = (text) => /[А-Яа-яЁё]/.test(text);
             const containsChinese = (text) => /[\u4e00-\u9fff]/.test(text);
+            const containsJapanese = (text) => /[\u3040-\u30ff\u31f0-\u31ff]/.test(text);
 
             const cleanName = (name) => {
                 name = name.replace(/”/g, '"').replace(/’/g, "'");
-                if (containsCyrillic(name) || containsChinese(name)) {
+                if (containsCyrillic(name) || containsChinese(name) || containsJapanese(name)) {
                     name = name.replace(/\s*\([^)]+\)/g, "").replace(/\s*\[[^\]]+\]/g, "");
                 }
                 return name;
             };
 
-            // Clean song title (Cyrillic/Chinese)
-            let songTitle = cleanName(songData.title);
+            // Clean song title (Cyrillic/Chinese/Japanese)
+            let songTitle = cleanName(songTitleRaw);
 
             // Clean song title (Translation)
-            const isTranslation = songData.tracking_data?.some(
-                (item) => item.key === "Translation" && item.value === true
-            );
+            const isTranslation = trackingData?.some((item) => item.key === "Translation" && item.value === true);
+
             if (isTranslation) {
                 const dashIndex = songTitle.indexOf("-");
                 const lastBracketIndex = Math.max(
@@ -2366,14 +2391,13 @@ chrome.storage.local.get([
                 songTitle = songTitle.replace(/[>˃]/g, "&gt;");
             }
 
+            const primaryArtists = (primaryArtistsRaw || [])
+                .map(id => artists[id]?.name || "")
+                .map(name => cleanName(name));
 
-
-            // Clean artist names (Disambiguation)
-            const primaryArtists = songData.primary_artists.map(a => cleanName(a.name));
-            const featuredArtists = songData.featured_artists.map(a => {
-                let name = cleanName(a.name);
-                return name.replace(/\s*\(([A-Z]{2,3})\)\s*/g, "");
-            });
+            const featuredArtists = (featuredArtistsRaw || [])
+                .map(id => artists[id]?.name || "")
+                .map(name => cleanName(name));
 
             const primaryArtistsText = primaryArtists.length > 1
                 ? primaryArtists.slice(0, -1).join(", ") + " & " + primaryArtists.at(-1)
@@ -2402,6 +2426,7 @@ chrome.storage.local.get([
                     'hu': `[„${songTitle}” dalszöveg${featuringText}]`,
                     'is': `[Söngtextar fyrir "${songTitle}"${featuringText}]`,
                     'it': `[Testo di "${songTitle}"${featuringText}]`,
+                    'ja': `[${primaryArtistsText}「${songTitle}」${formattedFeaturingText}歌詞]`,
                     'la': `[Lyricis "${songTitle}"${featuringText}]`,
                     'lt': `[Dainos žodžiai „${songTitle}”${featuringText}]`,
                     'mk': `[Текст за песната „${songTitle}”${featuringText}]`,
@@ -2419,14 +2444,14 @@ chrome.storage.local.get([
                     'uk': `[Текст пісні «${songTitle}»${featuringText}]`,
                     'uz': `[«${songTitle}» qoʻshigʻi matni${featuringText}]`,
                     'vi': `[Lời bài hát "${songTitle}"${featuringText}]`,
-                    'zh': `[${primaryArtists}《${songTitle}》${formattedFeaturingText}歌词]`,
-                    'zh-hant': `[${primaryArtists}《${songTitle}》${formattedFeaturingText}歌詞]`,
+                    'zh': `[${primaryArtistsText}《${songTitle}》${formattedFeaturingText}歌词]`,
+                    'zh-hant': `[${primaryArtistsText}《${songTitle}》${formattedFeaturingText}歌詞]`,
                 },
                 Translation: {
                     'de': `[Deutscher Songtext zu „${songTitle}“${featuringText}]`,
                     'hu': `[„${songTitle}” magyarul]`,
                     'nl': `[Songtekst van "${songTitle}"${featuringText} (Vertaling)]`,
-                    'no': `[Tekst til ${primaryArtists} – «${songTitle}»${featuringText} (Oversettelse)]`,
+                    'no': `[Tekst til ${primaryArtistsText} – «${songTitle}»${featuringText} (Oversettelse)]`,
                     'pt': `[Letra de "${songTitle}"${featuringText}]`,
                     'sq': `[Teksti i "${songTitle}"${featuringText} në shqip]`,
                     'tr': `["${songTitle}"${featuringText} için Türkçe şarkı sözleri]`,
@@ -2538,9 +2563,9 @@ chrome.storage.local.get([
 
         const insertSectionHeader = (fullText, hoverText, storedLanguage) => {
             const actions = {
-                Header: () => insertSeoHeader(songData, hoverText, storedLanguage),
-                Translation: () => insertSeoHeader(songData, hoverText, storedLanguage),
-                Snippet: () => insertSeoHeader(songData, hoverText, storedLanguage),
+                Header: () => insertSeoHeader(songTitle, primaryArtists, featuredArtists, trackingData, hoverText, storedLanguage),
+                Translation: () => insertSeoHeader(songTitle, primaryArtists, featuredArtists, trackingData, hoverText, storedLanguage),
+                Snippet: () => insertSeoHeader(songTitle, primaryArtists, featuredArtists, trackingData, hoverText, storedLanguage),
                 Part: () => insertPartHeader(fullText),
                 Verse: () => insertVerseHeader(fullText),
                 default: () => insertTextAtCursor(`[${fullText}]`)
@@ -2697,7 +2722,7 @@ chrome.storage.local.get([
             const headerDiv = createGridContainer("lyricsSectionsButtonsContainer", "2rem");
 
             let storedLanguage = localStorage.getItem("selectedLanguage");
-            if (storedLanguage === "auto") storedLanguage = songData.language;
+            if (storedLanguage === "auto") storedLanguage = songLanguage;
             if (!storedLanguage) return;
 
             const HEADERS = {
@@ -2709,7 +2734,7 @@ chrome.storage.local.get([
                         { displayText: null, fullText: null, hoverText: null },
                         { displayText: "Въведение", fullText: "Въведение", hoverText: "Intro" },
                         { displayText: "Финал", fullText: "Финал", hoverText: "Outro" },
-                        { displayText: null, fullText: null, hoverText: null }, //Skit
+                        { displayText: "Скит", fullText: "Скит", hoverText: "Skit" },
                         { displayText: "Част", fullText: "Част", hoverText: "Part" },
                         { displayText: "Куплет", fullText: "Куплет", hoverText: "Verse" },
                         { displayText: "Предприпев", fullText: "Предприпев", hoverText: "Pre-Chorus" },
@@ -2717,6 +2742,8 @@ chrome.storage.local.get([
                         { displayText: "Следприпев", fullText: "Следприпев", hoverText: "Post-Chorus" },
                         { displayText: "Рефрен", fullText: "Рефрен", hoverText: "Refrain" },
                         { displayText: "Мост", fullText: "Мост", hoverText: "Bridge" },
+                        { displayText: "Интерлюдия", fullText: "Интерлюдия", hoverText: "Interlude" },
+                        { displayText: "Инстр. Пауза", fullText: "Инструментална Пауза", hoverText: "Instrumental Break" },
                     ]
                 },
                 "bs": { // Serbian (Serbo-Croatian (ijekavica))
@@ -2795,7 +2822,7 @@ chrome.storage.local.get([
                     ]
                 },
                 "de": { // German
-                    Rap: [
+                    1434: [
                         { displayText: "Songtext", fullText: "Songtext", hoverText: "Header" },
                         { displayText: "Übersetzung", fullText: "Übersetzung", hoverText: "Translation" },
                         { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
@@ -2924,6 +2951,28 @@ chrome.storage.local.get([
                         { displayText: null, fullText: null, hoverText: null },
                         { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
                         { displayText: null, fullText: null, hoverText: null },
+                    ]
+                },
+                "ja": { // Japanese
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Intro", fullText: "Intro", hoverText: "Intro" },
+                        { displayText: "Outro", fullText: "Outro", hoverText: "Outro" },
+                        { displayText: "Skit", fullText: "Skit", hoverText: "Skit" },
+                        { displayText: "Part", fullText: "Part", hoverText: "Part" },
+                        { displayText: "Verse", fullText: "Verse", hoverText: "Verse" },
+                        { displayText: "Pre-Chorus", fullText: "Pre-Chorus", hoverText: "Pre-Chorus" },
+                        { displayText: "Chorus", fullText: "Chorus", hoverText: "Chorus" },
+                        { displayText: "Post-Chorus", fullText: "Post-Chorus", hoverText: "Post-Chorus" },
+                        { displayText: "Refrain", fullText: "Refrain", hoverText: "Refrain" },
+                        { displayText: "Bridge", fullText: "Bridge", hoverText: "Bridge" },
+                        { displayText: "Breakdown", fullText: "Breakdown", hoverText: "Breakdown" },
+                        { displayText: "Interlude", fullText: "Interlude", hoverText: "Interlude" },
+                        { displayText: "Build", fullText: "Build", hoverText: "Build" },
+                        { displayText: "Drop", fullText: "Drop", hoverText: "Drop" }
                     ]
                 },
                 "ko": { // Korean
@@ -3192,7 +3241,7 @@ chrome.storage.local.get([
                     ]
                 },
                 "tr": { // Turkish
-                    Rap: [
+                    1434: [
                         { displayText: "Header", fullText: "Header", hoverText: "Header" },
                         { displayText: "Translation", fullText: "Translation", hoverText: "Translation" },
                         { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
@@ -3302,8 +3351,7 @@ chrome.storage.local.get([
             };
 
             const langLabels = HEADERS[storedLanguage];
-            const tagName = songData.primary_tag?.name;
-            const buttonLabels = langLabels?.[tagName] || langLabels?.Default || [];
+            const buttonLabels = langLabels?.[primaryTag] || langLabels?.Default || [];
 
             renderButtons(
                 headerDiv,
@@ -5288,13 +5336,12 @@ chrome.storage.local.get([
     //////////                               SOUNDCLOUD PLAYER                                //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function addSoundCloudPlayer(songData) {
+    function addSoundCloudPlayer(soundcloudUrl) {
         let isSoundCloudPlaying = false;
         let soundCloudContainer = null;
 
-        function addSoundCloudButton(songData) {
-            const soundCloudUrl = songData.soundcloud_url;
-            if (!soundCloudUrl) return;
+        function addSoundCloudButton(soundcloudUrl) {
+            if (!soundcloudUrl) return;
 
             const { stickytoolbarRight } = getDomElements();
             if (!stickytoolbarRight) return;
@@ -5314,7 +5361,7 @@ chrome.storage.local.get([
                 if (isSoundCloudPlaying) {
                     stopSoundCloudPlayer();
                 } else {
-                    loadSoundCloudPlayer(soundCloudUrl);
+                    loadSoundCloudPlayer(soundcloudUrl);
                 }
                 isSoundCloudPlaying = !isSoundCloudPlaying;
             });
@@ -5323,7 +5370,7 @@ chrome.storage.local.get([
         }
 
 
-        function loadSoundCloudPlayer(soundCloudUrl) {
+        function loadSoundCloudPlayer(soundcloudUrl) {
             const html = localStorage.getItem("AppleMusicStructure");
             if (!html) return;
 
@@ -5362,7 +5409,7 @@ chrome.storage.local.get([
                 pointerEvents: "auto",
             });
 
-            iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(soundCloudUrl)}&color=%23ff5500&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false`;
+            iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(soundcloudUrl)}&color=%23ff5500&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false`;
             iframe.setAttribute("allow", "autoplay");
 
             const { mediaplayerscontainerContainer } = getDomElements();
@@ -5383,7 +5430,7 @@ chrome.storage.local.get([
             soundCloudContainer = null;
         }
 
-        addSoundCloudButton(songData);
+        addSoundCloudButton(soundcloudUrl);
     }
 
 
@@ -5392,22 +5439,28 @@ chrome.storage.local.get([
     //////////                                 SPOTIFY PLAYER                                 //////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    async function addSpotifyPlayer(songData) {
-        async function getSpotifySongId(songData) {
+    async function addSpotifyPlayer(spotifyUuid, songTitle, primaryArtistsRaw, featuredArtistsRaw, artists) {
+        async function getSpotifySongId(spotifyUuid, songTitle, primaryArtistsRaw, featuredArtistsRaw, artists) {
             console.log("Run function getSpotifySongId()");
 
-            if (songData.spotify_uuid) {
-                loadSpotifyPlayer(songData.spotify_uuid);
+            if (spotifyUuid) {
+                loadSpotifyPlayer(spotifyUuid);
             } else {
                 const containsCyrillic = text => /[А-Яа-яЁё]/.test(text);
                 const containsChinese = text => /[\u4e00-\u9fff]/.test(text);
 
-                let title = songData.title;
+                let title = songTitle;
                 if (containsCyrillic(title) || containsChinese(title)) {
                     title = title.replace(/\s*\([^)]+\)/g, '').replace(/\s*\[[^\]]+\]/g, '');
                 }
-                const primaryArtists = songData.primary_artists.map(artist => artist.name.replace(/ *\([^)]*\) */g, "").replace(/\u200B/g, "").trim());
-                const featuredArtists = songData.featured_artists.map(artist => artist.name.replace(/ *\([^)]*\) */g, "").replace(/\u200B/g, "").trim());
+                const primaryArtists = (primaryArtistsRaw || [])
+                    .map(id => artists[id]?.name || "")
+                    .map(name => name.replace(/ *\([^)]*\) */g, "").replace(/\u200B/g, "").trim());
+
+                const featuredArtists = (featuredArtistsRaw || [])
+                    .map(id => artists[id]?.name || "")
+                    .map(name => name.replace(/ *\([^)]*\) */g, "").replace(/\u200B/g, "").trim());
+
                 const searchSets = {
                     title: new Set([title]),
                     primaryArtists: new Set(primaryArtists),
@@ -5620,7 +5673,7 @@ chrome.storage.local.get([
             return bestScore >= 0.75 ? bestTrack : null;
         }
 
-        await getSpotifySongId(songData);
+        await getSpotifySongId(spotifyUuid, songTitle, primaryArtistsRaw, featuredArtistsRaw, artists);
     }
 
 
