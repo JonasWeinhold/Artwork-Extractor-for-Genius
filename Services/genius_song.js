@@ -2344,10 +2344,12 @@ chrome.storage.local.get([
             const containsCyrillic = (text) => /[А-Яа-яЁё]/.test(text);
             const containsChinese = (text) => /[\u4e00-\u9fff]/.test(text);
             const containsJapanese = (text) => /[\u3040-\u30ff\u31f0-\u31ff]/.test(text);
+            const containsKorean = (text) => /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/.test(text);
+
 
             const cleanName = (name) => {
                 name = name.replace(/”/g, '"').replace(/’/g, "'");
-                if (containsCyrillic(name) || containsChinese(name) || containsJapanese(name)) {
+                if (containsCyrillic(name) || containsChinese(name) || containsJapanese(name) || containsKorean(name)) {
                     name = name.replace(/\s*\([^)]+\)/g, "").replace(/\s*\[[^\]]+\]/g, "");
                 }
                 return name;
@@ -2427,6 +2429,7 @@ chrome.storage.local.get([
                     'is': `[Söngtextar fyrir "${songTitle}"${featuringText}]`,
                     'it': `[Testo di "${songTitle}"${featuringText}]`,
                     'ja': `[${primaryArtistsText}「${songTitle}」${formattedFeaturingText}歌詞]`,
+                    'ko': `[${primaryArtistsText} "${songTitle}" ${formattedFeaturingText}가사]`,
                     'la': `[Lyricis "${songTitle}"${featuringText}]`,
                     'lt': `[Dainos žodžiai „${songTitle}”${featuringText}]`,
                     'mk': `[Текст за песната „${songTitle}”${featuringText}]`,
@@ -2470,10 +2473,21 @@ chrome.storage.local.get([
                 }
             };
 
+            const snippetInsertEndLangs = new Set(['de',]);
+
             const textToInsert = textFormats[headerType]?.[storedLanguage];
+
             if (textToInsert) {
-                insertText(textToInsert, headerType === "Snippet" ? "end" : "begin");
+                let position = "begin";
+
+                if (headerType === "Snippet") {
+                    position = snippetInsertEndLangs.has(storedLanguage) ? "end" : "begin";
+                }
+
+                insertText(textToInsert, position);
             }
+
+
         }
 
         function insertPartHeader(fullText) {
@@ -2981,7 +2995,7 @@ chrome.storage.local.get([
                 },
                 "ko": { // Korean
                     Default: [
-                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
                         { displayText: null, fullText: null, hoverText: null },
                         { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
                         { displayText: null, fullText: null, hoverText: null },
