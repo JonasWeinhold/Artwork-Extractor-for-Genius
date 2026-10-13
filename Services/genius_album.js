@@ -154,6 +154,7 @@ chrome.storage.local.get([
 
         if (isAlbumNew) {
             const state = getScripts("window.__PRELOADED_STATE__");
+            console.log(state);
             const userId = state?.session?.currentUser;
             const userUrl = state?.entities?.users?.[userId]?.url;
             const userRole = state?.entities?.users?.[userId]?.roleForDisplay;
@@ -198,6 +199,7 @@ chrome.storage.local.get([
 
             if (isGeniusAlbumUploadCover) uploadAlbumCover(albumId, coverArts);
 
+            if (isGeniusAlbumExpandTracklist) expandTracklist(highContrastMode, textColor);
             if (isGeniusAlbumEditTracklist) addTracklistCheckboxes(userRole, highContrastMode, textColor, primaryColor, secondaryColor);
 
 
@@ -1065,6 +1067,86 @@ chrome.storage.local.get([
         });
     }
 
+    function expandTracklist(highContrastMode, textColor) {
+        const discContainers = Array.from(document.querySelectorAll("[class^='Tracklist__DiscContainer-']"));
+        const allCreditButtons = Array.from(document.querySelectorAll("[class*='Track__CreditsToggle-']"));
+
+        const plusSVG = `
+            <svg fill="currentColor" viewBox="0 0 14 14">
+                <path d="M0 6h13.5v1.5H0z"></path>
+                <path d="M6 13.5V0h1.5v13.5z"></path>
+            </svg>
+        `;
+
+        const minusSVG = `
+            <svg fill="currentColor" viewBox="0 0 14 2">
+                <path d="M0 0h13.5v1.5H0z"></path>
+            </svg>
+        `;
+
+        const createExpandButton = (label, buttonsToClick) => {
+            if (buttonsToClick.length === 0 || buttonsToClick.length > 50) return null;
+
+            const firstCreditButton = document.querySelector("[class*='Track__CreditsToggle']");
+            if (!firstCreditButton) return null;
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = firstCreditButton.className;
+            btn.setAttribute("aria-expanded", "false");
+            btn.setAttribute("aria-label", label);
+            btn.innerHTML = plusSVG;
+
+            btn.style.outline = highContrastMode ? "1px solid rgb(0,0,0)" : `1px solid ${textColor}`;
+            btn.style.borderRadius = "50%";
+            btn.style.outlineOffset = "0.2rem";
+            btn.style.width = "0.75rem";
+            btn.style.aspectRatio = "1 / 1";
+
+            btn.addEventListener("click", async () => {
+                const expanded = btn.getAttribute("aria-expanded") === "true";
+
+                if (!expanded) {
+                    for (const b of buttonsToClick) {
+                        b.click();
+                        await new Promise(r => setTimeout(r, 50));
+                    }
+                } else {
+                    buttonsToClick.forEach(b => b.click());
+                }
+
+                btn.setAttribute("aria-expanded", expanded ? "false" : "true");
+                btn.innerHTML = expanded ? plusSVG : minusSVG;
+            });
+
+            return btn;
+        };
+
+        const discHeaders = discContainers.map(d => d.querySelector("[class^='TracklistDiscHeader__Container-']")).filter(Boolean);
+
+        if (discHeaders.length > 1) {
+            discHeaders.forEach((discHeader, index) => {
+                const discButtons = Array.from(
+                    discContainers[index].querySelectorAll("[class*='Track__CreditsToggle-']")
+                );
+
+                const btn = createExpandButton(`Expand Disc ${index + 1}`, discButtons);
+                if (btn) discHeader.appendChild(btn);
+            });
+
+            return;
+        }
+
+        const headerContainer = document.querySelector("[class^='Tracklist__Header-']");
+        if (!headerContainer) return;
+
+        const btnAll = createExpandButton("Expand All", allCreditButtons);
+        if (!btnAll) return;
+
+        btnAll.style.marginLeft = "auto";
+
+        headerContainer.appendChild(btnAll);
+    }
 
 
     function expandAllTracksInTracklist() {
@@ -4818,7 +4900,7 @@ chrome.storage.local.get([
                     modal.status.appendChild(document.createTextNode("..."));
 
                     if (payload) {
-                        await updateSongMetadata(song, payload.song);
+                        await updateSongMetadata(song.id, payload.song);
                     }
 
                     currentIndex++;
@@ -7600,7 +7682,7 @@ chrome.storage.local.get([
                     }
 
                     console.log("Updating song with data:", song.id, updateData);
-                    await updateSongMetadata(song, updateData);
+                    await updateSongMetadata(song.id, updateData);
                 }, index * delay);
             });
 
