@@ -1072,17 +1072,17 @@ chrome.storage.local.get([
         const allCreditButtons = Array.from(document.querySelectorAll("[class*='Track__CreditsToggle-']"));
 
         const plusSVG = `
-            <svg fill="currentColor" viewBox="0 0 14 14">
-                <path d="M0 6h13.5v1.5H0z"></path>
-                <path d="M6 13.5V0h1.5v13.5z"></path>
-            </svg>
-        `;
+        <svg fill="currentColor" viewBox="0 0 14 14">
+            <path d="M0 6h13.5v1.5H0z"></path>
+            <path d="M6 13.5V0h1.5v13.5z"></path>
+        </svg>
+    `;
 
         const minusSVG = `
-            <svg fill="currentColor" viewBox="0 0 14 2">
-                <path d="M0 0h13.5v1.5H0z"></path>
-            </svg>
-        `;
+        <svg fill="currentColor" viewBox="0 0 14 2">
+            <path d="M0 0h13.5v1.5H0z"></path>
+        </svg>
+    `;
 
         const createExpandButton = (label, buttonsToClick) => {
             if (buttonsToClick.length === 0 || buttonsToClick.length > 50) return null;
@@ -1095,6 +1095,7 @@ chrome.storage.local.get([
             btn.className = firstCreditButton.className;
             btn.setAttribute("aria-expanded", "false");
             btn.setAttribute("aria-label", label);
+            btn.setAttribute("data-expand-btn", "true");
             btn.innerHTML = plusSVG;
 
             btn.style.outline = highContrastMode ? "1px solid rgb(0,0,0)" : `1px solid ${textColor}`;
@@ -1107,12 +1108,20 @@ chrome.storage.local.get([
                 const expanded = btn.getAttribute("aria-expanded") === "true";
 
                 if (!expanded) {
+                    // ⭐ expand only collapsed buttons
                     for (const b of buttonsToClick) {
-                        b.click();
-                        await new Promise(r => setTimeout(r, 50));
+                        const isExpanded = b.getAttribute("aria-expanded") === "true";
+                        if (!isExpanded) {
+                            b.click();
+                            await new Promise(r => setTimeout(r, 25));
+                        }
                     }
                 } else {
-                    buttonsToClick.forEach(b => b.click());
+                    // ⭐ collapse only expanded buttons
+                    buttonsToClick.forEach(b => {
+                        const isExpanded = b.getAttribute("aria-expanded") === "true";
+                        if (isExpanded) b.click();
+                    });
                 }
 
                 btn.setAttribute("aria-expanded", expanded ? "false" : "true");
@@ -1122,10 +1131,14 @@ chrome.storage.local.get([
             return btn;
         };
 
-        const discHeaders = discContainers.map(d => d.querySelector("[class^='TracklistDiscHeader__Container-']")).filter(Boolean);
+        const discHeaders = discContainers
+            .map(d => d.querySelector("[class^='TracklistDiscHeader__Container-']"))
+            .filter(Boolean);
 
         if (discHeaders.length > 1) {
             discHeaders.forEach((discHeader, index) => {
+                if (discHeader.querySelector("[data-expand-btn='true']")) return;
+
                 const discButtons = Array.from(
                     discContainers[index].querySelectorAll("[class*='Track__CreditsToggle-']")
                 );
@@ -1140,13 +1153,15 @@ chrome.storage.local.get([
         const headerContainer = document.querySelector("[class^='Tracklist__Header-']");
         if (!headerContainer) return;
 
+        if (headerContainer.querySelector("[data-expand-btn='true']")) return;
+
         const btnAll = createExpandButton("Expand All", allCreditButtons);
         if (!btnAll) return;
 
         btnAll.style.marginLeft = "auto";
-
         headerContainer.appendChild(btnAll);
     }
+
 
 
     function expandAllTracksInTracklist() {
@@ -7067,6 +7082,11 @@ chrome.storage.local.get([
                     svg.style.filter = 'drop-shadow(0 0 6px #000)';
                 } else {
                     svg.style.filter = '';
+                }
+
+                const expandAllBtn = document.querySelector('button[data-expand-btn="true"]');
+                if (expandAllBtn) {
+                    expandAllBtn.style.marginRight = "0.375rem";
                 }
             };
 

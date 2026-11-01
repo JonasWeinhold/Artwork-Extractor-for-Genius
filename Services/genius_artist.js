@@ -10,8 +10,7 @@ chrome.storage.local.get([
     'isGeniusArtistFollowButton',
     'isGeniusArtistSpreadsheetButton',
     'isGeniusArtistSearchArtistMetadata',
-    'isGeniusArtistRecords',
-    'isGeniusArtistNewPage'
+    'isGeniusArtistRecords'
 ], async function (result) {
     const isGeniusArtistArtistPage = result.isGeniusArtistArtistPage ?? true;
     const isGeniusArtistArtistPageZwsp = result.isGeniusArtistArtistPageZwsp ?? true;
@@ -24,7 +23,6 @@ chrome.storage.local.get([
     const isGeniusArtistSpreadsheetButton = result.isGeniusArtistSpreadsheetButton ?? false;
     const isGeniusArtistSearchArtistMetadata = result.isGeniusArtistSearchArtistMetadata ?? true;
     const isGeniusArtistRecords = result.isGeniusArtistRecords ?? true;
-    const isGeniusArtistNewPage = result.isGeniusArtistNewPage ?? true;
 
 
     if (result['Services/genius_artist.js'] === false) {
@@ -49,7 +47,9 @@ chrome.storage.local.get([
         const isAllAlbums = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/albums$/.test(window.location.href);
         const isAllSongs = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+\/songs$/.test(window.location.href);
         const isArtist = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/]+$/.test(window.location.href);
+        const isArtistOld = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/?]+\?react=0$/.test(window.location.href);
         const isArtistNew = /https:\/\/(genius\.com|genius-staging.com)\/artists\/[^/?]+\?react=1$/.test(window.location.href);
+
         const isUser = profilePath ? new RegExp(`https:\\/\\/(genius\\.com|genius-staging\\.com)${profilePath}$`).test(window.location.href) : false;
 
         if (isAllSongs || isAllAlbums) {
@@ -58,37 +58,39 @@ chrome.storage.local.get([
             const artistId = state?.artistDiscography?.artist;
 
             if (isGeniusArtistAllSongsAlbumsPage || isGeniusArtistAllSongsAlbumsPageMetadata) checkAllSongsAlbumsPage(artistId, isAllSongs, isAllAlbums);
-        } else if (isArtistNew) {
+        } else if (isArtist || isArtistNew || isArtistOld) {
             const state = getScripts("window.__PRELOADED_STATE__");
 
-            const userId = state?.session?.currentUser;
-            const artistId = state?.profilePage?.artist;
-            const alternateNames = state?.entities?.artists?.[artistId]?.alternateNames;
-            const baseName = state?.entities?.artists?.[artistId]?.nameComponents?.baseName;
-            const headerImageUrl = state?.entities?.artists?.[artistId]?.headerImageUrl;
-            const imageUrl = state?.entities?.artists?.[artistId]?.imageUrl;
+            if (state?.currentPage === "profilePage") { //NEW
+                const userId = state?.session?.currentUser;
+                const artistId = state?.profilePage?.artist;
+                const alternateNames = state?.entities?.artists?.[artistId]?.alternateNames;
+                const baseName = state?.entities?.artists?.[artistId]?.nameComponents?.baseName;
+                const headerImageUrl = state?.entities?.artists?.[artistId]?.headerImageUrl;
+                const imageUrl = state?.entities?.artists?.[artistId]?.imageUrl;
 
-            if (!userId || !artistId) return;
+                if (!userId || !artistId) return;
 
-            if (isGeniusArtistArtistId) showArtistIdButtonNew(artistId, alternateNames);
-            if (isGeniusArtistArtistPageInfo) showCoverInfoNew(headerImageUrl, imageUrl);
+                if (isGeniusArtistArtistId) showArtistIdButtonNew(artistId, alternateNames);
+                if (isGeniusArtistArtistPageInfo) showCoverInfoNew(headerImageUrl, imageUrl);
 
-            if (isGeniusArtistFollowButton) FollowButtonArtistPageNew(artistId);
-            if (isGeniusArtistSpreadsheetButton) getSpreadsheetNew(artistId, "artist");
+                if (isGeniusArtistFollowButton) FollowButtonArtistPageNew(artistId);
+                if (isGeniusArtistSpreadsheetButton) getSpreadsheetNew(artistId, "artist");
 
-            if (isGeniusArtistSearchArtistMetadata) searchArtistMetadata(baseName);
+                if (isGeniusArtistSearchArtistMetadata) searchArtistMetadata(baseName);
 
-        } else if (isArtist) {
-            const { artistId, userId, artistData } = await getArtistInfo();
-            if (!artistId || !userId || !artistData) return;
+            } else if (state?.currentPage === "islands") { //OLD
+                const { artistId, userId, artistData } = await getArtistInfo();
+                if (!artistId || !userId || !artistData) return;
 
-            if (isGeniusArtistArtistId) showArtistIdButton(artistId);
-            if (isGeniusArtistArtistPageInfo) showCoverInfo(artistData);
+                if (isGeniusArtistArtistId) showArtistIdButton(artistId);
+                if (isGeniusArtistArtistPageInfo) showCoverInfo(artistData);
 
-            if (isGeniusArtistArtistPage) checkArtistCover(artistData);
-            if (isGeniusArtistFollowButton) FollowButtonArtistPage(artistId);
+                if (isGeniusArtistArtistPage) checkArtistCover(artistData);
+                if (isGeniusArtistFollowButton) FollowButtonArtistPage(artistId);
 
-            if (isGeniusArtistSpreadsheetButton) getSpreadsheet(artistId, "artist");
+                if (isGeniusArtistSpreadsheetButton) getSpreadsheet(artistId, "artist");
+            }
         } else if (isUser) {
             const userId = document.documentElement.innerHTML.match(/var CURRENT_USER = JSON.parse\('{\\"id\\":(\d+)/)?.[1];
             if (!userId) return;
@@ -118,22 +120,6 @@ chrome.storage.local.get([
         return { artistId, userId, artistData: json.response.artist };
     }
 
-    if (isGeniusArtistNewPage) {
-        document.addEventListener('click', function (event) {
-            const link = event.target.closest('a');
-            if (!link) return;
-
-            if ([...link.classList].some(cls => cls.startsWith('OptOutButton__Container-'))) return;
-
-            const href = link.href;
-            if (!href.startsWith('https://genius.com/artists/')) return;
-            if (href.includes('react=1')) return;
-
-            event.preventDefault();
-            const newUrl = href + (href.includes('?') ? '&' : '?') + 'react=1';
-            location.href = newUrl;
-        });
-    }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -543,6 +529,7 @@ chrome.storage.local.get([
             btn.style.justifyContent = "center";
             btn.style.backgroundColor = "white";
             btn.style.color = "black";
+            btn.style.border = "1px solid";
             btn.style.borderColor = "black";
 
             btn.addEventListener("mouseover", () => {
@@ -1984,12 +1971,12 @@ chrome.storage.local.get([
             if (document.getElementById('pullDataButton')) return;
 
             const smallButton = document.querySelector('[class^="SmallButton__Container-"]');
-            if (!smallButton) return; 
+            if (!smallButton) return;
 
             const triggerBtn = document.createElement("button");
             triggerBtn.id = "pullDataButton";
             triggerBtn.type = "button";
-            triggerBtn.className = smallButton.className; 
+            triggerBtn.className = smallButton.className;
             triggerBtn.textContent = "Pull Data";
             triggerBtn.style.marginRight = "1rem";
 
