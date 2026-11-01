@@ -1108,7 +1108,6 @@ chrome.storage.local.get([
                 const expanded = btn.getAttribute("aria-expanded") === "true";
 
                 if (!expanded) {
-                    // ⭐ expand only collapsed buttons
                     for (const b of buttonsToClick) {
                         const isExpanded = b.getAttribute("aria-expanded") === "true";
                         if (!isExpanded) {
@@ -1117,7 +1116,6 @@ chrome.storage.local.get([
                         }
                     }
                 } else {
-                    // ⭐ collapse only expanded buttons
                     buttonsToClick.forEach(b => {
                         const isExpanded = b.getAttribute("aria-expanded") === "true";
                         if (isExpanded) b.click();
