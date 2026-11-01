@@ -960,14 +960,28 @@ chrome.storage.local.get([
                     if (!songAlbums.length) return true;
 
                     for (const album of songAlbums) {
-                        const response = await fetch(`https://genius.com/api/albums/${album.id}/tracks`);
-                        if (!response.ok) return false;
+                        let allTracks = [];
+                        let page = 1;
+                        let nextPage = 1;
 
-                        const json = await response.json();
-                        albumTracklists[album.id] = json.response.tracks || [];
+                        while (nextPage) {
+                            const response = await fetch(`https://genius.com/api/albums/${album.id}/tracks?page=${page}`);
+                            if (!response.ok) return false;
+
+                            const json = await response.json();
+                            const tracks = json.response.tracks || [];
+                            allTracks.push(...tracks);
+
+                            nextPage = json.response.next_page;
+                            page = nextPage;
+                        }
+
+                        albumTracklists[album.id] = allTracks;
                     }
+
                     console.log("Album Tracklists:", albumTracklists);
                     return true;
+
                 } catch {
                     return false;
                 }
@@ -1056,8 +1070,6 @@ chrome.storage.local.get([
             // ----------------------------------------------------
             async function stepUpdateTracklists() {
                 try {
-                    if (!songAlbums.length) return true;
-
                     for (const album of songAlbums) {
                         const oldTracks = albumTracklists[album.id];
                         const oldSong = oldTracks.find(t => t.song.id === songId);
@@ -1080,7 +1092,19 @@ chrome.storage.local.get([
                 }
             }
 
-            if (!(await runStepWithRetry("Updating album tracklists", statusBox, stepUpdateTracklists, 3))) return;
+            if (songAlbums.length > 0) {
+                const hasHugeTracklist = songAlbums.some(album => {
+                    const tracks = albumTracklists[album.id];
+                    return tracks && tracks.length > 200;
+                });
+
+                if (hasHugeTracklist) {
+                    statusBox.textContent = "Done (skipped tracklist update: album has more than 200 tracks)";
+                    await waitWithStatus(2);
+                } else {
+                    if (!(await runStepWithRetry("Updating album tracklists", statusBox, stepUpdateTracklists, 3))) return;
+                }
+            }
 
 
             // ----------------------------------------------------
