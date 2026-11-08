@@ -563,7 +563,7 @@ chrome.storage.local.get([
 
                     const songIds = await fetchAllSongIds(artistId);
                     for (const songId of songIds) {
-                        await toggleFollowSong(songId, 'follow');
+                        await sendActionSong(songId, 'follow');
                         await new Promise(r => setTimeout(r, 25));
                     }
 
@@ -581,7 +581,7 @@ chrome.storage.local.get([
 
                     const songIds = await fetchAllSongIds(artistId);
                     for (const songId of songIds) {
-                        await toggleFollowSong(songId, 'unfollow');
+                        await sendActionSong(songId, 'unfollow');
                         await new Promise(r => setTimeout(r, 25));
                     }
 
@@ -612,7 +612,7 @@ chrome.storage.local.get([
 
                     const songIds = await fetchAllSongIds(artistId);
                     for (const songId of songIds) {
-                        await toggleFollowSong(songId, 'follow');
+                        await sendActionSong(songId, 'follow');
                         await new Promise(r => setTimeout(r, 25));
                     }
 
@@ -630,7 +630,7 @@ chrome.storage.local.get([
 
                     const songIds = await fetchAllSongIds(artistId);
                     for (const songId of songIds) {
-                        await toggleFollowSong(songId, 'unfollow');
+                        await sendActionSong(songId, 'unfollow');
                         await new Promise(r => setTimeout(r, 25));
                     }
 

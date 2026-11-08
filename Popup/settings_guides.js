@@ -312,7 +312,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const isTidalCopyCredits = document.getElementById('isTidalCopyCredits').checked;
         const isTidalPopup = document.getElementById('isTidalPopup').checked;
         const isTidalHighlighting = document.getElementById('isTidalHighlighting').checked;
-        const isTidalPremiumPopup = document.getElementById('isTidalPremiumPopup').checked;
         const isTidalConvertPNG = document.getElementById('isTidalConvertPNG').checked;
         const isTidalSaveImage = document.getElementById('isTidalSaveImage').checked;
         const isTidalHostImgBB = document.getElementById('isTidalHostImgBB').checked;
@@ -435,7 +434,6 @@ document.addEventListener('DOMContentLoaded', function () {
             isTidalCopyCredits: isTidalCopyCredits,
             isTidalPopup: isTidalPopup,
             isTidalHighlighting: isTidalHighlighting,
-            isTidalPremiumPopup: isTidalPremiumPopup,
             isTidalConvertPNG: isTidalConvertPNG,
             isTidalSaveImage: isTidalSaveImage,
             isTidalHostImgBB: isTidalHostImgBB,
@@ -465,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'isDistroKidCopyCover', 'isDistroKidPopup', 'isDistroKidConvertPNG', 'isDistroKidSaveImage', 'isDistroKidHostImgBB', 'isDistroKidHostFilestack',
         'isSoundCloudCopyCover', 'isSoundCloudPopup', 'isSoundCloudArtistBanner', 'isSoundCloudConvertPNG', 'isSoundCloudSaveImage', 'isSoundCloudHostImgBB', 'isSoundCloudHostFilestack',
         'isSpotifyCopyTracklist', 'isSpotifyCopyCover', 'isSpotifyCopyArtist', 'isSpotifyPopup', 'isSpotifySidebar', 'isSpotifyRightClick', 'isSpotifyConvertPNG', 'isSpotifySaveImage', 'isSpotifyHostImgBB', 'isSpotifyHostFilestack',
-        'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalPremiumPopup', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImgBB', 'isTidalHostFilestack',
+        'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImgBB', 'isTidalHostFilestack',
         'isYandexMusicCopyCover', 'isYandexMusicPopup', 'isYandexMusicConvertPNG', 'isYandexMusicSaveImage', 'isYandexMusicHostImgBB', 'isYandexMusicHostFilestack',
         'isYouTubeMusicCopyCoverPlaylist', 'isYouTubeMusicCopyCoverChannel', 'isYouTubeMusicCopyLink', 'isYouTubeMusicPopup', 'isYouTubeMusicSaveImage',
     ], function (result) {
@@ -574,7 +572,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('isTidalCopyCredits').checked = result.isTidalCopyCredits !== undefined ? result.isTidalCopyCredits : true;
         document.getElementById('isTidalPopup').checked = result.isTidalPopup !== undefined ? result.isTidalPopup : true;
         document.getElementById('isTidalHighlighting').checked = result.isTidalHighlighting !== undefined ? result.isTidalHighlighting : true;
-        document.getElementById('isTidalPremiumPopup').checked = result.isTidalPremiumPopup !== undefined ? result.isTidalPremiumPopup : false;
         document.getElementById('isTidalConvertPNG').checked = result.isTidalConvertPNG !== undefined ? result.isTidalConvertPNG : true;
         document.getElementById('isTidalSaveImage').checked = result.isTidalSaveImage !== undefined ? result.isTidalSaveImage : false;
         document.getElementById('isTidalHostImgBB').checked = result.isTidalHostImgBB !== undefined ? result.isTidalHostImgBB : false;
@@ -698,7 +695,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('isTidalCopyCredits').addEventListener('change', saveSettings);
     document.getElementById('isTidalPopup').addEventListener('change', saveSettings);
     document.getElementById('isTidalHighlighting').addEventListener('change', saveSettings);
-    document.getElementById('isTidalPremiumPopup').addEventListener('change', saveSettings);
     document.getElementById('isTidalConvertPNG').addEventListener('change', saveSettings);
     document.getElementById('isTidalSaveImage').addEventListener('change', saveSettings);
     document.getElementById('isTidalHostImgBB').addEventListener('change', saveSettings);
