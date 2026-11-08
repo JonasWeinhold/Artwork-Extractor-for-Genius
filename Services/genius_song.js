@@ -107,11 +107,11 @@ chrome.storage.local.get([
         const soundcloudUrl = state?.entities?.songs?.[songId]?.soundcloudUrl;
         const spotifyUuid = state?.entities?.songs?.[songId]?.spotifyUuid;
         const songLanguage = state?.entities?.songs?.[songId]?.language;
-        const recordetAt = state?.entities?.songs?.[songId]?.recordetAt;
+        const recordedAt = state?.entities?.songs?.[songId]?.recordingLocation;
         const albumAppearances = state?.entities?.albumAppearances;
         const trackingData = state?.entities?.songs?.[songId]?.trackingData;
-
-
+        const songDescription = state?.entities?.songs?.[songId]?.description?.markdown;
+        const songExcludedPermissions = state?.entities?.songs?.[songId]?.currentUserMetadata?.excludedPermissions;
         const songFollow = state?.entities?.songs?.[songId]?.currentUserMetadata?.interactions?.following;
 
 
@@ -144,7 +144,7 @@ chrome.storage.local.get([
         if (isGeniusSongSongPage) checkSongCover(customSongArtImageUrl, songArtImageUrl, album, songTitle);
 
         if (isGeniusSongFollowButton) addFollowButton();
-        if (isGeniusSongRecreateButton) addRecreateButton(songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, customPerformances, artists, primaryTag, secondaryTag, tags, songAlbums, albums, youtubeUrl, youtubeStart, soundcloudUrl, customSongArtImageUrl, releaseDateComponents, songLanguage, recordetAt, albumAppearances);
+        if (isGeniusSongRecreateButton) addRecreateButton(userRole, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, customPerformances, artists, primaryTag, secondaryTag, tags, songAlbums, albums, youtubeUrl, youtubeStart, soundcloudUrl, customSongArtImageUrl, releaseDateComponents, songLanguage, recordedAt, albumAppearances, songDescription, songExcludedPermissions);
         if (isGeniusSongTranslationButton) addTranslationButton(songs, songId, songTitle, primaryArtistNames, featuredArtists, artists, primaryTag, releaseDateComponents, customSongArtImageUrl, youtubeUrl, youtubeStart);
         if (isGeniusSongShellyButton) addShellyButton(songId, lyricsMarkedCompleteBy, lyricsMarkedStaffApprovedBy, lyricsVerified, updatedByHumanAt, lyricsUpdatedAt);
 
@@ -568,8 +568,10 @@ chrome.storage.local.get([
     }
 
 
-    function addRecreateButton(songId, songTitleRaw, primaryArtistsRaw, featuredArtistsRaw, writerArtistsRaw, producerArtistsRaw, customPerformancesRaw, artists, primaryTagRaw, secondaryTagRaw, tags, songAlbumsRaw, albums, youtubeUrl, youtubeStart, soundcloudUrl, customSongArtImageUrl, releaseDateComponents, songLanguageRaw, recordedAtRaw, albumAppearances) {
+    function addRecreateButton(userRole, songId, songTitleRaw, primaryArtistsRaw, featuredArtistsRaw, writerArtistsRaw, producerArtistsRaw, customPerformancesRaw, artists, primaryTagRaw, secondaryTagRaw, tags, songAlbumsRaw, albums, youtubeUrl, youtubeStart, soundcloudUrl, customSongArtImageUrl, releaseDateComponents, songLanguageRaw, recordedAtRaw, albumAppearances, songDescription, songExcludedPermissions) {
         console.log("Run function addRecreateButton()");
+
+        if (songExcludedPermissions?.includes("destroy")) return;
 
         const { adminSpan } = getDomElements();
         if (!adminSpan) return;
@@ -580,50 +582,68 @@ chrome.storage.local.get([
         const list = dropdownContainer.querySelector('[class^="StickyToolbarDropdown__DropdownItems-"]');
         if (!list) return;
 
-        if (document.getElementById("recreate-btn")) return;
+        if (document.getElementById("recreate-song-btn")) return;
 
         const existingButton = list.querySelector("button");
         const existingLi = list.querySelector("li");
+
         if (!existingButton || !existingLi) return;
 
-        const li = document.createElement("li");
-        li.className = existingLi.className;
-
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.id = "recreate-btn";
-        btn.textContent = "Recreate Song";
-        btn.className = existingButton.className;
-
-        btn.addEventListener("click", async () => {
+        const handleRecreate = (type) => {
             const songTitle = songTitleRaw ? [{ name: songTitleRaw }] : [];
             const primaryArtists = (primaryArtistsRaw || []).map(id => artists[id]).filter(Boolean);
             const featuredArtists = (featuredArtistsRaw || []).map(id => artists[id]).filter(Boolean);
             const writerArtists = (writerArtistsRaw || []).map(id => artists[id]).filter(Boolean);
             const producerArtists = (producerArtistsRaw || []).map(id => artists[id]).filter(Boolean);
-            const additionalCredits = (customPerformancesRaw || []).map(entry => ({
-                role: entry.label,
-                artists: (entry.artists || []).map(id => artists[id]).filter(Boolean)
-            }));
+            const additionalCredits = (customPerformancesRaw || []).map(entry => ({ role: entry.label, artists: (entry.artists || []).map(id => artists[id]).filter(Boolean) }));
             const primaryTags = primaryTagRaw ? [tags[primaryTagRaw]].filter(Boolean) : [];
             const secondaryTags = (secondaryTagRaw || []).map(id => tags[id]).filter(Boolean);
             const songAlbums = (songAlbumsRaw || []).map(id => albums[id]).filter(Boolean);
-            const youtube = (youtubeUrl || youtubeStart) ? [{ url: youtubeUrl || null, start: youtubeStart || null }] : [];
+            const youtube = youtubeUrl || youtubeStart ? [{ url: youtubeUrl || null, start: youtubeStart || null }] : [];
             const soundcloud = soundcloudUrl ? [{ url: soundcloudUrl }] : [];
             const customSongArtImage = customSongArtImageUrl ? [{ url: customSongArtImageUrl }] : [];
             const releaseDate = releaseDateComponents ? [{ day: releaseDateComponents.day, month: releaseDateComponents.month, year: releaseDateComponents.year }] : [];
             const songLanguage = songLanguageRaw ? [{ name: songLanguageRaw }] : [];
             const recordedAt = recordedAtRaw ? [{ name: recordedAtRaw }] : [];
 
-            openRecreateModal(songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances);
-        });
+            openRecreateModal(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription);
+        };
 
-        li.appendChild(btn);
-        list.appendChild(li);
+        const createButton = (id, text) => {
+            const button = document.createElement("button");
+
+            button.type = "button";
+            button.id = id;
+            button.textContent = text;
+            button.className = existingButton.className;
+
+            return button;
+        };
+
+        const appendButton = button => {
+            const li = document.createElement("li");
+
+            li.className = existingLi.className;
+            li.appendChild(button);
+
+            list.appendChild(li);
+        };
+
+        const btnSong = createButton("recreate-song-btn", "Recreate Song");
+
+        btnSong.addEventListener("click", () => handleRecreate("song"));
+        appendButton(btnSong);
+
+        if (userRole === "moderator") {
+            const btnLeak = createButton("recreate-leak-btn", "Recreate Leak");
+
+            btnLeak.addEventListener("click", () => handleRecreate("leak"));
+            appendButton(btnLeak);
+        }
     }
 
-    function openRecreateModal(songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances) {
-        console.log(songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances);
+    function openRecreateModal(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription) {
+        console.log(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription);
 
         const { editmetadatabutonSmallbutton } = getDomElements();
         if (document.getElementById("create-recreate-modal")) return;
@@ -697,7 +717,7 @@ chrome.storage.local.get([
             const row = document.createElement("div");
             Object.assign(row.style, {
                 display: "grid",
-                gridTemplateColumns: "225px 1fr",
+                gridTemplateColumns: "250px 1fr",
                 alignItems: "flex-start",
                 gap: "16px"
             });
@@ -792,7 +812,7 @@ chrome.storage.local.get([
         const headerRow = document.createElement("div");
         Object.assign(headerRow.style, {
             display: "grid",
-            gridTemplateColumns: "225px 1fr",
+            gridTemplateColumns: "250px 1fr",
             alignItems: "flex-start",
             gap: "16px"
         });
@@ -814,7 +834,7 @@ chrome.storage.local.get([
             const lineRow = document.createElement("div");
             Object.assign(lineRow.style, {
                 display: "grid",
-                gridTemplateColumns: "225px 1fr",
+                gridTemplateColumns: "250px 1fr",
                 alignItems: "flex-start",
                 gap: "16px"
             });
@@ -908,6 +928,10 @@ chrome.storage.local.get([
 
         const statusBox = document.createElement("div");
         statusBox.textContent = "";
+        if (songDescription !== "?") {
+            statusBox.textContent = "Warning: Song Bio";
+            statusBox.style.color = "red";
+        }
 
         createBtn.addEventListener("click", async () => {
             createBtn.disabled = true;
@@ -991,20 +1015,35 @@ chrome.storage.local.get([
 
 
             // ----------------------------------------------------
-            // STEP 2: SET PRIMARY ARTIST TO SHELLY
+            // STEP 2: SET PRIMARY ARTIST TO SHELLY / SET TITLE TO LEAK
             // ----------------------------------------------------
-            const shellyPayload = { primary_artists: [{ id: 3703683, name: "Shelly The Cleanup Bot" }] };
+            if (type === "song") {
+                const shellyPayload = { primary_artists: [{ id: 3703683, name: "Shelly The Cleanup Bot" }] };
 
-            async function stepSetShelly() {
-                try {
-                    const result = await updateSongMetadata(songId, shellyPayload);
-                    return !!result && result.ok;
-                } catch {
-                    return false;
+                async function stepSetShelly() {
+                    try {
+                        const result = await updateSongMetadata(songId, shellyPayload);
+                        return !!result && result.ok;
+                    } catch {
+                        return false;
+                    }
                 }
-            }
 
-            if (!(await runStepWithRetry("Changing primary artist to 'Shelly The Cleanup Bot'", statusBox, stepSetShelly, 1))) return;
+                if (!(await runStepWithRetry("Changing primary artist to 'Shelly The Cleanup Bot'", statusBox, stepSetShelly, 1))) return;
+            } else if (type === "leak") {
+                const leakPayload = { title: `${songTitle?.[0]?.name} (Leak)` };
+
+                async function stepSetLeakTitle() {
+                    try {
+                        const result = await updateSongMetadata(songId, leakPayload);
+                        return !!result && result.ok;
+                    } catch {
+                        return false;
+                    }
+                }
+
+                if (!(await runStepWithRetry(`Changing song title to '${songTitle?.[0]?.name} (Leak)'`, statusBox, stepSetLeakTitle, 1))) return;
+            }
 
 
             // ----------------------------------------------------
@@ -1025,7 +1064,7 @@ chrome.storage.local.get([
                     if (songAlbums.length) song.albums = songAlbums.map(a => ({ id: a.id, name: a.name }));
                     if (releaseDate?.[0]) { song.release_date_components = { day: releaseDate[0].day, month: releaseDate[0].month, year: releaseDate[0].year }; }
                     if (songLanguage?.[0]?.name) song.language = songLanguage[0].name;
-                    if (recordedAt?.[0]?.name) song.recorded_at = recordedAt[0].name;
+                    if (recordedAt?.[0]?.name) song.recording_location = recordedAt[0].name;
                     if (youtube?.[0]?.url) song.youtube_url = youtube[0].url;
                     if (youtube?.[0]?.start) song.youtube_start = youtube[0].start;
                     if (soundcloud?.[0]?.url) song.soundcloud_url = soundcloud[0].url;
@@ -1033,10 +1072,7 @@ chrome.storage.local.get([
                     song.lyrics_state = "incomplete";
                     song.lyrics = "";
 
-                    const createPayload = {
-                        text_format: "html,markdown,preview",
-                        song
-                    };
+                    const createPayload = { text_format: "html,markdown,preview", song };
 
                     const result = await createSong(createPayload);
                     newSongId = result?.response?.song?.id;
@@ -1051,18 +1087,33 @@ chrome.storage.local.get([
 
 
             // ----------------------------------------------------
-            // STEP 4: DELETE OLD SONG
+            // STEP 4: DELETE OLD SONG / HIDE OLD SONG
             // ----------------------------------------------------
-            async function stepDeleteOldSong() {
-                try {
-                    const ok = await deleteId(songId, "songs");
-                    return ok;
-                } catch {
-                    return false;
+            if (type === "song") {
+                async function stepDeleteOldSong() {
+                    try {
+                        const ok = await deleteId(songId, "songs");
+                        return ok;
+                    } catch {
+                        return false;
+                    }
                 }
-            }
 
-            if (!(await runStepWithRetry("Deleting old song", statusBox, stepDeleteOldSong, 1))) return;
+                if (!(await runStepWithRetry("Deleting old song", statusBox, stepDeleteOldSong, 1))) return;
+            } else if (type === "leak") {
+                const hidePayload = { viewable_by_roles: ["moderator"] };
+
+                async function stepHideSong() {
+                    try {
+                        const result = await updateActionSong(songId, "hide", hidePayload);
+                        return !!result && result.ok;
+                    } catch {
+                        return false;
+                    }
+                }
+
+                if (!(await runStepWithRetry("Hiding old song", statusBox, stepHideSong, 1))) return;
+            }
 
 
             // ----------------------------------------------------
@@ -1076,11 +1127,24 @@ chrome.storage.local.get([
 
                         if (oldSong && oldSong.disc_track_number == null) continue;
 
-                        const payload = oldTracks.map(t => ({
-                            disc_track_number: t.disc_track_number,
-                            disc_number: t.disc_number,
-                            song_id: t.song.id === songId ? newSongId : t.song.id
-                        }));
+                        let payload;
+                        if (type === "song") {
+                            payload = oldTracks.map(t => ({
+                                disc_track_number: t.disc_track_number,
+                                disc_number: t.disc_number,
+                                song_id: t.song.id === songId ? newSongId : t.song.id
+                            }));
+                        } else if (type === "leak") {
+                            payload = [...oldTracks.map(t => ({
+                                disc_track_number: t.disc_track_number,
+                                disc_number: t.disc_number,
+                                song_id: t.song.id === songId ? newSongId : t.song.id
+                            })), {
+                                disc_track_number: null,
+                                disc_number: null,
+                                song_id: songId
+                            }];
+                        }
 
                         const ok = await updateTracklist(album.id, payload);
                         if (!ok) return false;
@@ -1104,6 +1168,26 @@ chrome.storage.local.get([
                 } else {
                     if (!(await runStepWithRetry("Updating album tracklists", statusBox, stepUpdateTracklists, 3))) return;
                 }
+            }
+
+
+            // ----------------------------------------------------
+            // STEP 6: LOCK NEW SONG
+            // ----------------------------------------------------
+            if (type === "leak") {
+                const publishPayload = { text_format: "html,markdown,preview" };
+
+                async function stepPublishSong() {
+                    try {
+                        const result = await updateActionSong(newSongId, "publish", publishPayload);
+
+                        return !!result && result.ok;
+                    } catch {
+                        return false;
+                    }
+                }
+
+                if (!(await runStepWithRetry("Locking new song", statusBox, stepPublishSong, 1))) return;
             }
 
 
@@ -2578,6 +2662,7 @@ chrome.storage.local.get([
             { code: 'SV', value: 'sv', name: 'Swedish' },
             { code: 'TR', value: 'tr', name: 'Turkish' },
             { code: 'UK', value: 'uk', name: 'Ukrainian' },
+            { code: 'UR', value: 'ur', name: 'Urdu' },
             { code: 'UZ', value: 'uz', name: 'Uzbek' },
             { code: 'VI', value: 'vi', name: 'Vietnamese' },
         ];
@@ -2922,11 +3007,12 @@ chrome.storage.local.get([
             const containsChinese = (text) => /[\u4e00-\u9fff]/.test(text);
             const containsJapanese = (text) => /[\u3040-\u30ff\u31f0-\u31ff]/.test(text);
             const containsKorean = (text) => /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/.test(text);
+            const containsUrdu = (text) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
 
 
             const cleanName = (name) => {
                 name = name.replace(/”/g, '"').replace(/’/g, "'");
-                if (containsCyrillic(name) || containsChinese(name) || containsJapanese(name) || containsKorean(name)) {
+                if (containsCyrillic(name) || containsChinese(name) || containsJapanese(name) || containsKorean(name) || containsUrdu(name)) {
                     name = name.replace(/\s*\([^)]+\)/g, "").replace(/\s*\[[^\]]+\]/g, "");
                 }
                 return name;
@@ -3022,6 +3108,7 @@ chrome.storage.local.get([
                     'sr': `[Tekst pesme „${songTitle}”${featuringText}]`,
                     'tr': `["${songTitle}"${featuringText} için şarkı sözleri]`,
                     'uk': `[Текст пісні «${songTitle}»${featuringText}]`,
+                    'ur': `[کے لیریکس "${songTitle}" ${primaryArtistsText}${featuringText}]`,
                     'uz': `[«${songTitle}» qoʻshigʻi matni${featuringText}]`,
                     'vi': `[Lời bài hát "${songTitle}"${featuringText}]`,
                     'zh': `[${primaryArtistsText}《${songTitle}》${formattedFeaturingText}歌词]`,
@@ -3881,6 +3968,28 @@ chrome.storage.local.get([
                         { displayText: null, fullText: null, hoverText: null },
                     ]
                 },
+                "ur": { // Urdu
+                    Default: [
+                        { displayText: "Header", fullText: "Header", hoverText: "Header" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Instrumental", fullText: "Instrumental", hoverText: "Instrumental" },
+                        { displayText: null, fullText: null, hoverText: null },
+                        { displayText: "Intro", fullText: "Intro", hoverText: "Intro" },
+                        { displayText: "Outro", fullText: "Outro", hoverText: "Outro" },
+                        { displayText: "Skit", fullText: "Skit", hoverText: "Skit" },
+                        { displayText: "Part", fullText: "Part", hoverText: "Part" },
+                        { displayText: "Verse", fullText: "Verse", hoverText: "Verse" },
+                        { displayText: "Pre-Chorus", fullText: "Pre-Chorus", hoverText: "Pre-Chorus" },
+                        { displayText: "Chorus", fullText: "Chorus", hoverText: "Chorus" },
+                        { displayText: "Post-Chorus", fullText: "Post-Chorus", hoverText: "Post-Chorus" },
+                        { displayText: "Refrain", fullText: "Refrain", hoverText: "Refrain" },
+                        { displayText: "Bridge", fullText: "Bridge", hoverText: "Bridge" },
+                        { displayText: "Breakdown", fullText: "Breakdown", hoverText: "Breakdown" },
+                        { displayText: "Interlude", fullText: "Interlude", hoverText: "Interlude" },
+                        { displayText: "Build", fullText: "Build", hoverText: "Build" },
+                        { displayText: "Drop", fullText: "Drop", hoverText: "Drop" }
+                    ]
+                },
                 "uz": { // Uzbek
                     Default: [
                         { displayText: "Header", fullText: "Header", hoverText: "Header" },
@@ -4459,6 +4568,29 @@ chrome.storage.local.get([
                                 line = line.replace(pattern, value);
                             }
 
+                        } else if (storedLanguage === 'da') {
+                            const replacements = [
+                                [/\bblir(?:')?(?![\w'])/gi, "bli'r"],
+                                [/\bhvorn(?:')?(?![\w'])/gi, "hvor'n"],
+                                [/\bsån(?:')?(?![\w'])/gi, "så'n"],
+                                [/\bgir(?:')?(?![\w'])/gi, "gi'r"],
+                                [/\btar(?:')?(?![\w'])/gi, "ta'r"],
+                                [/\blar(?:')?(?![\w'])/gi, "la'r"],
+
+                                [/\b(?:ik|ikk)(?:')?(?![\w'])/gi, "ikk'"],
+
+                                [/\bsku(?![\w'])/gi, "sku'"],
+                                [/\bska(?![\w'])/gi, "ska'"],
+                                [/\bhva(?![\w'])/gi, "hva'"],
+                                [/\bku(?![\w'])/gi, "ku'"],
+                                [/\bka(?![\w'])/gi, "ka'"],
+
+                                [/\bgi(?![\w'])/gi, "gi'"],
+                            ];
+
+                            for (const [pattern, replacement] of replacements) {
+                                line = line.replace(pattern, match => /^[A-Z]/.test(match) ? replacement.charAt(0).toUpperCase() + replacement.slice(1) : replacement);
+                            }
                         }
                     }
                 }

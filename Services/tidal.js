@@ -1,10 +1,9 @@
-chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalPremiumPopup', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImgBB', 'isTidalHostFilestack'], function (result) {
+chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyArtist', 'isTidalCopyCredits', 'isTidalPopup', 'isTidalHighlighting', 'isTidalConvertPNG', 'isTidalSaveImage', 'isTidalHostImgBB', 'isTidalHostFilestack'], function (result) {
   const isTidalCopyCover = result.isTidalCopyCover !== undefined ? result.isTidalCopyCover : true;
   const isTidalCopyArtist = result.isTidalCopyArtist !== undefined ? result.isTidalCopyArtist : true;
   const isTidalCopyCredits = result.isTidalCopyCredits !== undefined ? result.isTidalCopyCredits : true;
   const isTidalPopup = result.isTidalPopup !== undefined ? result.isTidalPopup : true;
   const isTidalHighlighting = result.isTidalHighlighting !== undefined ? result.isTidalHighlighting : true;
-  const isTidalPremiumPopup = result.isTidalPremiumPopup !== undefined ? result.isTidalPremiumPopup : false;
   const isTidalConvertPNG = result.isTidalConvertPNG !== undefined ? result.isTidalConvertPNG : true;
   const isTidalSaveImage = result.isTidalSaveImage !== undefined ? result.isTidalSaveImage : false;
   const isTidalHostImgBB = result.isTidalHostImgBB !== undefined ? result.isTidalHostImgBB : false;
@@ -71,65 +70,6 @@ chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyA
       });
 
       buttonContainer.insertAdjacentElement('afterend', copyButton);
-    }
-  }
-
-  // Copy Cover Button for Browse Albums (Does this page still exist?)
-  function addBrowseCopyButton() {
-    console.log('createBrowseCopyButton called');
-    const mainButton = document.querySelector('.main-button');
-
-    if (mainButton && !document.getElementById('copy-cover-button')) {
-      const copyButton = document.createElement('button');
-      copyButton.id = 'copy-cover-button';
-      copyButton.innerText = isTidalSaveImage ? "Save Cover" : "Copy Cover";
-
-      Object.assign(copyButton.style, {
-        backgroundColor: '#fff',
-        color: 'var(--ts-color-text-inverted)',
-        borderRadius: '16px',
-        cursor: 'pointer',
-        fontSize: '16px',
-        fontWeight: '600',
-        lineHeight: '24px',
-        width: '160px'
-      });
-
-      copyButton.addEventListener('click', async (event) => {
-        event.preventDefault();
-        sessionStorage.setItem('copyCover', 'true');
-        sessionStorage.setItem('mouseX', event.clientX);
-        sessionStorage.setItem('mouseY', event.clientY);
-
-        const currentUrl = window.location.href;
-        const accessToken = await getTidalAccessToken();
-
-        const { coverUrl, type, id } = await getTidalArtwork(currentUrl, accessToken);
-        const imageUrl = coverUrl.replace(/\d{2,4}x\d{2,4}\.(jpg|jpeg)$/, 'origin.jpg');
-
-        if (imageUrl) {
-          const urlName = `tidal-${type}-${id}`;
-          const fileName = getFileNameFromUrl(imageUrl);
-          const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
-          const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
-          const design = {
-            position: "fixed",
-            backgroundColor: "#fff",
-            color: "var(--wave-color-solid-base-fill)",
-            borderRadius: "16px",
-            padding: "10px 20px",
-            fontSize: "12px",
-            fontWeight: "bold",
-            zIndex: "9999",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-            top: `${mouseY + 50}px`,
-            left: `${mouseX + 75}px`
-          };
-          await processJpgImage(imageUrl, urlName, fileName, isTidalHostFilestack, isTidalHostImgBB, isTidalSaveImage, isTidalConvertPNG, isTidalPopup, design);
-        }
-      });
-
-      mainButton.insertAdjacentElement('afterend', copyButton);
     }
   }
 
@@ -219,30 +159,16 @@ chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyA
 
 
   const replacements = {
-    "BACKGROUND VOCALIST": "Background Vocals",
-    "PRODUCER": "Producer",
-    "CO-PRODUCER": "Co-Producer",
-    "AUTHOR": "Lyricist",
-    "ARRANGER": "Arranger",
-    "BACKING VOCALS": "Background Vocals",
-    "BASS": "Bass",
-    "DRUMS": "Drums",
-    "GUITAR": "Guitar",
-    "KEYBOARD": "Keyboards",
-    "TRUMPET": "Trumpet",
-    "TUBA": "Tuba",
-    "LYRICIST": "Lyricist",
-    "COMPOSER": "Composer",
-    "REMIXER": "Remixer",
-    "MIXER": "Mixing Engineer",
-    "MASTERER": "Mastering Engineer",
-    "RECORDER": "Recording Engineer",
-    "MIXING ENGINEER": "Mixing Engineer",
-    "MASTERING ENGINEER": "Mastering Engineer",
-    "RECORDING ENGINEER": "Recording Engineer",
-    "ADDITIONAL ENGINEER": "Additional Engineering",
-    "PROGRAMMING": "Programmer",
-    "MUSIC PUBLISHER": "Publisher",
+    "AUTHOR": "LYRICIST",
+    "BACKGROUND VOCALIST": "BACKGROUND VOCALS",
+    "BACKING VOCALS": "BACKGROUND VOCALS",
+    "KEYBOARD": "KEYBOARDS",
+    "MIXER": "MIXING ENGINEER",
+    "MASTERER": "MASTERING ENGINEER",
+    "RECORDER": "RECORDING ENGINEER",
+    "ADDITIONAL ENGINEER": "ADDITIONAL ENGINEERING",
+    "PROGRAMMING": "PROGRAMMER",
+    "MUSIC PUBLISHER": "PUBLISHER",
   };
 
   function replaceWords(text) {
@@ -314,25 +240,13 @@ chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyA
 
 
 
-
-
-  function clickTidalPremiumPopup() {
-    const closeButton = document.querySelector('._modalHeader_e62bee9 [data-test="modal-close-button"]');
-
-    if (closeButton) {
-      closeButton.click();
-    }
-  }
-
-
-
-
-
   window.addEventListener('click', () => {
-    const tidalArtistUrlPattern = /^https:\/\/(?:listen\.)?tidal\.com\/artist\//;
-    const tidalAlbumUrlPattern = /^https:\/\/(?:listen\.)?tidal\.com\/album\//;
-    const tidalBrowseAlbumUrlPattern = /^https:\/\/(?:listen\.)?tidal\.com\/browse\/album\//;
-    const tidalPlaylistUrlPattern = /^https:\/\/(?:listen\.)?tidal\.com\/playlist\//;
+    const tidalArtistUrlPattern = /^https:\/\/tidal\.com\/artist\//;
+    const tidalAlbumUrlPattern = /^https:\/\/tidal\.com\/album\//;
+    const tidalPlaylistUrlPattern = /^https:\/\/tidal\.com\/playlist\//;
+    const tidalCreditsUrlPattern = /^https:\/\/tidal\.com\/album\/\d+\/credits/;
+
+    console.log('Current URL:', window.location.href);
 
     if (tidalArtistUrlPattern.test(window.location.href)) {
       if (isTidalCopyArtist) addCopyCoverButton();
@@ -340,15 +254,10 @@ chrome.storage.local.get(['Services/tidal.js', 'isTidalCopyCover', 'isTidalCopyA
     if (tidalAlbumUrlPattern.test(window.location.href) || tidalPlaylistUrlPattern.test(window.location.href)) {
       if (isTidalCopyCover) addCopyCoverButton();
     }
-    if (tidalBrowseAlbumUrlPattern.test(window.location.href)) {
-      if (isTidalCopyCover) addBrowseCopyButton();
+    if (tidalCreditsUrlPattern.test(window.location.href)) {
+      if (isTidalCopyCredits) enableTextHoverAndCopy();
     }
-    if (isTidalCopyCredits) enableTextHoverAndCopy();
   });
 
-  const observer = new MutationObserver(() => {
-    if (isTidalPremiumPopup) clickTidalPremiumPopup();
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
 
 });

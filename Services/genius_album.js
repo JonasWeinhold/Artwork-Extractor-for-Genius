@@ -893,12 +893,12 @@ chrome.storage.local.get([
             const storedState = JSON.parse(sessionStorage.getItem(storageKey)) || [];
             if (followButton.textContent === 'Follow') {
                 const newFollows = followingStates.filter(data => !storedState.includes(data.songId));
-                await Promise.all(newFollows.map(data => toggleFollowSong(data.songId, 'follow')));
+                await Promise.all(newFollows.map(data => sendActionSong(data.songId, 'follow')));
                 storedState.push(...newFollows.map(data => data.songId));
                 sessionStorage.setItem(storageKey, JSON.stringify(storedState));
                 followButton.textContent = 'Following';
             } else {
-                await Promise.all(followingStates.map(data => toggleFollowSong(data.songId, 'unfollow')));
+                await Promise.all(followingStates.map(data => sendActionSong(data.songId, 'unfollow')));
                 sessionStorage.setItem(storageKey, JSON.stringify([]));
                 followButton.textContent = 'Follow';
             }
