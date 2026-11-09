@@ -361,7 +361,7 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
         }
     }
 
-    function addCopyArtistArtwork() {
+    function addCopyArtistArtworkOld() {
         const artistHeader = document.querySelector('h1.artist-expression-header__name');
         if (artistHeader) {
             artistHeader.style.cursor = 'pointer';
@@ -396,6 +396,65 @@ chrome.storage.local.get(['Services/apple.js', 'isAppleMusicCopyTracklist', 'isA
                 };
                 await processPngImage(imageUrl, fileName, isAppleMusicSaveImage, isAppleMusicPopup, design);
             });
+        }
+    }
+
+    function addCopyArtistArtwork() {
+        const secondaryActions = document.querySelector(".artist-expression-header__cloud-buttons");
+        const playButton = document.querySelector(".artist-expression-header__play-button");
+
+        if (secondaryActions && playButton && !document.getElementById("copy-artist-button")) {
+            secondaryActions.style.display = "flex";
+            secondaryActions.style.gap = "10px";
+
+            const button = document.createElement("button");
+            button.id = "copy-artist-button";
+            button.textContent = "CA";
+
+            Object.assign(button.style, {
+                minWidth: "2.25rem",
+                width: "2.5rem",
+                height: "36px",
+                backgroundColor: getComputedStyle(playButton).getPropertyValue("--svgFill").trim(),
+                borderRadius: "24px",
+                font: "var(--title-3-semibold)",
+                padding: "0 12px",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+            });
+
+
+            button.addEventListener("click", async (event) => {
+                event.preventDefault();
+                sessionStorage.setItem('mouseX', event.clientX);
+                sessionStorage.setItem('mouseY', event.clientY);
+
+                const imageUrl = await getAppleMusicArtwork("artist")
+                console.log(imageUrl);
+                const fileName = getFileNameFromUrl(imageUrl);
+                const mouseX = parseInt(sessionStorage.getItem("mouseX"), 10);
+                const mouseY = parseInt(sessionStorage.getItem("mouseY"), 10);
+                const design = {
+                    position: "fixed",
+                    backgroundColor: "#d60017",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "5px",
+                    padding: "10px 20px",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    zIndex: "9999",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                    top: `${mouseY + 30}px`,
+                    left: `${mouseX + 40}px`
+                };
+                await processPngImage(imageUrl, fileName, isAppleMusicSaveImage, isAppleMusicPopup, design);
+            });
+
+            secondaryActions.prepend(button);
         }
     }
 
