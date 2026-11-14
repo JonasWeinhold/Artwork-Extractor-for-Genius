@@ -1006,6 +1006,7 @@ chrome.storage.local.get([
                         "Release Date",
                         "Albums",
                         "Cover Image Info",
+                        "YouTube",
                         "Tags",
                         "Language",
                         "Lyrics Status",
@@ -1023,6 +1024,7 @@ chrome.storage.local.get([
                             escapeCSV(getReleaseDate(song.release_date_components)),
                             escapeCSV(song.albums.map(album => album.name).join(", ")),
                             escapeCSV(getCoverInfo(song.song_art_image_url)),
+                            escapeCSV(song.youtube_url),
                             escapeCSV([song.primary_tag?.name, ...song.tags.map(tag => tag.name).filter(name => name !== song.primary_tag?.name).sort((a, b) => a.localeCompare(b))].join(", ")),
                             escapeCSV(song.language),
                             escapeCSV(getLyricsStatus(song)),
@@ -1534,6 +1536,7 @@ chrome.storage.local.get([
                         "Release Date",
                         "Albums",
                         "Cover Image Info",
+                        "YouTube",
                         "Tags",
                         "Language",
                         "Lyrics Status",
@@ -1551,6 +1554,7 @@ chrome.storage.local.get([
                             escapeCSV(getReleaseDate(song.release_date_components)),
                             escapeCSV(song.albums.map(a => a.name).join(", ")),
                             escapeCSV(getCoverInfo(song.song_art_image_url)),
+                            escapeCSV(song.youtube_url),
                             escapeCSV([
                                 song.primary_tag?.name,
                                 ...song.tags

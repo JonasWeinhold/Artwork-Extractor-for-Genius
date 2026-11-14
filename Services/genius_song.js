@@ -111,6 +111,7 @@ chrome.storage.local.get([
         const albumAppearances = state?.entities?.albumAppearances;
         const trackingData = state?.entities?.songs?.[songId]?.trackingData;
         const songDescription = state?.entities?.songs?.[songId]?.description?.markdown;
+        const pendingLyricsEditsCount = state?.entities?.songs?.[songId]?.pendingLyricsEditsCount;
         const songExcludedPermissions = state?.entities?.songs?.[songId]?.currentUserMetadata?.excludedPermissions;
         const songFollow = state?.entities?.songs?.[songId]?.currentUserMetadata?.interactions?.following;
 
@@ -144,7 +145,7 @@ chrome.storage.local.get([
         if (isGeniusSongSongPage) checkSongCover(customSongArtImageUrl, songArtImageUrl, album, songTitle);
 
         if (isGeniusSongFollowButton) addFollowButton();
-        if (isGeniusSongRecreateButton) addRecreateButton(userRole, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, customPerformances, artists, primaryTag, secondaryTag, tags, songAlbums, albums, youtubeUrl, youtubeStart, soundcloudUrl, customSongArtImageUrl, releaseDateComponents, songLanguage, recordedAt, albumAppearances, songDescription, songExcludedPermissions);
+        if (isGeniusSongRecreateButton) addRecreateButton(userRole, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, customPerformances, artists, primaryTag, secondaryTag, tags, songAlbums, albums, youtubeUrl, youtubeStart, soundcloudUrl, customSongArtImageUrl, releaseDateComponents, songLanguage, recordedAt, albumAppearances, songDescription, pendingLyricsEditsCount, songExcludedPermissions);
         if (isGeniusSongTranslationButton) addTranslationButton(songs, songId, songTitle, primaryArtistNames, featuredArtists, artists, primaryTag, releaseDateComponents, customSongArtImageUrl, youtubeUrl, youtubeStart);
         if (isGeniusSongShellyButton) addShellyButton(songId, lyricsMarkedCompleteBy, lyricsMarkedStaffApprovedBy, lyricsVerified, updatedByHumanAt, lyricsUpdatedAt);
 
@@ -568,7 +569,7 @@ chrome.storage.local.get([
     }
 
 
-    function addRecreateButton(userRole, songId, songTitleRaw, primaryArtistsRaw, featuredArtistsRaw, writerArtistsRaw, producerArtistsRaw, customPerformancesRaw, artists, primaryTagRaw, secondaryTagRaw, tags, songAlbumsRaw, albums, youtubeUrl, youtubeStart, soundcloudUrl, customSongArtImageUrl, releaseDateComponents, songLanguageRaw, recordedAtRaw, albumAppearances, songDescription, songExcludedPermissions) {
+    function addRecreateButton(userRole, songId, songTitleRaw, primaryArtistsRaw, featuredArtistsRaw, writerArtistsRaw, producerArtistsRaw, customPerformancesRaw, artists, primaryTagRaw, secondaryTagRaw, tags, songAlbumsRaw, albums, youtubeUrl, youtubeStart, soundcloudUrl, customSongArtImageUrl, releaseDateComponents, songLanguageRaw, recordedAtRaw, albumAppearances, songDescription, pendingLyricsEditsCount, songExcludedPermissions) {
         console.log("Run function addRecreateButton()");
 
         if (songExcludedPermissions?.includes("destroy")) return;
@@ -606,7 +607,7 @@ chrome.storage.local.get([
             const songLanguage = songLanguageRaw ? [{ name: songLanguageRaw }] : [];
             const recordedAt = recordedAtRaw ? [{ name: recordedAtRaw }] : [];
 
-            openRecreateModal(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription);
+            openRecreateModal(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription, pendingLyricsEditsCount);
         };
 
         const createButton = (id, text) => {
@@ -642,8 +643,8 @@ chrome.storage.local.get([
         }
     }
 
-    function openRecreateModal(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription) {
-        console.log(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription);
+    function openRecreateModal(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription, pendingLyricsEditsCount) {
+        console.log(type, songId, songTitle, primaryArtists, featuredArtists, writerArtists, producerArtists, additionalCredits, primaryTags, secondaryTags, songAlbums, youtube, soundcloud, customSongArtImage, releaseDate, songLanguage, recordedAt, albumAppearances, songDescription, pendingLyricsEditsCount);
 
         const { editmetadatabutonSmallbutton } = getDomElements();
         if (document.getElementById("create-recreate-modal")) return;
@@ -928,9 +929,16 @@ chrome.storage.local.get([
 
         const statusBox = document.createElement("div");
         statusBox.textContent = "";
-        if (songDescription !== "?") {
-            statusBox.textContent = "Warning: Song Bio";
+        if (songDescription !== "?" || pendingLyricsEditsCount > 0) {
             statusBox.style.color = "red";
+
+            if (songDescription !== "?" && pendingLyricsEditsCount > 0) {
+                statusBox.textContent = `Warning: Song Bio | ${pendingLyricsEditsCount} Proposed Lyrics Edit${pendingLyricsEditsCount === 1 ? "" : "s"}`;
+            } else if (songDescription !== "?") {
+                statusBox.textContent = "Warning: Song Bio";
+            } else {
+                statusBox.textContent = `Warning: ${pendingLyricsEditsCount} Proposed Lyrics Edit${pendingLyricsEditsCount === 1 ? "" : "s"}`;
+            }
         }
 
         createBtn.addEventListener("click", async () => {
