@@ -213,24 +213,23 @@ chrome.storage.local.get(['Services/soundcloud.js', 'isSoundCloudCopyCover', 'is
     try {
       const headers = document.querySelectorAll('[aria-label="Track-Header"]');
 
-      for (const header of headers) {
-        const imgs = header.querySelectorAll('img');
+      const containers = headers.length ? headers : document.querySelectorAll('section[class^="MuiStack-root"]');
+
+      for (const container of containers) {
+        const imgs = container.querySelectorAll('img');
 
         for (const img of imgs) {
-          if (img.closest('span') || img.closest('ol') || img.closest('form')) {
-            continue;
-          }
+          if (img.closest('span') || img.closest('ol') || img.closest('form')) continue;
 
           const src = img.currentSrc || img.src;
-          if (src) {
-            return src;
-          }
+          if (src) return src;
         }
       }
     } catch (error) {
       console.error('Error fetching cover:', error.message);
-      return null;
     }
+
+    return null;
   }
 
   function getFileNameFromUrl(url) {

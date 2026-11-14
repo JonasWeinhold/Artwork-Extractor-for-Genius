@@ -171,8 +171,8 @@ chrome.storage.local.get([
 
 
             const albumData = state?.entities;
-            const songIds = state?.entities?.albumAppearances ? Object.values(state.entities.albumAppearances).sort((a, b) => a.trackNumber - b.trackNumber).map(entry => entry.song) : [];
-
+            const songIds = state?.entities?.albums?.[albumId]?.tracklist;
+            //const songIds = state?.entities?.albumAppearances ? Object.values(state.entities.albumAppearances).sort((a, b) => a.trackNumber - b.trackNumber).map(entry => entry.song) : [];
 
             if (isGeniusAlbumAlbumPageInfo) showCoverArtInfo();
 
@@ -3601,7 +3601,6 @@ chrome.storage.local.get([
                     }
 
                     const metadataData = (await metadataResponse.json()).items[0].snippet;
-                    console.log(metadataData);
 
                     let videosData;
                     let videoLinks = [];
@@ -3614,7 +3613,6 @@ chrome.storage.local.get([
                         }
 
                         videosData = await videosResponse.json();
-                        console.log(videosData);
                         videoLinks.push(...videosData.items.map(item => `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`));
                         nextPageToken = videosData.nextPageToken;
                     } while (nextPageToken);
